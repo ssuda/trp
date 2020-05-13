@@ -9,6 +9,16 @@ import {
 import theme from '@/theme';
 import { getMainWindowSize } from './screenSize';
 
+//import tpno from './i3ms/tpno';
+import {
+  tagVehicles,
+  permitDetails,
+  permitsDetails,
+  permitReport,
+  releaseVehicles
+} from '../i3ms/i3ms';
+import { init, openBrowser } from '../i3ms/puppeteer';
+
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isMac = process.platform === 'darwin';
 const isLinux = process.platform === 'linux';
@@ -88,6 +98,66 @@ ipcMain.on('open-settings-window', (event, tab) => {
 
 ipcMain.on('reload-main-window', () => {
   mainWindow.reload();
+});
+
+openBrowser(false);
+
+ipcMain.on('permit-report', async (event, args) => {
+  console.log(args.startDate, args.endDate);
+  await init(args.credentials);
+  const r = await permitReport(args);
+  console.log('sending results to browser', r);
+  event.sender.send('permit-report-results', r);
+});
+
+// ipcMain.on('truck-passes', async (event, args) => {
+//   const r = await tpno(args);
+//   console.log('sending results to browser', r);
+//   event.sender.send('tp-results', r);
+// });
+
+ipcMain.on('tag-vehicles', async (event, args) => {
+  console.log(args);
+  const r = await tagVehicles(args, event.sender);
+  console.log('sending results to browser', r);
+  event.sender.send('tag-results', r);
+});
+
+ipcMain.on('release-vehicles', async (event, args) => {
+  console.log(args);
+  const r = await releaseVehicles(args, event.sender);
+  console.log('sending results to browser', r);
+  event.sender.send('release-vehicles-results', r);
+});
+
+ipcMain.on('permit-details', async (event, args) => {
+  console.log(args);
+  await init(args.credentials, false);
+  const r = await permitDetails(args);
+  console.log('sending results to browser', r);
+  event.sender.send('permit-details-results', r);
+});
+
+ipcMain.on('permits-details', async (event, args) => {
+  console.log('permits details', args);
+
+  if (args.refresh) {
+    for (let permit of args.permits) {
+      await init(permit.credentials, false);
+      await permitDetails({
+        ...permit,
+        sender: event.sender
+      });
+    }
+    return event.sender.send('permits-details-results');
+  }
+
+  await init(args.credentials, false);
+  args.sender = event.sender;
+  console.log('calling permits details');
+  const r = await permitsDetails(args);
+  console.log('sending results to browser', r);
+  event.sender.send('permits-details-results', r);
 });
 
 // Quit when all windows are closed.

@@ -8,7 +8,14 @@ module.exports = {
   isSingle: 0,
   isChild: 0,
   isSubmittable: 0,
-  keywordFields: ['lrNumber', 'startDate', 'endDate', 'permit', 'loadQty', 'unloadQty'],
+  keywordFields: [
+    'lrNumber',
+    'startDate',
+    'endDate',
+    'permit',
+    'loadQty',
+    'unloadQty'
+  ],
   //settings: 'PurchaseInvoiceSettings',
   //showTitle: false,
   fields: [
@@ -33,7 +40,7 @@ module.exports = {
     {
       fieldname: 'lrNumber',
       label: 'LR Number',
-      fieldtype: 'Data',
+      fieldtype: 'Data'
     },
     {
       fieldname: 'startDate',
@@ -50,7 +57,7 @@ module.exports = {
     {
       fieldname: 'tpNumber',
       label: 'TP No',
-      fieldtype: 'Data',
+      fieldtype: 'Data'
     },
     {
       fieldname: 'tpUrl',
@@ -87,5 +94,16 @@ module.exports = {
   ],
 
   actions: getActions('Permit'),
-  quickEditFields: ['permit', 'truck', 'lrNumber', 'startDate', 'endDate', 'loadQty', 'unloadQty', 'discount', 'advance', 'fuel']
+  quickEditFields: [
+    'permit',
+    'truck',
+    'lrNumber',
+    'startDate',
+    'endDate',
+    'loadQty',
+    'unloadQty',
+    'discount',
+    'advance',
+    'fuel'
+  ]
 };

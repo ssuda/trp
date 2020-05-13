@@ -1,4 +1,4 @@
-const { getActions } = require('../Transaction/Transaction');
+const frappe = require('frappejs');
 
 module.exports = {
   name: 'Permit',
@@ -68,6 +68,23 @@ module.exports = {
     }
   ],
 
-  actions: getActions('Permit'),
-  quickEditFields: ['name', 'startDate', 'endDate', 'account', 'quantity', 'customer']
+  actions: [
+    {
+      label: 'Fetch Permits',
+      condition: doc => doc,
+      action: async function(doc) {
+        await doc.loadLink('account');
+        const account = doc.getLink('account');
+        frappe.events.trigger('permits-details', { credentials: account });
+      }
+    }
+  ],
+  quickEditFields: [
+    'name',
+    'startDate',
+    'endDate',
+    'account',
+    'quantity',
+    'customer'
+  ]
 };
