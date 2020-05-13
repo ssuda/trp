@@ -1,4 +1,3 @@
-
 module.exports = {
   name: 'I3MSAccount',
   label: 'I3MS Account',

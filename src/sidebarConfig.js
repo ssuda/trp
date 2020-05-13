@@ -21,7 +21,7 @@ const config = {
       icon: getIcon('dashboard')
     },
     {
-      title: _('Trucks'),
+      title: _('Transport'),
       action() {
         router.push('/list/Truck');
       },
@@ -35,6 +35,11 @@ const config = {
           label: _('Permits'),
           route: '/list/Permit',
           doctype: 'Permit'
+        },
+        {
+          label: _('Trips'),
+          route: '/list/Trip',
+          doctype: 'Trip'
         }
       ],
       icon: getIcon('general', '24', '5')

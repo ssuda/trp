@@ -42,7 +42,7 @@ import BackLink from '@/components/BackLink';
 //import { openSettings } from '@/utils';
 import {
   handleErrorWithDialog,
-  getActionsForDocument,
+  getActionsForDocument
   //showMessageDialog
 } from '@/utils';
 

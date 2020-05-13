@@ -1,7 +1,7 @@
 //const { getActions } = require('../Transaction/Transaction');
 //const InvoiceTemplate = require('../SalesInvoice/InvoiceTemplate.vue').default;
 const frappe = require('frappejs');
-import { _ } from 'frappejs/utils';
+const { _ } = require('frappejs/utils');
 
 module.exports = {
   name: 'TruckList',

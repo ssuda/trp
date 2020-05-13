@@ -69,5 +69,5 @@ module.exports = {
   ],
 
   actions: getActions('Permit'),
-  quickEditFields: ['name', 'startDate', 'endDate', 'account', 'quantity']
+  quickEditFields: ['name', 'startDate', 'endDate', 'account', 'quantity', 'customer']
 };
