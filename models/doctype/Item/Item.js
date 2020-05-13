@@ -30,7 +30,7 @@ module.exports = {
       label: 'Unit Type',
       fieldtype: 'Select',
       default: 'Unit',
-      options: ['Unit', 'Kg', 'Gram', 'Hour', 'Day']
+      options: ['Unit', 'Kg', 'Gram', 'Hour', 'Day', 'Tonne', 'Nos']
     },
     {
       fieldname: 'itemType',

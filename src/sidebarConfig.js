@@ -21,6 +21,25 @@ const config = {
       icon: getIcon('dashboard')
     },
     {
+      title: _('Trucks'),
+      action() {
+        router.push('/list/Truck');
+      },
+      items: [
+        {
+          label: _('Trucks'),
+          route: '/list/Truck',
+          doctype: 'Truck'
+        },
+        {
+          label: _('Permits'),
+          route: '/list/Permit',
+          doctype: 'Permit'
+        }
+      ],
+      icon: getIcon('general', '24', '5')
+    },
+    {
       title: _('Sales'),
       icon: getIcon('sales'),
       action() {

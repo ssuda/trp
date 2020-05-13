@@ -10,6 +10,7 @@ import JournalEntry from '../../../models/doctype/JournalEntry/JournalEntryList'
 import AccountingLedgerEntry from '../../../models/doctype/AccountingLedgerEntry/AccountingLedgerEntryList';
 import Account from '../../../models/doctype/Account/AccountList';
 import GSTR3B from '../../../models/doctype/GSTR3B/GSTR3BList';
+import TruckList from '../../../models/doctype/Truck/TruckListList';
 
 export default {
   SalesInvoice,
@@ -23,5 +24,6 @@ export default {
   JournalEntry,
   Account,
   GSTR3B,
+  TruckList,
   AccountingLedgerEntry
 };

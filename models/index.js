@@ -24,6 +24,11 @@ module.exports = {
   PurchaseInvoiceItem: require('./doctype/PurchaseInvoiceItem/PurchaseInvoiceItem.js'),
   PurchaseInvoiceSettings: require('./doctype/PurchaseInvoiceSettings/PurchaseInvoiceSettings.js'),
 
+  Truck: require('./doctype/Truck/Truck.js'),
+  TruckList: require('./doctype/Truck/TruckList.js'),
+  Permit: require('./doctype/Permit/Permit.js'),
+  I3MSAccount: require('./doctype/I3MSAccount/I3MSAccount.js'),
+
   Tax: require('./doctype/Tax/Tax.js'),
   TaxDetail: require('./doctype/TaxDetail/TaxDetail.js'),
   TaxSummary: require('./doctype/TaxSummary/TaxSummary.js'),
