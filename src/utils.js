@@ -287,3 +287,17 @@ export function getActionsForDocument(doc) {
 export function openSettings(tab = 'General') {
   ipcRenderer.send('open-settings-window', tab);
 }
+
+export async function syncDoc(data) {
+  let doc;
+  if (await frappe.db.exists(data.doctype, data.name)) {
+    doc = await frappe.getDoc(data.doctype, data.name);
+    Object.assign(doc, data);
+    await doc.update();
+  } else {
+    doc = frappe.newDoc(data);
+    await doc.insert();
+  }
+
+  return doc;
+}

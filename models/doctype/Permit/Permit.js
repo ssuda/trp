@@ -1,4 +1,5 @@
 const frappe = require('frappejs');
+const { handleErrorWithDialog } =  require('@/utils');
 
 module.exports = {
   name: 'Permit',
@@ -33,13 +34,12 @@ module.exports = {
     {
       fieldname: 'taggingUrl',
       label: 'Tagging Link',
-      fieldtype: 'Date',
-      hidden: true
+      fieldtype: 'Data'
     },
     {
       fieldname: 'vehicleDetails',
       label: 'Vehicle Details Link',
-      fieldtype: 'Date',
+      fieldtype: 'Data',
       hidden: true
     },
     {
@@ -70,21 +70,32 @@ module.exports = {
 
   actions: [
     {
-      label: 'Fetch Permits',
-      condition: doc => doc,
-      action: async function(doc) {
+      label: 'Fetch From I3MS',
+      condition: doc => doc.isNew(),
+      action: async function (doc) {
+        if (!doc.account) {
+          handleErrorWithDialog(new Error('You must select `i3ms account`.', doc));
+          return;
+        }
         await doc.loadLink('account');
         const account = doc.getLink('account');
         frappe.events.trigger('permits-details', { credentials: account });
+      },
+    },
+    {
+      label: 'Refresh',
+      condition: doc => !doc.isNew(),
+      action: async function (doc) {
+        await doc.loadLink('account');
+        const account = doc.getLink('account');
+        frappe.events.trigger('permit-details', { credentials: account, ...doc });
       }
     }
   ],
   quickEditFields: [
     'name',
-    'startDate',
-    'endDate',
     'account',
-    'quantity',
+    'taggingUrl',
     'customer'
   ]
 };

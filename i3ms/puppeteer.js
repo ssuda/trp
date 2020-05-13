@@ -56,6 +56,7 @@ async function browsePage(href) {
       console.log('Retrying', numAttempts, href);
       await delay(5000);
       numAttempts++;
+      await page.reload();
       success = false;
     }
   }
@@ -182,6 +183,7 @@ async function createBrowser(headless) {
       });
       console.log('browser created');
       browser.on('disconnected', disconnectHandler);
+      browser.on('error', () => browser.reload());
     } catch (ex) {
       console.error(ex);
       browser = await puppeteer.connect({

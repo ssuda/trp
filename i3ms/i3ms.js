@@ -46,9 +46,8 @@ export async function permitsDetails(args) {
         end_date: endDate,
         tag_url: r['Tag New Vehicle'],
         vehicle_details: r['Vehicle Details'],
-        account_id: args.account_id,
-        company_id: args.company_id,
-        sender: args.sender
+        sender: args.sender,
+        is_new: true
       };
 
       if (!permit.tag_url) {
@@ -143,18 +142,16 @@ export async function successDownload(permitNo, credentials) {
 export async function permitDetails(options) {
   let {
     tag_url,
-    company_id,
     vehicle_details,
-    account_id,
     permit_number,
     source,
     start_date,
     end_date,
-    id: permit_id
+    is_new
   } = options;
   let permit = options;
 
-  if (!permit_id) {
+  if (is_new) {
     let quantity = 0;
 
     if (tag_url && !vehicle_details) {
@@ -205,20 +202,18 @@ export async function permitDetails(options) {
       tag_url,
       vehicle_details,
       end_date,
-      account_id,
-      company_id
     });
   }
 
   const v = await successDownload(permit_number);
-  permit.taggedSuccess = _.map(v, t => t.truck_number);
+  permit.tagged = _.map(v, t => t.truck_number);
 
-  console.log('tagged length', permit.taggedSuccess.length);
+  console.log('tagged length', permit.tagged.length);
   permit.trips = await permitReport(permit);
 
   if (options.sender) {
     console.log('sending results to browser', permit);
-    return options.sender.send('permit-details-results', permit);
+    return options.sender.send('permit-details-results', _.omit(permit, ['sender']));
   }
 
   return permit;

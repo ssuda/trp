@@ -97,6 +97,7 @@ export default {
       this.doctype = this.listConfig.doctype;
       await this.updateData();
     },
+
     openForm(doc) {
       if (this.listConfig.formRoute) {
         this.$router.push(this.listConfig.formRoute(doc.name));
