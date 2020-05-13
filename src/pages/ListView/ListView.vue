@@ -14,6 +14,12 @@
         <SearchBar class="ml-2" />
       </template>
     </PageHeader>
+    <!-- <div v-if="listConfig.actions" class="my-2 flex flex-row items-center">
+         <Button :key="action.label" v-for="action in listConfig.actions"
+            class="ml-8 text-white text-sm font-bold uppercase w-24" type="primary"  @click="selectItem(action)">
+           {{action.label}}
+        </Button>
+    </div> -->
     <div class="flex-1 flex h-full">
       <List
         ref="list"
@@ -52,6 +58,12 @@ export default {
     }
   },
   methods: {
+
+    selectItem(d) {
+      if (d.action) {
+        d.action();
+      }
+    },
     async makeNewDoc() {
       const doctype = this.listConfig.doctype;
       const doc = await frappe.getNewDoc(doctype);

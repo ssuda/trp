@@ -6,6 +6,7 @@ import FeatherIcon from 'frappejs/ui/components/FeatherIcon';
 import outsideClickDirective from 'frappejs/ui/plugins/outsideClickDirective';
 import models from '../models';
 import { ipcRenderer } from 'electron';
+import { syncDoc } from '@/utils';
 
 // vue imports
 import Vue from 'vue';
@@ -28,6 +29,44 @@ import router from './router';
 
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
+    ipcRenderer.removeAllListeners();
+    ipcRenderer.on('permit-details-results', async (e, permit) => {
+      console.log('Got result from i3ms', permit)
+      //save permit
+      const doc = await syncDoc({
+        doctype: 'Permit',
+        name: permit.permit_number,
+        account: args.credentials.name,
+        taggingUrl: permit.tag_url,
+        vehicleDetails: permit.vehicle_details,
+        startDate: permit.start_date,
+        endDate: permit.end_date,
+        quantity: permit.quantity,
+        tagged: JSON.stringify({
+          success: permit.tagged
+        })
+      })
+
+      // insertOrUpdate Trucks
+      for (let truck of permit.trips.map(t => t.truck_number)) {
+        await frappe.syncDoc({
+          doctype: 'Truck',
+          name: truck
+        })
+      }
+
+      for (let trip of permit.trips) {
+        await frappe.syncDoc({
+          doctype: 'Trip',
+          permit: doc.name,
+          truck: trip.truck_number,
+          tpNumber: trip.tp_number,
+          tpUrl: trip.tp_url,
+          loadQty: trip.load_carrying,
+          startDate: trip.tp_date
+        })
+      }
+    })
   });
 
   frappe.events.on('check-for-updates', () => {
