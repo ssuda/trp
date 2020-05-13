@@ -26,6 +26,10 @@ import router from './router';
     ipcRenderer.send('reload-main-window');
   });
 
+  frappe.events.on('permits-details', args => {
+    ipcRenderer.send('permits-details', args);
+  });
+
   frappe.events.on('check-for-updates', () => {
     let { autoUpdate } = frappe.AccountingSettings;
     if (autoUpdate == null || autoUpdate === 1) {
