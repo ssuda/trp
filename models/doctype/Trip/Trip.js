@@ -17,8 +17,13 @@ module.exports = {
     'unloadQty'
   ],
   //settings: 'PurchaseInvoiceSettings',
-  //showTitle: false,
+  showTitle: false,
   fields: [
+    {
+      label: 'Name',
+      fieldname: 'name',
+      fieldtype: 'Data'
+    },
     {
       label: 'Permit',
       fieldname: 'permit',

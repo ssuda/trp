@@ -30,6 +30,7 @@ module.exports = {
   I3MSAccount: require('./doctype/I3MSAccount/I3MSAccount.js'),
   Trip: require('./doctype/Trip/Trip.js'),
   FuelSlip: require('./doctype/Trip/FuelSlip.js'),
+  PermitAction: require('./doctype/Permit/PermitAction.js'),
 
   Tax: require('./doctype/Tax/Tax.js'),
   TaxDetail: require('./doctype/TaxDetail/TaxDetail.js'),

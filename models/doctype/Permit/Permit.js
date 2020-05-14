@@ -1,5 +1,5 @@
 const frappe = require('frappejs');
-const { handleErrorWithDialog } =  require('@/utils');
+const { handleErrorWithDialog } = require('@/utils');
 
 module.exports = {
   name: 'Permit',
@@ -11,7 +11,7 @@ module.exports = {
   isSubmittable: 0,
   keywordFields: ['name', 'endDate', 'customer', 'quantity'],
   //settings: 'PurchaseInvoiceSettings',
-  //showTitle: false,
+  showTitle: false,
   fields: [
     {
       label: 'Permit Number',
@@ -72,30 +72,30 @@ module.exports = {
     {
       label: 'Fetch From I3MS',
       condition: doc => doc.isNew(),
-      action: async function (doc) {
+      action: async function(doc) {
         if (!doc.account) {
-          handleErrorWithDialog(new Error('You must select `i3ms account`.', doc));
+          handleErrorWithDialog(
+            new Error('You must select `i3ms account`.', doc)
+          );
           return;
         }
         await doc.loadLink('account');
         const account = doc.getLink('account');
         frappe.events.trigger('permits-details', { credentials: account });
-      },
+      }
     },
     {
       label: 'Refresh',
       condition: doc => !doc.isNew(),
-      action: async function (doc) {
+      action: async function(doc) {
         await doc.loadLink('account');
         const account = doc.getLink('account');
-        frappe.events.trigger('permit-details', { credentials: account, ...doc });
+        frappe.events.trigger('permit-details', {
+          credentials: account,
+          ...doc
+        });
       }
     }
   ],
-  quickEditFields: [
-    'name',
-    'account',
-    'taggingUrl',
-    'customer'
-  ]
+  quickEditFields: ['account', 'name', 'taggingUrl', 'customer']
 };
