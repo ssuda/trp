@@ -201,26 +201,32 @@ export async function permitDetails(options) {
       start_date,
       tag_url,
       vehicle_details,
-      end_date,
+      end_date
     });
   }
 
   const v = await successDownload(permit_number);
-  permit.tagged = _.map(v, t => t.truck_number);
+  permit.tagged = _.map(v, t => t.truck_number).reduce((p, t) => {
+    p[t] = '';
+    return p;
+  }, {});
 
   console.log('tagged length', permit.tagged.length);
   permit.trips = await permitReport(permit);
 
   if (options.sender) {
     console.log('sending results to browser', permit);
-    return options.sender.send('permit-details-results', _.omit(permit, ['sender']));
+    return options.sender.send(
+      'permit-details-results',
+      _.omit(permit, ['sender'])
+    );
   }
 
   return permit;
 }
 
 export async function tag(vehicles, options, sse) {
-  const { tag_url, id: permit_id } = options;
+  const { taggingUrl } = options;
   let sno = 1;
   let retries = [];
   const failed = [];
@@ -233,16 +239,16 @@ export async function tag(vehicles, options, sse) {
     }
     sno++;
 
-    console.log(sno, 'Tagging vehicle', truck.truck_number);
+    console.log(sno, 'Tagging vehicle', truck);
 
-    let reason = await i3ms.tagVehicle(tag_url, truck.truck_number);
+    let reason = await i3ms.tagVehicle(taggingUrl, truck);
 
     if (reason && /is already tagged/i.test(reason)) {
       reason = '';
     }
 
     if (reason) {
-      failed[truck.truck_number] = reason;
+      failed[truck] = reason;
       if (sse) {
         sse.send('failed', Object.keys(failed).length);
       }
@@ -250,13 +256,11 @@ export async function tag(vehicles, options, sse) {
 
     if (reason || reason === '') {
       sse.send('tag-truck-result', {
-        truck_number: truck.truck_number,
-        reason,
-        success: !reason
+        [truck]: reason
       });
     } else {
       //retry tagging
-      retries.push(truck.truck_number);
+      retries.push(truck);
     }
 
     return delay(200);
@@ -268,17 +272,11 @@ export async function tag(vehicles, options, sse) {
 }
 
 export async function tagVehicles(options, sse) {
-  const {
-    tag_url,
-    credentials,
-    id: permit_id,
-    trucks,
-    permit_number
-  } = options;
+  const { taggingUrl, credentials, trucks } = options;
   try {
     if (trucks.length) {
       await i3ms.init(credentials);
-      await i3ms.tagInit(tag_url);
+      await i3ms.tagInit(taggingUrl);
 
       let retries = await tag(trucks, options, sse);
 
@@ -291,24 +289,6 @@ export async function tagVehicles(options, sse) {
           retries = await tag(retries, options, sse);
         }
       }
-
-      if (options.smsMessage) {
-        //send sms
-        const vehicles = _.filter(
-          trucks,
-          t => !retries.includes(t.truck_number)
-        );
-        const phoneNumbers = _.filter(
-          _.uniq(_.map(vehicles, t => t.owner.phone_number)),
-          t => t
-        );
-
-        // if (phoneNumbers.length) {
-        //   const response = await sendBulkSms(options.smsMessage, phoneNumbers);
-        //   console.log(response);
-        // }
-      }
-
       sse.send('tag-result', retries);
     }
   } catch (ex) {

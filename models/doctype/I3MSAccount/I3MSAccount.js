@@ -11,7 +11,8 @@ module.exports = {
       fieldname: 'name',
       label: 'Account Name',
       fieldtype: 'Data',
-      required: 1
+      required: 1,
+      placeholder: 'Account Name'
     },
     {
       fieldname: 'username',

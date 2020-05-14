@@ -1,5 +1,3 @@
-const { getActions } = require('../Transaction/Transaction');
-
 module.exports = {
   name: 'Truck',
   doctype: 'DocType',
@@ -28,5 +26,5 @@ module.exports = {
     }
   ],
 
-  actions: getActions('Truck')
+  quickEditFields: ['name', 'supplier']
 };

@@ -9,15 +9,17 @@ module.exports = {
   isChild: 0,
   isSubmittable: 0,
   keywordFields: [
+    'name',
     'lrNumber',
-    'startDate',
-    'endDate',
     'permit',
+    'truck',
     'loadQty',
-    'unloadQty'
+    'unloadQty',
+    'startDate',
+    'endDate'
   ],
   //settings: 'PurchaseInvoiceSettings',
-  showTitle: false,
+  showTitle: true,
   fields: [
     {
       label: 'Name',
@@ -40,7 +42,8 @@ module.exports = {
       label: 'Truck',
       fieldname: 'truck',
       fieldtype: 'Link',
-      target: 'Truck'
+      target: 'Truck',
+      readOnly: doc => doc.permit
     },
     {
       fieldname: 'lrNumber',
@@ -51,7 +54,8 @@ module.exports = {
       fieldname: 'startDate',
       label: 'Start Date',
       fieldtype: 'Date',
-      default: new Date().toISOString().slice(0, 10)
+      default: new Date().toISOString().slice(0, 10),
+      readOnly: doc => doc.permit
     },
     {
       fieldname: 'endDate',
@@ -62,22 +66,24 @@ module.exports = {
     {
       fieldname: 'tpNumber',
       label: 'TP No',
-      fieldtype: 'Data'
+      fieldtype: 'Data',
+      readOnly: true
     },
     {
       fieldname: 'tpUrl',
       label: 'TP Link',
       fieldtype: 'Data',
-      hidden: true
+      hidden: true,
+      readOnly: true
     },
     {
       fieldname: 'loadQty',
-      label: 'Loaded Quantity',
+      label: 'Loaded',
       fieldtype: 'Float'
     },
     {
       fieldname: 'unloadQty',
-      label: 'Unloaded Quantity',
+      label: 'Unloaded',
       fieldtype: 'Float'
     },
     {

@@ -10,7 +10,6 @@ import JournalEntry from '../../../models/doctype/JournalEntry/JournalEntryList'
 import AccountingLedgerEntry from '../../../models/doctype/AccountingLedgerEntry/AccountingLedgerEntryList';
 import Account from '../../../models/doctype/Account/AccountList';
 import GSTR3B from '../../../models/doctype/GSTR3B/GSTR3BList';
-import Truck from '../../../models/doctype/Truck/TruckListList';
 import Permit from '../../../models/doctype/Permit/PermitList';
 
 export default {
@@ -25,7 +24,6 @@ export default {
   JournalEntry,
   Account,
   GSTR3B,
-  Truck,
   Permit,
   AccountingLedgerEntry
 };

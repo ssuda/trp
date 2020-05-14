@@ -13,7 +13,6 @@ import GetStarted from '@/pages/GetStarted';
 import ChartOfAccounts from '@/pages/ChartOfAccounts';
 import InvoiceForm from '@/pages/InvoiceForm';
 import JournalEntryForm from '@/pages/JournalEntryForm';
-import TruckListForm from '@/pages/TruckListForm';
 import PermitActionForm from '@/pages/PermitActionForm';
 
 Vue.use(Router);
@@ -40,25 +39,6 @@ const routes = [
         route.params.doctype = 'JournalEntry';
         return {
           doctype: 'JournalEntry',
-          name: route.params.name
-        };
-      },
-      edit: route => route.query
-    }
-  },
-  {
-    path: '/edit/TruckList/:name',
-    name: 'TruckListForm',
-    components: {
-      default: TruckListForm,
-      edit: QuickEditForm
-    },
-    props: {
-      default: route => {
-        // for sidebar item active state
-        route.params.doctype = 'TruckList';
-        return {
-          doctype: 'TruckList',
           name: route.params.name
         };
       },
