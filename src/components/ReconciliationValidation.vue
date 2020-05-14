@@ -35,6 +35,7 @@
   </div>
 </template>
 <script>
+const frappe = require('frappejs');
 const luxon = require('luxon');
 
 export default {

@@ -24,7 +24,7 @@ module.exports = {
     {
       fieldname: 'numTrucks',
       label: 'No Of Trucks',
-      fieldtype: 'Int',
+      fieldtype: 'Data',
       readOnly: true,
       formula: doc =>
         doc.trucks ? doc.trucks.split('\n').filter(Boolean).length : ''

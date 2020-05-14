@@ -115,7 +115,7 @@ export default {
         fields: ['*'],
         filters,
         orderBy: 'creation',
-        limit: this.listConfig.limit || 100
+        limit: this.listConfig.limit
       });
     },
     getFilters() {
