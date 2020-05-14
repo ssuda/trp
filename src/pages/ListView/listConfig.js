@@ -11,6 +11,7 @@ import AccountingLedgerEntry from '../../../models/doctype/AccountingLedgerEntry
 import Account from '../../../models/doctype/Account/AccountList';
 import GSTR3B from '../../../models/doctype/GSTR3B/GSTR3BList';
 import Permit from '../../../models/doctype/Permit/PermitList';
+import Trip from '../../../models/doctype/Trip/TripList';
 
 export default {
   SalesInvoice,
@@ -25,5 +26,6 @@ export default {
   Account,
   GSTR3B,
   Permit,
+  Trip,
   AccountingLedgerEntry
 };

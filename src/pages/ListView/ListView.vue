@@ -11,7 +11,7 @@
         <Button class="ml-2" :icon="true" type="primary" @click="makeNewDoc">
           <feather-icon name="plus" class="w-4 h-4 text-white" />
         </Button>
-        <SearchBar class="ml-2" />
+        <SearchBar @input="search" class="ml-2" v-model="searchText"/>
       </template>
     </PageHeader>
     <div v-if="listConfig.actions" class="my-2 flex flex-row items-center">
@@ -57,8 +57,15 @@ export default {
     //Icon,
     FilterDropdown
   },
+  data() {
+    return {
+      searchText: '',
+      currentFilters: null
+    }
+  },
   activated() {
     if (typeof this.filters === 'object') {
+      this.currentFilters = this.filters
       this.$refs.filterDropdown.setFilter(this.filters);
     }
   },
@@ -85,6 +92,12 @@ export default {
       });
     },
     applyFilter(filters) {
+      this.currentFilters = filters;
+      this.$refs.list.updateData(filters);
+    },
+    search() {
+      const filters = this.currentFilters || {}
+      filters.keywords = ['like', `%${this.searchText}%`];
       this.$refs.list.updateData(filters);
     },
     getFormPath(name) {

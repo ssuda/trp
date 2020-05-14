@@ -41,6 +41,8 @@ import frappe from 'frappejs';
 import Dropdown from '@/components/Dropdown';
 
 export default {
+  props: ['value'],
+
   data() {
     return {
       inputValue: '',
@@ -53,10 +55,18 @@ export default {
     Dropdown
   },
   mounted() {
+    if(this.value) {
+      this.inputValue = this.value
+    }
     this.makeSearchList();
   },
   methods: {
     async search() {
+
+      if (typeof(this.value) !== 'undefined') {
+        return this.$emit('input', this.inputValue);
+      }
+
       this.$toggleDropdown && this.$toggleDropdown(true);
 
       this.suggestions = this.searchList.filter(d => {
@@ -70,6 +80,7 @@ export default {
     },
     clearInput() {
       this.inputValue = '';
+      this.$emit('input', '');
       this.$emit('change', null);
     },
     makeSearchList() {
