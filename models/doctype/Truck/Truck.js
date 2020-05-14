@@ -7,7 +7,7 @@ module.exports = {
   //documentClass: require('./TruckDocument'),
   //printTemplate: InvoiceTemplate,
   isSingle: 0,
-  isChild: 1,
+  isChild: 0,
   keywordFields: ['name', 'supplier'],
   tableFields: ['name', 'supplier'],
   showTitle: true,

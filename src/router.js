@@ -14,6 +14,7 @@ import ChartOfAccounts from '@/pages/ChartOfAccounts';
 import InvoiceForm from '@/pages/InvoiceForm';
 import JournalEntryForm from '@/pages/JournalEntryForm';
 import TruckListForm from '@/pages/TruckListForm';
+import PermitActionForm from '@/pages/PermitActionForm';
 
 Vue.use(Router);
 
@@ -63,6 +64,12 @@ const routes = [
       },
       edit: route => route.query
     }
+  },
+  {
+    path: '/PermitAction',
+    name: 'PermitAction',
+    component: PermitActionForm,
+    props: true
   },
   {
     path: '/edit/:doctype/:name',

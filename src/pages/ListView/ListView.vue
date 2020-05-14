@@ -14,12 +14,17 @@
         <SearchBar class="ml-2" />
       </template>
     </PageHeader>
-    <!-- <div v-if="listConfig.actions" class="my-2 flex flex-row items-center">
-         <Button :key="action.label" v-for="action in listConfig.actions"
-            class="ml-8 text-white text-sm font-bold uppercase w-24" type="primary"  @click="selectItem(action)">
-           {{action.label}}
-        </Button>
-    </div> -->
+    <div v-if="listConfig.actions" class="my-2 flex flex-row items-center">
+      <Button
+        :key="action.label"
+        v-for="action in listConfig.actions"
+        class="ml-8 text-white text-sm font-medium uppercase w-24"
+        type="primary"
+        @click="selectItem(action)"
+      >
+        {{ action.label }}
+      </Button>
+    </div>
     <div class="flex-1 flex h-full">
       <List
         ref="list"
@@ -32,13 +37,13 @@
 </template>
 <script>
 import frappe from 'frappejs';
-import Observable from 'frappejs/utils/observable';
+//import Observable from 'frappejs/utils/observable';
 import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import SearchBar from '@/components/SearchBar';
 import List from './List';
 import listConfigs from './listConfig';
-import Icon from '@/components/Icon';
+//import Icon from '@/components/Icon';
 import FilterDropdown from '@/components/FilterDropdown';
 
 export default {
@@ -49,7 +54,7 @@ export default {
     List,
     Button,
     SearchBar,
-    Icon,
+    //Icon,
     FilterDropdown
   },
   activated() {
@@ -58,10 +63,9 @@ export default {
     }
   },
   methods: {
-
     selectItem(d) {
       if (d.action) {
-        d.action();
+        d.action(this);
       }
     },
     async makeNewDoc() {

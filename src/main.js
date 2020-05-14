@@ -6,7 +6,7 @@ import FeatherIcon from 'frappejs/ui/components/FeatherIcon';
 import outsideClickDirective from 'frappejs/ui/plugins/outsideClickDirective';
 import models from '../models';
 import { ipcRenderer } from 'electron';
-import { syncDoc } from '@/utils';
+//import { syncDoc } from '@/utils';
 
 // vue imports
 import Vue from 'vue';
@@ -30,10 +30,14 @@ import router from './router';
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
     ipcRenderer.removeAllListeners();
+    ipcRenderer.on('permits-details-results', e => {
+      frappe.events.trigger('permits-details-results', e);
+    });
+
     ipcRenderer.on('permit-details-results', async (e, permit) => {
-      console.log('Got result from i3ms', permit)
+      console.log('Got result from i3ms', permit);
       //save permit
-      const doc = await syncDoc({
+      await frappe.syncDoc({
         doctype: 'Permit',
         name: permit.permit_number,
         account: args.credentials.name,
@@ -45,28 +49,41 @@ import router from './router';
         tagged: JSON.stringify({
           success: permit.tagged
         })
-      })
+      });
 
       // insertOrUpdate Trucks
       for (let truck of permit.trips.map(t => t.truck_number)) {
+        console.log('inserting truck', truck);
         await frappe.syncDoc({
           doctype: 'Truck',
           name: truck
-        })
+        });
       }
 
       for (let trip of permit.trips) {
-        await frappe.syncDoc({
+        console.log('inserting trip', {
           doctype: 'Trip',
-          permit: doc.name,
+          name: trip.tp_number,
+          permit: permit.permit_number,
           truck: trip.truck_number,
           tpNumber: trip.tp_number,
           tpUrl: trip.tp_url,
           loadQty: trip.load_carrying,
           startDate: trip.tp_date
-        })
+        });
+
+        await frappe.syncDoc({
+          doctype: 'Trip',
+          name: trip.tp_number,
+          permit: permit.permit_number,
+          truck: trip.truck_number,
+          tpNumber: trip.tp_number,
+          tpUrl: trip.tp_url,
+          loadQty: trip.load_carrying,
+          startDate: trip.tp_date
+        });
       }
-    })
+    });
   });
 
   frappe.events.on('check-for-updates', () => {

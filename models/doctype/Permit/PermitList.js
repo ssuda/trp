@@ -1,19 +1,30 @@
 import { _ } from 'frappejs/utils';
+import frappe from 'frappejs';
 
 export default {
   doctype: 'Permit',
   title: _('Permits'),
-  columns: [
-    'name', 'customer', 'endDate', 'quantity'
-  ],
+  columns: ['name', 'customer', 'endDate', 'quantity'],
   actions: [
     {
-        label: 'Fetch',
-        action: async function(doc) {
-            await doc.loadLink('account');
-            const account = doc.getLink('account');
-            frappe.events.trigger('permits-details', { credentials: account });
+      label: 'Fetch',
+      action: async function(listView) {
+        try {
+          const doc = await frappe.getNewDoc('PermitAction');
+          await doc.set({
+            name: _('Fetch Permits From I3MS'),
+            action: 'fetchNew'
+          });
+          listView.$router.push({
+            name: 'PermitAction',
+            params: {
+              doc: doc
+            }
+          });
+        } catch (ex) {
+          console.error(ex);
         }
       }
-  ],
-}
+    }
+  ]
+};
