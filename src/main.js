@@ -46,9 +46,7 @@ import router from './router';
         startDate: permit.start_date,
         endDate: permit.end_date,
         quantity: permit.quantity,
-        tagged: JSON.stringify({
-          success: permit.tagged
-        })
+        tagged: JSON.stringify(permit.tagged)
       });
 
       // insertOrUpdate Trucks
@@ -83,6 +81,39 @@ import router from './router';
           startDate: trip.tp_date
         });
       }
+    });
+  });
+
+  frappe.events.on('tag-vehicles', permit => {
+    ipcRenderer.send('tag-vehicles', permit);
+    ipcRenderer.removeAllListeners('tag-results');
+
+    ipcRenderer.on('tag-results', function() {
+      // End of the tagging
+    });
+
+    ipcRenderer.removeAllListeners('tag-truck-result');
+    ipcRenderer.on('tag-truck-result', async function(event, response) {
+      console.log('received failed from main process', response);
+
+      let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
+      tagged = JSON.stringify(Object.assign(tagged, response));
+      console.log('finally tagged', tagged);
+
+      await frappe.syncDoc({
+        doctype: 'Permit',
+        tagged
+      });
+    });
+
+    ipcRenderer.removeAllListeners('failed');
+    ipcRenderer.on('failed', (event, results) => {
+      console.log('received failed from main process', results);
+    });
+
+    ipcRenderer.removeAllListeners('total');
+    ipcRenderer.on('total', (event, results) => {
+      console.log('received total from main process', results);
     });
   });
 

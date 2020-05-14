@@ -1,5 +1,6 @@
 const frappe = require('frappejs');
-const { handleErrorWithDialog } = require('@/utils');
+const router = require('@/router').default;
+const { _ } = require('frappejs/utils');
 
 module.exports = {
   name: 'Permit',
@@ -70,30 +71,53 @@ module.exports = {
 
   actions: [
     {
-      label: 'Fetch From I3MS',
-      condition: doc => doc.isNew(),
-      action: async function(doc) {
-        if (!doc.account) {
-          handleErrorWithDialog(
-            new Error('You must select `i3ms account`.', doc)
-          );
-          return;
+      label: 'Refresh',
+      condition: doc => !doc.isNew(),
+      action: async function(permit) {
+        try {
+          const doc = await frappe.getNewDoc('PermitAction');
+          await doc.set({
+            name: _('Refresh Permit'),
+            action: 'refresh',
+            permit
+          });
+          router.push({
+            name: 'PermitAction',
+            params: {
+              doc: doc
+            }
+          });
+        } catch (ex) {
+          console.error(ex);
         }
-        await doc.loadLink('account');
-        const account = doc.getLink('account');
-        frappe.events.trigger('permits-details', { credentials: account });
+        // await doc.loadLink('account');
+        // const account = doc.getLink('account');
+        // frappe.events.trigger('permit-details', {
+        //   credentials: account,
+        //   ...doc
+        // });
       }
     },
     {
-      label: 'Refresh',
+      label: 'Tagging',
       condition: doc => !doc.isNew(),
-      action: async function(doc) {
-        await doc.loadLink('account');
-        const account = doc.getLink('account');
-        frappe.events.trigger('permit-details', {
-          credentials: account,
-          ...doc
-        });
+      action: async function(permit) {
+        try {
+          const doc = await frappe.getNewDoc('PermitAction');
+          await doc.set({
+            name: _('Tagging'),
+            action: 'tagging',
+            permit
+          });
+          router.push({
+            name: 'PermitAction',
+            params: {
+              doc: doc
+            }
+          });
+        } catch (ex) {
+          console.error(ex);
+        }
       }
     }
   ],

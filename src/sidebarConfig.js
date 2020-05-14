@@ -23,23 +23,33 @@ const config = {
     {
       title: _('Transport'),
       action() {
-        router.push('/list/Truck');
+        router.push('/list/Permit');
       },
       items: [
-        {
-          label: _('Trucks'),
-          route: '/list/Truck',
-          doctype: 'Truck'
-        },
         {
           label: _('Permits'),
           route: '/list/Permit',
           doctype: 'Permit'
         },
         {
+          label: _('Trucks'),
+          route: '/list/Truck',
+          doctype: 'Truck'
+        },
+        {
+          label: _('Truck Lists'),
+          route: '/list/TruckList',
+          doctype: 'TruckList'
+        },
+        {
           label: _('Trips'),
           route: '/list/Trip',
           doctype: 'Trip'
+        },
+        {
+          label: _('I3MS Accounts'),
+          route: '/list/I3MSAccount',
+          doctype: 'I3MSAccount'
         }
       ],
       icon: getIcon('general', '24', '5')

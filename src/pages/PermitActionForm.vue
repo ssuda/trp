@@ -13,7 +13,7 @@
             <div class="flex text-sm text-gray-900 border-b pb-4">
               <div class="w-1/3">
                 <div class="text-xl text-gray-700 font-semibold">
-                  {{ doc.permit }}
+                  {{ doc.permit.name }}
                 </div>
               </div>
             </div>
@@ -67,7 +67,7 @@ import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import FormControl from '@/components/Controls/FormControl';
 import BackLink from '@/components/BackLink';
-//import { openSettings } from '@/utils';
+import _ from 'lodash';
 import { handleErrorWithDialog, showMessageDialog } from '@/utils';
 
 export default {
@@ -116,30 +116,83 @@ export default {
         return;
       }
       this.loading = true;
-      const dt = DateTime.local()
-        .minus({ months: 2 })
-        .toISO();
-      const credentials = await frappe.getDoc('I3MSAccount', this.doc.account);
-      let permits = await frappe.db.getAll({
-        doctype: 'Permit',
-        fields: ['*'],
-        filters: { account: this.doc.account, startDate: ['>=', dt] }
-      });
-      permits = permits.map(permit => ({
-        tag_url: permit.taggingUrl,
-        vehicle_details: permit.vehicleDetails,
-        permit_number: permit.name,
-        start_date: permit.startDate,
-        end_date: permit.endDate
-      }));
-      frappe.events.trigger('permits-details', {
-        credentials,
-        permits: permits
-      });
-      frappe.events.once('permits-details-results', () => {
-        this.loading = false;
-        this.$router.back();
-      });
+
+      if (this.doc.action === 'fetchNew') {
+        const dt = DateTime.local()
+          .minus({ months: 2 })
+          .toISO();
+        const credentials = await frappe.getDoc(
+          'I3MSAccount',
+          this.doc.account
+        );
+        let permits = await frappe.db.getAll({
+          doctype: 'Permit',
+          fields: ['*'],
+          filters: { account: this.doc.account, startDate: ['>=', dt] }
+        });
+        permits = permits.map(permit => ({
+          tag_url: permit.taggingUrl,
+          vehicle_details: permit.vehicleDetails,
+          permit_number: permit.name,
+          start_date: permit.startDate,
+          end_date: permit.endDate
+        }));
+        frappe.events.trigger('permits-details', {
+          credentials,
+          permits: permits
+        });
+        frappe.events.once('permits-details-results', () => {
+          this.loading = false;
+          this.$router.back();
+        });
+      } else if (this.doc.action === 'tagging') {
+        const credentials = await frappe.getDoc(
+          'I3MSAccount',
+          this.doc.account
+        );
+        const truckList = await frappe.getDoc('TruckList', this.doc.truckList);
+        console.log(this.doc.credentials, truckList);
+        let trucks = truckList.trucks.split('\n').filter(Boolean);
+
+        let tagged = this.doc.tagged ? JSON.parse(this.doc.tagged) : {};
+        tagged = Object.keys(tagged)
+          .map(t => !tagged[t] && t)
+          .filter(Boolean);
+        trucks = _.difference(trucks, tagged);
+
+        console.log('Trucks remaining', trucks);
+
+        if (trucks.length) {
+          this.loading = true;
+          frappe.events.trigger('tag-vehicles', {
+            credentials,
+            ...this.doc.permit,
+            trucks
+          });
+        } else {
+          showMessageDialog({ message: this._('All Trucks Already Tagged') });
+          return;
+        }
+      } else if (this.doc.action === 'refresh') {
+        //call permit refresh
+        const permit = this.doc.permit;
+        const credentials = await frappe.getDoc(
+          'I3MSAccount',
+          this.doc.account
+        );
+        frappe.events.trigger('permit-details', {
+          credentials,
+          tag_url: permit.taggingUrl,
+          vehicle_details: permit.vehicleDetails,
+          permit_number: permit.name,
+          start_date: permit.startDate,
+          end_date: permit.endDate
+        });
+        frappe.events.once('permits-details-results', () => {
+          this.loading = false;
+          this.$router.back();
+        });
+      }
     },
 
     handleError(e) {

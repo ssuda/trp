@@ -114,11 +114,14 @@ export default {
         doctype: this.doctype,
         fields: ['*'],
         filters,
-        orderBy: 'creation'
+        orderBy: 'creation',
+        limit: this.listConfig.limit || 100
       });
     },
     getFilters() {
-      let filters = {};
+      let filters = {
+        //keywords: ['like', '%L420000908%']
+      };
       Object.assign(filters, this.listConfig.filters || {});
       Object.assign(filters, this.filters);
       return filters;
