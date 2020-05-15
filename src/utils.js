@@ -15,7 +15,7 @@ export function createNewDatabase() {
       remote.getCurrentWindow(),
       {
         title: _('Select folder'),
-        defaultPath: 'frappe-books.db'
+        defaultPath: 'spinbi-trp.db'
       },
       filePath => {
         if (filePath) {

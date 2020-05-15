@@ -1,4 +1,4 @@
-productName: Frappe Books
+productName: SpinBi TRP
 appId: io.frappe.books
 afterSign: build/notarize.js
 snap:

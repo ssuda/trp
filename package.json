@@ -1,10 +1,10 @@
 {
-  "name": "frappe-books",
-  "description": "Simple book-keeping app for everyone",
-  "version": "0.0.3-beta.11",
+  "name": "spinbi-trp",
+  "description": "Transporter ERP app",
+  "version": "0.0.1",
   "author": {
-    "name": "Frappe Technologies Pvt. Ltd.",
-    "email": "hello@frappe.io"
+    "name": "SpinBi Technologies Pvt. Ltd.",
+    "email": "samba@spinbi.com"
   },
   "scripts": {
     "serve": "vue-cli-service serve",

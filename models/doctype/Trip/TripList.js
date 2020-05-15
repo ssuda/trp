@@ -13,5 +13,6 @@ export default {
     'startDate',
     'endDate'
   ],
-  limit: 100
+  limit: 100,
+  upload: true
 };
