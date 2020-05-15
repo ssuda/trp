@@ -6,7 +6,7 @@ module.exports = {
   name: 'Permit',
   doctype: 'DocType',
   label: 'Permit',
-  //documentClass: require('./PurchaseInvoiceDocument'),
+  documentClass: require('./PermitDocument'),
   isSingle: 0,
   isChild: 0,
   isSubmittable: 0,
@@ -65,7 +65,30 @@ module.exports = {
     {
       fieldname: 'tagged',
       label: 'Tagged',
-      fieldtype: 'Text'
+      fieldtype: 'Text',
+      hidden: true
+    },
+    {
+      fieldname: 'numTagged',
+      label: 'Tagged',
+      fieldtype: 'Float',
+      formulaDependsOn: ['tagged'],
+      formula: doc => doc.getNumberOfTagged(),
+      readOnly: true
+    },
+    {
+      fieldname: 'numTrips',
+      label: 'Trips',
+      fieldtype: 'Float',
+      formula: doc => doc.getNumberOfTrips(),
+      readOnly: true
+    },
+    {
+      fieldname: 'delivered',
+      label: 'Delivered',
+      fieldtype: 'Float',
+      formula: doc => doc.getQuantityDelivered(),
+      readOnly: true
     }
   ],
 

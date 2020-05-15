@@ -11,7 +11,7 @@
         <Button class="ml-2" :icon="true" type="primary" @click="makeNewDoc">
           <feather-icon name="plus" class="w-4 h-4 text-white" />
         </Button>
-        <SearchBar @input="search" class="ml-2" v-model="searchText"/>
+        <SearchBar @input="search" class="ml-2" v-model="searchText" />
       </template>
     </PageHeader>
     <div v-if="listConfig.actions" class="my-2 flex flex-row items-center">
@@ -24,7 +24,14 @@
       >
         {{ action.label }}
       </Button>
+      <input type="hidden">
+
+      <Button class="ml-4 text-white bg-red-800 text-sm  w-24 h-8 py-3 px-4 border border-red-100 rounded font-bold flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4"><path class="heroicon-ui" d="M13 5.41V17a1 1 0 0 1-2 0V5.41l-3.3 3.3a1 1 0 0 1-1.4-1.42l5-5a1 1 0 0 1 1.4 0l5 5a1 1 0 1 1-1.4 1.42L13 5.4zM3 17a1 1 0 0 1 2 0v3h14v-3a1 1 0 0 1 2 0v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3z"/></svg>
+          Upload
+      </Button>
     </div>
+
     <div class="flex-1 flex h-full">
       <List
         ref="list"
@@ -61,11 +68,11 @@ export default {
     return {
       searchText: '',
       currentFilters: null
-    }
+    };
   },
   activated() {
     if (typeof this.filters === 'object') {
-      this.currentFilters = this.filters
+      this.currentFilters = this.filters;
       this.$refs.filterDropdown.setFilter(this.filters);
     }
   },
@@ -96,7 +103,7 @@ export default {
       this.$refs.list.updateData(filters);
     },
     search() {
-      const filters = this.currentFilters || {}
+      const filters = this.currentFilters || {};
       filters.keywords = ['like', `%${this.searchText}%`];
       this.$refs.list.updateData(filters);
     },

@@ -7,21 +7,35 @@
           <thead style="font-size: 13px">
             <tr>
               <th scope="col">
-                <input type="checkbox" checked="true" ref="all" @change="allSelected" />
+                <input
+                  type="checkbox"
+                  checked="true"
+                  ref="all"
+                  @change="allSelected"
+                />
               </th>
               <th
                 scope="col"
                 v-for="(fieldname, index) in Object.keys(entries[0])"
                 :key="index"
-              >{{ fieldname }}</th>
+              >
+                {{ fieldname }}
+              </th>
             </tr>
           </thead>
           <tbody style="font-size: 13px">
             <tr v-for="(entry, index) in entries" :key="index">
               <th scope="row">
-                <input type="checkbox" checked="true" :ref="'cb-'+index" @change="rowSelected" />
+                <input
+                  type="checkbox"
+                  checked="true"
+                  :ref="'cb-' + index"
+                  @change="rowSelected"
+                />
               </th>
-              <td v-for="(fieldname, idx) in Object.keys(entry)" :key="idx">{{ entry[fieldname] }}</td>
+              <td v-for="(fieldname, idx) in Object.keys(entry)" :key="idx">
+                {{ entry[fieldname] }}
+              </td>
             </tr>
           </tbody>
         </table>

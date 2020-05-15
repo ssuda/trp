@@ -4,7 +4,7 @@ import frappe from 'frappejs';
 export default {
   doctype: 'Permit',
   title: _('Permits'),
-  columns: ['name', 'customer', 'endDate', 'quantity'],
+  columns: ['name', 'customer', 'endDate', 'quantity', 'numTagged', 'numTrips', 'delivered'],
   actions: [
     {
       label: 'Fetch',
