@@ -12,6 +12,7 @@ import Float from './Float';
 import Currency from './Currency';
 import Text from './Text';
 import Color from './Color';
+import Password from './Password';
 
 export default {
   name: 'FormControl',
@@ -30,7 +31,8 @@ export default {
       Float,
       Currency,
       Text,
-      Color
+      Color,
+      Password
     };
     let { df } = this.$attrs;
     return h(controls[df.fieldtype] || Data, {
