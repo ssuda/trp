@@ -14,22 +14,33 @@
         <SearchBar @input="search" class="ml-2" v-model="searchText" />
       </template>
     </PageHeader>
-    <div v-if="listConfig.actions" class="my-2 flex flex-row items-center">
-      <Button
-        :key="action.label"
-        v-for="action in listConfig.actions"
-        class="ml-8 text-white text-sm font-medium uppercase w-24"
-        type="primary"
-        @click="selectItem(action)"
-      >
-        {{ action.label }}
-      </Button>
-      <input type="hidden">
+    <div class="my-2 flex flex-row items-center">
+      <div v-if="listConfig.actions" class="flex flex-col">
+        <Button
+          :key="action.label"
+          v-for="action in listConfig.actions"
+          class="ml-8 text-white"
+          type="primary"
+          @click="selectItem(action)"
+        >
+          {{ action.label }}
+        </Button>
+      </div>
 
-      <Button class="ml-4 text-white bg-red-800 text-sm  w-24 h-8 py-3 px-4 border border-red-100 rounded font-bold flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4"><path class="heroicon-ui" d="M13 5.41V17a1 1 0 0 1-2 0V5.41l-3.3 3.3a1 1 0 0 1-1.4-1.42l5-5a1 1 0 0 1 1.4 0l5 5a1 1 0 1 1-1.4 1.42L13 5.4zM3 17a1 1 0 0 1 2 0v3h14v-3a1 1 0 0 1 2 0v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3z"/></svg>
-          Upload
-      </Button>
+      <div v-if="listConfig.upload" class="flex flex-col">
+        <div class="flex flex-row">
+          <Button
+            :icon="true"
+            class="ml-8 text-white"
+            type="primary"
+          >
+            <feather-icon name="download" class="w-4 h-4 font-weight-bold text-white" />
+            <span class="ml-4">Template</span>
+          </Button>
+
+          <FileSelect class="ml-8" label="Upload" v-model="uploadedFile" />
+        </div>
+      </div>
     </div>
 
     <div class="flex-1 flex h-full">
@@ -52,6 +63,7 @@ import List from './List';
 import listConfigs from './listConfig';
 //import Icon from '@/components/Icon';
 import FilterDropdown from '@/components/FilterDropdown';
+import FileSelect from '@/components/FileSelect';
 
 export default {
   name: 'ListView',
@@ -62,10 +74,12 @@ export default {
     Button,
     SearchBar,
     //Icon,
-    FilterDropdown
+    FilterDropdown,
+    FileSelect
   },
   data() {
     return {
+      uploadedFile: null,
       searchText: '',
       currentFilters: null
     };

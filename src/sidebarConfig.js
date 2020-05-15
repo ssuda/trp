@@ -10,11 +10,11 @@ const config = {
     return companyName;
   },
   groups: [
-    {
-      title: _('Get Started'),
-      route: '/get-started',
-      icon: getIcon('general', '24', '5')
-    },
+    // {
+    //   title: _('Get Started'),
+    //   route: '/get-started',
+    //   icon: getIcon('general', '24', '5')
+    // },
     {
       title: _('Dashboard'),
       route: '/',
