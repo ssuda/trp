@@ -32,6 +32,11 @@ const config = {
           doctype: 'Permit'
         },
         {
+          label: _('Trips'),
+          route: '/list/Trip',
+          doctype: 'Trip'
+        },
+        {
           label: _('Trucks'),
           route: '/list/Truck',
           doctype: 'Truck'
@@ -40,11 +45,6 @@ const config = {
           label: _('Truck Lists'),
           route: '/list/TruckList',
           doctype: 'TruckList'
-        },
-        {
-          label: _('Trips'),
-          route: '/list/Trip',
-          doctype: 'Trip'
         },
         {
           label: _('I3MS Accounts'),

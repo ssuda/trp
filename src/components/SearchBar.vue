@@ -55,15 +55,14 @@ export default {
     Dropdown
   },
   mounted() {
-    if(this.value) {
-      this.inputValue = this.value
+    if (this.value) {
+      this.inputValue = this.value;
     }
     this.makeSearchList();
   },
   methods: {
     async search() {
-
-      if (typeof(this.value) !== 'undefined') {
+      if (typeof this.value !== 'undefined') {
         return this.$emit('input', this.inputValue);
       }
 

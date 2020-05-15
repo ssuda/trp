@@ -23,7 +23,7 @@ module.exports = {
     {
       fieldname: 'password',
       label: 'Password',
-      fieldtype: 'Data',
+      fieldtype: 'Password',
       required: 1
     }
   ],
