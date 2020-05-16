@@ -1,14 +1,23 @@
 module.exports = {
   SetupWizard: require('./doctype/SetupWizard/SetupWizard'),
+  LoginRegister: require('./doctype/SetupWizard/LoginRegister'),
   Currency: require('./doctype/Currency/Currency'),
+
+  Address: require('./doctype/Address/Address.js'),
+  Contact: require('./doctype/Contact/Contact.js'),
   Color: require('./doctype/Color/Color'),
   Account: require('./doctype/Account/Account.js'),
   AccountingSettings: require('./doctype/AccountingSettings/AccountingSettings'),
   CompanySettings: require('./doctype/CompanySettings/CompanySettings'),
-  AccountingLedgerEntry: require('./doctype/AccountingLedgerEntry/AccountingLedgerEntry.js'),
   Party: require('./doctype/Party/Party.js'),
   Customer: require('./doctype/Party/Customer'),
   Supplier: require('./doctype/Party/Supplier'),
+
+  Tax: require('./doctype/Tax/Tax.js'),
+  TaxDetail: require('./doctype/TaxDetail/TaxDetail.js'),
+  TaxSummary: require('./doctype/TaxSummary/TaxSummary.js'),
+
+  GSTR3B: require('./doctype/GSTR3B/GSTR3B.js'),
 
   Payment: require('./doctype/Payment/Payment.js'),
   PaymentFor: require('./doctype/PaymentFor/PaymentFor.js'),
@@ -23,23 +32,14 @@ module.exports = {
   PurchaseInvoice: require('./doctype/PurchaseInvoice/PurchaseInvoice.js'),
   PurchaseInvoiceItem: require('./doctype/PurchaseInvoiceItem/PurchaseInvoiceItem.js'),
   PurchaseInvoiceSettings: require('./doctype/PurchaseInvoiceSettings/PurchaseInvoiceSettings.js'),
-
+  
+  I3MSAccount: require('./doctype/I3MSAccount/I3MSAccount.js'),
   Truck: require('./doctype/Truck/Truck.js'),
   TruckList: require('./doctype/Truck/TruckList.js'),
   Permit: require('./doctype/Permit/Permit.js'),
-  I3MSAccount: require('./doctype/I3MSAccount/I3MSAccount.js'),
-  Trip: require('./doctype/Trip/Trip.js'),
   FuelSlip: require('./doctype/Trip/FuelSlip.js'),
   PermitAction: require('./doctype/Permit/PermitAction.js'),
-
-  Tax: require('./doctype/Tax/Tax.js'),
-  TaxDetail: require('./doctype/TaxDetail/TaxDetail.js'),
-  TaxSummary: require('./doctype/TaxSummary/TaxSummary.js'),
-
-  GSTR3B: require('./doctype/GSTR3B/GSTR3B.js'),
-
-  Address: require('./doctype/Address/Address.js'),
-  Contact: require('./doctype/Contact/Contact.js'),
+  Trip: require('./doctype/Trip/Trip.js'),
 
   JournalEntry: require('./doctype/JournalEntry/JournalEntry.js'),
   JournalEntryAccount: require('./doctype/JournalEntryAccount/JournalEntryAccount.js'),
@@ -73,5 +73,6 @@ module.exports = {
   EmailAccount: require('./doctype/EmailAccount/EmailAccount'),
 
   PrintSettings: require('./doctype/PrintSettings/PrintSettings'),
-  GetStarted: require('./doctype/GetStarted/GetStarted')
+  GetStarted: require('./doctype/GetStarted/GetStarted'),
+  AccountingLedgerEntry: require('./doctype/AccountingLedgerEntry/AccountingLedgerEntry.js'),
 };
