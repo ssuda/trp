@@ -46,7 +46,7 @@
       </div>
       <TwoColumnForm :fields="fields" :doc="doc" />
     </div>
-    <div class="flex justify-end px-8 mt-5 window-no-drag">
+    <!-- <div class="flex justify-end px-8 mt-5 window-no-drag">
       <Button
         @click="submit"
         type="primary"
@@ -54,6 +54,20 @@
         :disabled="!valuesFilled || loading"
       >
         {{ buttonText }}
+      </Button>
+    </div> -->
+    <div class="flex flex-1 items-center justify-between mr-8 mt-5 window-no-drag">
+      <div class=""></div>
+      <button @click="gotoLoginRegister" class="cursor-pointer text-sm text-blue-700">
+          Already Orgnanization Setup? Login/Register
+      </button>
+      <Button
+          @click="submit"
+          type="primary"
+          class="text-sm text-white"
+          :disabled="!valuesFilled || loading"
+      >
+          {{ buttonText }}
       </Button>
     </div>
   </div>
@@ -69,8 +83,13 @@ import Popover from '@/components/Popover';
 import {
   getErrorMessage,
   handleErrorWithDialog,
-  showMessageDialog
+  showMessageDialog,
+  connectToRemoteDatabase
 } from '@/utils';
+
+import {
+  registerUserAndCompany
+} from '@/firebase'
 
 export default {
   name: 'SetupWizard',
@@ -101,6 +120,11 @@ export default {
     });
   },
   methods: {
+
+    gotoLoginRegister() {
+      this.$emit('setup-complete', true);
+    },
+
     setValue(fieldname, value) {
       this.emailError = null;
       this.doc.set(fieldname, value).catch(e => {
@@ -123,6 +147,8 @@ export default {
       }
       try {
         this.loading = true;
+        await registerUserAndCompany(this.doc);
+        await connectToRemoteDatabase('spinbi');
         await setupCompany(this.doc);
         this.$emit('setup-complete');
       } catch (e) {

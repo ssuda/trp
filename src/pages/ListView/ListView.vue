@@ -29,12 +29,11 @@
 
       <div v-if="listConfig.upload" class="flex flex-col">
         <div class="flex flex-row">
-          <Button
-            :icon="true"
-            class="ml-8 text-white"
-            type="primary"
-          >
-            <feather-icon name="download" class="w-4 h-4 font-weight-bold text-white" />
+          <Button :icon="true" class="ml-8 text-white" type="primary">
+            <feather-icon
+              name="download"
+              class="w-4 h-4 font-weight-bold text-white"
+            />
             <span class="ml-4">Template</span>
           </Button>
 

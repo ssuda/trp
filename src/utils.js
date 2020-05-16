@@ -4,10 +4,15 @@ import { _ } from 'frappejs/utils';
 import migrate from './migrate';
 import { remote, shell, ipcRenderer } from 'electron';
 import SQLite from 'frappejs/backends/sqlite';
+import mysql from '@/database';
+
 import postStart from '../server/postStart';
 import router from '@/router';
 import Avatar from '@/components/Avatar';
 import config from '@/config';
+import Vue from 'vue';
+
+//import keytar from 'keytar';
 
 export function createNewDatabase() {
   return new Promise(resolve => {
@@ -62,6 +67,31 @@ export function loadExistingDatabase() {
       }
     );
   });
+}
+
+export async function connectToRemoteDatabase(dbname) {
+  //const credentials = keytar.findCredentials(dbname)[0];
+  // const host = config.get('dbhostname', 'spinbitrp.carfhb845pe3.ap-south-1.rds.amazonaws.com');
+  // const username = config.get('username', 'fe9fd197e0040f2c');
+  // const password = config.get('password', 'x9wj29ZpXHYmp&5n');
+
+  const host = 'localhost';
+  const user = 'root';
+  const password = 'root';
+
+  frappe.login('Administrator');
+  frappe.db = new mysql({
+    host,
+    password,
+    user,
+    database: dbname
+  });
+  await frappe.db.connect();
+
+  await migrate();
+  await postStart();
+
+  config.set('lastSelectedDB', dbname);
 }
 
 export async function connectToLocalDatabase(filepath) {
@@ -199,7 +229,12 @@ export function getErrorMessage(e, doc) {
 
 export function handleErrorWithDialog(e, doc) {
   let errorMessage = getErrorMessage(e, doc);
-  showMessageDialog({ message: errorMessage });
+  //showMessageDialog({ message: errorMessage });
+  Vue.notify({
+    type: 'error',
+    group: 'trp',
+    title: errorMessage,
+  });
   throw e;
 }
 

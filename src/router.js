@@ -48,8 +48,14 @@ const routes = [
   {
     path: '/PermitAction',
     name: 'PermitAction',
-    component: PermitActionForm,
-    props: true
+    components: {
+      default: PermitActionForm,
+      edit: QuickEditForm
+    },
+    props: {
+      default: true,
+      edit: route => route.query
+    }
   },
   {
     path: '/edit/:doctype/:name',

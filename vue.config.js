@@ -21,13 +21,17 @@ module.exports = {
       '~': path.resolve('.')
     });
 
-    config.plugins.push(
-      // https://github.com/knex/knex/issues/1446#issuecomment-537715431
-      new webpack.ContextReplacementPlugin(
-        /knex[/\\]lib[/\\]dialects/,
-        /sqlite3[/\\]index.js/
-      )
-    );
+    // config.plugins.push(
+    //   // https://github.com/knex/knex/issues/1446#issuecomment-537715431
+    //   new webpack.ContextReplacementPlugin(
+    //     /knex[/\\]lib[/\\]dialects/,
+    //     /sqlite3[/\\]index.js/
+    //   ),
+    // );
+
+    config.externals = {
+      knex: 'commonjs knex'
+    }
 
     config.module.rules.push({
       test: /\.txt$/i,

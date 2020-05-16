@@ -32,6 +32,13 @@ module.exports = {
       placeholder: 'John Doe',
       required: 1
     },
+    {
+      fieldname: 'password',
+      label: 'Password',
+      fieldtype: 'Password',
+      placeholder: 'Password',
+      required: 1
+    },
 
     {
       fieldname: 'email',
@@ -115,6 +122,7 @@ module.exports = {
   ],
   quickEditFields: [
     'fullname',
+    'password',
     'bankName',
     'country',
     'currency',

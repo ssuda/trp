@@ -14,10 +14,15 @@
     />
     <SetupWizard
       v-if="activeScreen === 'SetupWizard'"
-      @setup-complete="showSetupWizardOrDesk(true)"
+      @setup-complete="(isLogin) => showSetupWizardOrDesk(true, isLogin)"
+    />
+     <LoginRegister
+      v-if="activeScreen === 'LoginRegister'"
+      @login-complete="showSetupWizardOrDesk(true)"
     />
     <Settings v-if="activeScreen === 'Settings'" />
     <portal-target name="popovers" multiple></portal-target>
+    <notifications group="trp" position="bottom center"/>
   </div>
 </template>
 
@@ -25,14 +30,17 @@
 import './styles/index.css';
 import 'frappe-charts/dist/frappe-charts.min.css';
 import frappe from 'frappejs';
+import { firebaseAuth } from '@/firebase';
 import Desk from './pages/Desk';
 import SetupWizard from './pages/SetupWizard/SetupWizard';
 import DatabaseSelector from './pages/DatabaseSelector';
 import Settings from '@/pages/Settings/Settings.vue';
 import WindowsTitleBar from '@/components/WindowsTitleBar';
+import LoginRegister from './pages/SetupWizard/LoginRegister';
+
 import { remote } from 'electron';
 import config from '@/config';
-import { connectToLocalDatabase } from '@/utils';
+import { connectToLocalDatabase, connectToRemoteDatabase } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
 
 export default {
@@ -49,8 +57,9 @@ export default {
       let size = {
         Desk: [width, height],
         DatabaseSelector: [600, 600],
-        SetupWizard: [600, 600],
-        Settings: [460, 577]
+        SetupWizard: [600, 650],
+        Settings: [460, 577],
+        LoginRegister: [600, 600],
       }[value];
       let resizable = value === 'Desk';
 
@@ -66,26 +75,38 @@ export default {
     SetupWizard,
     DatabaseSelector,
     Settings,
-    WindowsTitleBar
+    WindowsTitleBar,
+    LoginRegister,
   },
   async mounted() {
-    let lastSelectedFilePath = config.get('lastSelectedFilePath', null);
-    if (!lastSelectedFilePath) {
-      this.activeScreen = 'DatabaseSelector';
-    } else {
-      await connectToLocalDatabase(lastSelectedFilePath);
+    let lastSelectedDB = config.get('lastSelectedDB', null);
+    if (lastSelectedDB) {
+      await connectToRemoteDatabase(lastSelectedFilePath);
       this.showSetupWizardOrDesk();
+    } else {
+      let lastSelectedFilePath = config.get('lastSelectedFilePath', null);
+      if (!lastSelectedFilePath) {
+        this.activeScreen = 'DatabaseSelector';
+      } else {
+        await connectToLocalDatabase(lastSelectedFilePath);
+        this.showSetupWizardOrDesk();
+      }
     }
   },
   methods: {
-    showSetupWizardOrDesk(resetRoute = false) {
+    showSetupWizardOrDesk(resetRoute = false, isLogin) {
       const { setupComplete } = frappe.AccountingSettings;
-      if (!setupComplete) {
+      if (!setupComplete && !isLogin) {
         this.activeScreen = 'SetupWizard';
       } else if (this.$route.path.startsWith('/settings')) {
         this.activeScreen = 'Settings';
       } else {
-        this.activeScreen = 'Desk';
+        //check whether he is logged in or not
+        if (firebaseAuth.currentUser) {
+          this.activeScreen = 'Desk';
+        } else {
+          this.activeScreen = 'LoginRegister'
+        }
         this.checkForUpdates();
       }
       if (resetRoute) {
