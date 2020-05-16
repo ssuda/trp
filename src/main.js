@@ -11,7 +11,7 @@ import { ipcRenderer } from 'electron';
 // vue imports
 import Vue from 'vue';
 import PortalVue from 'portal-vue';
-import Notifications from 'vue-notification'
+import Notifications from 'vue-notification';
 
 import App from './App';
 import router from './router';

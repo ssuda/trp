@@ -76,15 +76,15 @@ export async function connectToRemoteDatabase(dbname) {
   // const password = config.get('password', 'x9wj29ZpXHYmp&5n');
 
   const host = 'localhost';
-  const user = 'root';
-  const password = 'root';
+  const user = 'postgres';
+  const password = 'postgrespassword';
 
   frappe.login('Administrator');
   frappe.db = new mysql({
     host,
     password,
     user,
-    database: dbname
+    database: 'postgres'
   });
   await frappe.db.connect();
 
@@ -233,7 +233,7 @@ export function handleErrorWithDialog(e, doc) {
   Vue.notify({
     type: 'error',
     group: 'trp',
-    title: errorMessage,
+    title: errorMessage
   });
   throw e;
 }

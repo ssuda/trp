@@ -31,7 +31,7 @@ module.exports = {
 
     config.externals = {
       knex: 'commonjs knex'
-    }
+    };
 
     config.module.rules.push({
       test: /\.txt$/i,

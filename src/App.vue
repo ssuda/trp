@@ -14,15 +14,15 @@
     />
     <SetupWizard
       v-if="activeScreen === 'SetupWizard'"
-      @setup-complete="(isLogin) => showSetupWizardOrDesk(true, isLogin)"
+      @setup-complete="isLogin => showSetupWizardOrDesk(true, isLogin)"
     />
-     <LoginRegister
+    <LoginRegister
       v-if="activeScreen === 'LoginRegister'"
       @login-complete="showSetupWizardOrDesk(true)"
     />
     <Settings v-if="activeScreen === 'Settings'" />
     <portal-target name="popovers" multiple></portal-target>
-    <notifications group="trp" position="bottom center"/>
+    <notifications group="trp" position="bottom center" />
   </div>
 </template>
 
@@ -59,7 +59,7 @@ export default {
         DatabaseSelector: [600, 600],
         SetupWizard: [600, 650],
         Settings: [460, 577],
-        LoginRegister: [600, 600],
+        LoginRegister: [600, 600]
       }[value];
       let resizable = value === 'Desk';
 
@@ -76,7 +76,7 @@ export default {
     DatabaseSelector,
     Settings,
     WindowsTitleBar,
-    LoginRegister,
+    LoginRegister
   },
   async mounted() {
     let lastSelectedDB = config.get('lastSelectedDB', null);
@@ -105,7 +105,7 @@ export default {
         if (firebaseAuth.currentUser) {
           this.activeScreen = 'Desk';
         } else {
-          this.activeScreen = 'LoginRegister'
+          this.activeScreen = 'LoginRegister';
         }
         this.checkForUpdates();
       }

@@ -15,7 +15,7 @@ module.exports = {
       fieldname: 'fullname',
       label: 'Your Name',
       fieldtype: 'Data',
-      placeholder: 'John Doe',
+      placeholder: 'John Doe'
     },
     {
       fieldname: 'email',
@@ -31,19 +31,14 @@ module.exports = {
       fieldname: 'password',
       label: 'Password',
       fieldtype: 'Password',
-      required: 1,
+      required: 1
     },
     {
       fieldname: 'companyName',
       label: 'Company Name',
       placeholder: 'Company Name',
       fieldtype: 'Data'
-    },
+    }
   ],
-  quickEditFields: [
-    'fullname',
-    'email',
-    'password',
-    'companyName',
-  ]
+  quickEditFields: ['fullname', 'email', 'password', 'companyName']
 };
