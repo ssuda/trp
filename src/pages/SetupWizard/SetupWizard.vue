@@ -56,18 +56,23 @@
         {{ buttonText }}
       </Button>
     </div> -->
-    <div class="flex flex-1 items-center justify-between mr-8 mt-5 window-no-drag">
+    <div
+      class="flex flex-1 items-center justify-between mr-8 mt-5 window-no-drag"
+    >
       <div class=""></div>
-      <button @click="gotoLoginRegister" class="cursor-pointer text-sm text-blue-700">
-          Already Orgnanization Setup? Login/Register
+      <button
+        @click="gotoLoginRegister"
+        class="cursor-pointer text-sm text-blue-700"
+      >
+        Already Orgnanization Setup? Login/Register
       </button>
       <Button
-          @click="submit"
-          type="primary"
-          class="text-sm text-white"
-          :disabled="!valuesFilled || loading"
+        @click="submit"
+        type="primary"
+        class="text-sm text-white"
+        :disabled="!valuesFilled || loading"
       >
-          {{ buttonText }}
+        {{ buttonText }}
       </Button>
     </div>
   </div>
@@ -87,9 +92,7 @@ import {
   connectToRemoteDatabase
 } from '@/utils';
 
-import {
-  registerUserAndCompany
-} from '@/firebase'
+import { registerUserAndCompany } from '@/firebase';
 
 export default {
   name: 'SetupWizard',
@@ -120,7 +123,6 @@ export default {
     });
   },
   methods: {
-
     gotoLoginRegister() {
       this.$emit('setup-complete', true);
     },

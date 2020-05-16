@@ -32,7 +32,7 @@ module.exports = {
   PurchaseInvoice: require('./doctype/PurchaseInvoice/PurchaseInvoice.js'),
   PurchaseInvoiceItem: require('./doctype/PurchaseInvoiceItem/PurchaseInvoiceItem.js'),
   PurchaseInvoiceSettings: require('./doctype/PurchaseInvoiceSettings/PurchaseInvoiceSettings.js'),
-  
+
   I3MSAccount: require('./doctype/I3MSAccount/I3MSAccount.js'),
   Truck: require('./doctype/Truck/Truck.js'),
   TruckList: require('./doctype/Truck/TruckList.js'),
@@ -74,5 +74,5 @@ module.exports = {
 
   PrintSettings: require('./doctype/PrintSettings/PrintSettings'),
   GetStarted: require('./doctype/GetStarted/GetStarted'),
-  AccountingLedgerEntry: require('./doctype/AccountingLedgerEntry/AccountingLedgerEntry.js'),
+  AccountingLedgerEntry: require('./doctype/AccountingLedgerEntry/AccountingLedgerEntry.js')
 };
