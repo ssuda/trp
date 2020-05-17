@@ -106,12 +106,13 @@ import BaseDocument from '@/basedocument';
     ipcRenderer.send('tag-vehicles', permit);
     ipcRenderer.removeAllListeners('tag-results');
 
-    ipcRenderer.on('tag-results', function() {
+    ipcRenderer.on('tag-results', function(e, response) {
       // End of the tagging
+      frappe.events.trigger('tag-results', response);
     });
 
     ipcRenderer.removeAllListeners('tag-truck-result');
-    ipcRenderer.on('tag-truck-result', async function(event, response) {
+    ipcRenderer.on('tag-truck-result', async function(e, response) {
       console.log('received failed from main process', response);
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
@@ -120,12 +121,13 @@ import BaseDocument from '@/basedocument';
 
       await frappe.syncDoc({
         doctype: 'Permit',
+        name: permit.permit_number,
         tagged
       });
     });
 
     ipcRenderer.removeAllListeners('failed');
-    ipcRenderer.on('failed', (event, results) => {
+    ipcRenderer.on('failed', (e, results) => {
       console.log('received failed from main process', results);
     });
 

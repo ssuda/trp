@@ -1,3 +1,6 @@
+const stateList = require('~/fixtures/stateInfo.json');
+const countryList = require('~/fixtures/countryInfo.json');
+
 module.exports = {
   name: 'Address',
   doctype: 'DocType',
@@ -35,14 +38,16 @@ module.exports = {
       fieldname: 'state',
       label: 'State',
       placeholder: 'State',
-      fieldtype: 'Data'
+      fieldtype: 'AutoComplete',
+      getList: () => Object.values(stateList).sort()
     },
     {
       fieldname: 'country',
       label: 'Country',
       placeholder: 'Country',
-      fieldtype: 'Data',
-      required: 1
+      required: 1,
+      fieldtype: 'AutoComplete',
+      getList: () => Object.keys(countryList).sort()
     },
     {
       fieldname: 'postalCode',
