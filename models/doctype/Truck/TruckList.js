@@ -6,6 +6,7 @@ module.exports = {
   isChild: 0,
   keywordFields: ['name', 'numTrucks'],
   naming: 'name',
+  documentClass: require('./TruckListDocument'),
   fields: [
     {
       label: 'Name',
@@ -17,7 +18,7 @@ module.exports = {
     {
       fieldname: 'trucks',
       label: 'Trucks',
-      fieldtype: 'Text',
+      fieldtype: 'LongText',
       required: 1,
       placeholder: 'Paste Each Truck in New Line'
     },
