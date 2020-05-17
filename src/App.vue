@@ -30,7 +30,7 @@
 import './styles/index.css';
 import 'frappe-charts/dist/frappe-charts.min.css';
 import frappe from 'frappejs';
-import { firebaseAuth } from '@/firebase';
+import { firebaseAuth, getCurrentUser } from '@/firebase';
 import Desk from './pages/Desk';
 import SetupWizard from './pages/SetupWizard/SetupWizard';
 import DatabaseSelector from './pages/DatabaseSelector';
@@ -95,7 +95,7 @@ export default {
     }
   },
   methods: {
-    showSetupWizardOrDesk(resetRoute = false, isLogin) {
+    async showSetupWizardOrDesk(resetRoute = false, isLogin) {
       const { setupComplete } = frappe.AccountingSettings;
       if (!setupComplete && !isLogin) {
         this.activeScreen = 'SetupWizard';
@@ -103,11 +103,18 @@ export default {
         this.activeScreen = 'Settings';
       } else {
         //check whether he is logged in or not
-        //if (firebaseAuth.currentUser) {
+        console.log(firebaseAuth.currentUser);
+        let user;
+
+        try {
+          user = await getCurrentUser();
+        } catch (ex) {}
+
+        if (user) {
           this.activeScreen = 'Desk';
-        //} else {
-        //  this.activeScreen = 'LoginRegister';
-        //}
+        } else {
+          this.activeScreen = 'LoginRegister';
+        }
         this.checkForUpdates();
       }
       if (resetRoute) {

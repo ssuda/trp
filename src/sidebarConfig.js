@@ -4,6 +4,8 @@ import { _ } from 'frappejs/utils';
 import Icon from './components/Icon';
 import router from './router';
 
+import { firebaseAuth } from '@/firebase';
+
 const config = {
   getTitle: async () => {
     const { companyName } = await frappe.getSingle('AccountingSettings');
@@ -142,6 +144,12 @@ const config = {
       icon: getIcon('settings'),
       items: [
         {
+          label: _('Users'),
+          route: '/list/User',
+          doctype: 'User',
+          condition: () => frappe.session.user === 'Administrator'
+        },
+        {
           label: _('Chart of Accounts'),
           route: '/chart-of-accounts'
         },
@@ -154,6 +162,13 @@ const config = {
           label: _('Settings'),
           action() {
             openSettings();
+          }
+        },
+        {
+          label: _('Sign Out'),
+          async action() {
+            await firebaseAuth.signOut();
+            router.go();
           }
         }
       ]

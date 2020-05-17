@@ -33,6 +33,7 @@
             <div
               v-for="item in group.items"
               :key="item.label"
+              :v-if="itemVisible(item)"
               class="mt-1 first:mt-0 text-base text-gray-800 py-1 pl-10 rounded cursor-pointer hover:bg-white"
               :class="itemActiveClass(item)"
               @click="onItemClick(item)"
@@ -95,6 +96,13 @@ export default {
     }
   },
   methods: {
+    itemVisible(item) {
+      if (item.condition) {
+        return item.condition();
+      }
+
+      return true;
+    },
     itemActiveClass(item) {
       let { path: currentRoute, params } = this.$route;
       let routeMatch = currentRoute === item.route;

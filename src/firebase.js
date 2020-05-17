@@ -24,6 +24,9 @@ const firebaseDb = firebaseApp.firestore();
 firebaseDb.enablePersistence({
   synchronizeTabs: true
 });
+
+firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
 const FieldValue = firebase.firestore.FieldValue;
 const Timestamp = firebase.firestore.Timestamp;
 
@@ -31,13 +34,27 @@ function getFirebaseProjectId() {
   return firebase.app().options.authDomain.split('.')[0];
 }
 
-// firebase.auth().onAuthStateChanged(function(user) {
-//     if (user) {
-//       firebaseUser = user
-//     } else {
-//       firebaseUser = null
-//     }
-// });
+let firebaseUser;
+
+firebase.auth().onAuthStateChanged(function(user) {
+  console.log('user', user);
+  console.log('firebase auth user', firebaseAuth.currentUser);
+
+  if (user) {
+    firebaseUser = user;
+  } else {
+    firebaseUser = null;
+  }
+});
+
+function getCurrentUser() {
+  return new Promise((resolve, reject) => {
+    const unsubscribe = firebase.auth().onAuthStateChanged(user => {
+      unsubscribe();
+      resolve(user);
+    }, reject);
+  });
+}
 
 async function registerUserAndCompany(user) {
   const { email, password } = user;
@@ -67,6 +84,7 @@ const cloudfunctionsBaseUrl =
   'https://us-central1-' + getFirebaseProjectId() + '.cloudfunctions.net/app';
 
 export {
+  getCurrentUser,
   firebaseAuth,
   firebaseDb,
   FieldValue,
