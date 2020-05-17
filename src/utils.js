@@ -121,21 +121,17 @@ export async function connectToLocalDatabase(filepath) {
 }
 
 export function showMessageDialog({ message, description, buttons = [] }) {
-  let buttonLabels = buttons.map(a => a.label);
-  remote.dialog.showMessageBox(
-    remote.getCurrentWindow(),
-    {
-      message,
-      detail: description,
-      buttons: buttonLabels
-    },
-    response => {
-      let button = buttons[response];
-      if (button && button.action) {
-        button.action();
+  Vue.modal.show('dialog', {
+    title: message,
+    text: description,
+    buttons: buttons.map(a => ({
+      title: a.label,
+      handler: () => {
+        a.action()
+        Vue.modal.hide('dialog')
       }
-    }
-  );
+    }))
+  })
 }
 
 export function deleteDocWithPrompt(doc) {
@@ -203,7 +199,7 @@ export function openQuickEdit({ doctype, name, hideFields, defaults = {} }) {
     method = 'replace';
   }
 
-  console.log('method', method);
+  console.log('method', method, hideFields);
   router[method]({
     query: {
       edit: 1,

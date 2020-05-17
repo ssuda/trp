@@ -54,14 +54,12 @@ module.exports = {
       fieldname: 'startDate',
       label: 'Start Date',
       fieldtype: 'Date',
-      default: new Date().toISOString().slice(0, 10),
-      readOnly: doc => doc.permit
+      readOnly: true
     },
     {
       fieldname: 'endDate',
       label: 'End Date',
       fieldtype: 'Date',
-      default: new Date().toISOString().slice(0, 10)
     },
     {
       fieldname: 'tpNumber',
@@ -99,7 +97,7 @@ module.exports = {
     {
       fieldname: 'fuel',
       label: 'Fuel',
-      fieldtype: 'Link',
+      fieldtype: 'Currency',
       target: 'FuelSlip'
     }
   ],

@@ -12,6 +12,9 @@ import { ipcRenderer } from 'electron';
 import Vue from 'vue';
 import PortalVue from 'portal-vue';
 import Notifications from 'vue-notification';
+import VModal from 'vue-js-modal'
+
+
 
 import App from './App';
 import router from './router';
@@ -21,7 +24,11 @@ import BaseDocument from '@/basedocument';
 (async () => {
   frappe.isServer = true;
   frappe.isElectron = true;
-  frappe.BaseDocument = BaseDocument;
+  frappe.getDocumentClass = function (doctype) {
+    const meta = this.getMeta(doctype);
+    return meta.documentClass || BaseDocument;
+  };
+  
   frappe.init();
   frappe.registerLibs(common);
   frappe.registerModels(coreModels);
@@ -121,7 +128,7 @@ import BaseDocument from '@/basedocument';
 
       await frappe.syncDoc({
         doctype: 'Permit',
-        name: permit.permit_number,
+        name: permit.name,
         tagged
       });
     });
@@ -129,11 +136,13 @@ import BaseDocument from '@/basedocument';
     ipcRenderer.removeAllListeners('failed');
     ipcRenderer.on('failed', (e, results) => {
       console.log('received failed from main process', results);
+      frappe.events.trigger('failed', results);
     });
 
     ipcRenderer.removeAllListeners('total');
     ipcRenderer.on('total', (event, results) => {
       console.log('received total from main process', results);
+      frappe.events.trigger('total', results);
     });
   });
 
@@ -151,6 +160,7 @@ import BaseDocument from '@/basedocument';
   Vue.directive('on-outside-click', outsideClickDirective);
   Vue.use(PortalVue);
   Vue.use(Notifications);
+  Vue.use(VModal, { dialog: true});
   Vue.mixin({
     computed: {
       frappe() {

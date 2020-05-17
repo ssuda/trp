@@ -4,12 +4,18 @@ const BaseDocument = require('@/basedocument');
 module.exports = class Permit extends BaseDocument {
 
   async getNumberOfTrips() {
-    let { count } = (
+    console.log('name', this.name);
+
+    let { count, sum } = (
       await frappe.db
         .knex('Trip')
         .where('permit', this.name)
         .count('name')
+        .sum('loadQty')
     )[0];
+
+    this.numTrips = count;
+    this.delivered = sum;
 
     console.log('trips', count);
     return count;
@@ -27,13 +33,17 @@ module.exports = class Permit extends BaseDocument {
   }
 
   async getQuantityDelivered() {
-    let { sum } = (
+
+    let { count, sum } = (
       await frappe.db
         .knex('Trip')
         .where('permit', this.name)
+        .count('name')
         .sum('loadQty')
     )[0];
 
+    this.numTrips = count;
+    this.delivered = sum;
     return sum;
   }
 };
