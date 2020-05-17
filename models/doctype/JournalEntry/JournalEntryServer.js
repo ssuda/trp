@@ -1,4 +1,4 @@
-const BaseDocument = require('frappejs/model/document');
+const BaseDocument = require('@/basedocument');
 const LedgerPosting = require('../../../accounting/ledgerPosting');
 
 module.exports = class JournalEntryServer extends BaseDocument {

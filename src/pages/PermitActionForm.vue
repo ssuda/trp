@@ -20,7 +20,7 @@
           </div>
           <div class="mt-8 px-6">
             <h1 class="text-2xl font-semibold">
-              {{ doc.name }}
+              {{ doc.label }}
             </h1>
             <div class="flex justify-between mt-2">
               <div class="w-1/3">
@@ -72,7 +72,7 @@ import { handleErrorWithDialog, showMessageDialog } from '@/utils';
 
 export default {
   name: 'PermitActionForm',
-  props: ['doc'],
+  props: ['name'],
   components: {
     PageHeader,
     Button,
@@ -82,26 +82,23 @@ export default {
 
   data() {
     return {
-      doctype: null,
-      name: null,
+      doc: null,
       loading: false
     };
   },
   computed: {
     meta() {
-      return frappe.getMeta(this.doctype);
+      return frappe.getMeta('PermitAction');
     },
     buttonText() {
       return this.loading ? this._('Setting Up...') : this._('Next');
     }
   },
   async created() {
-    console.log('received', this.doc);
     try {
-      this.doctype = this.doc.doctype;
-      this.name = this.doc.name;
-      window.d = this.doc;
+      this.doc = await frappe.getDoc('PermitAction', this.name);
     } catch (error) {
+      console.log(error);
       if (error instanceof frappe.errors.NotFoundError) {
         this.routeToList();
         return;
@@ -109,6 +106,7 @@ export default {
       this.handleError(error);
     }
   },
+
   methods: {
     async onClick() {
       if (!this.doc.account) {
@@ -175,6 +173,7 @@ export default {
         }
       } else if (this.doc.action === 'refresh') {
         //call permit refresh
+        console.log('fefresh called')
         const permit = this.doc.permit;
         const credentials = await frappe.getDoc(
           'I3MSAccount',
@@ -188,7 +187,7 @@ export default {
           start_date: permit.startDate,
           end_date: permit.endDate
         });
-        frappe.events.once('permits-details-results', () => {
+        frappe.events.once('permit-details-results', () => {
           this.loading = false;
           this.$router.back();
         });
@@ -200,7 +199,7 @@ export default {
     },
 
     routeToList() {
-      this.$router.back();
+      this.$router.push(`/list/Permit`);
     }
   }
 };

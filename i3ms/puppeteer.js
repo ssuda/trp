@@ -146,8 +146,19 @@ async function createPage() {
     }
   });
 
-  page.setDefaultTimeout(300000);
-  page.setDefaultNavigationTimeout(600000);
+  page.on('windowerror', e => {
+    console.error(e);
+  });
+
+  try {
+    await page.exposeFunction('onPageError', e => page.emit('windowerror', e));
+    await page.evaluateOnNewDocument(() => {
+      addEventListener('error', e => onPageError(e));
+    });
+  } catch(ex) {}
+
+  page.setDefaultTimeout(60000);
+  page.setDefaultNavigationTimeout(60000);
 }
 
 function disconnectHandler(e) {
@@ -183,7 +194,7 @@ async function createBrowser(headless) {
       });
       console.log('browser created');
       browser.on('disconnected', disconnectHandler);
-      browser.on('error', () => browser.reload());
+      browser.on('error', () => page.reload());
     } catch (ex) {
       console.error(ex);
       browser = await puppeteer.connect({
@@ -261,7 +272,7 @@ export async function tagVehicle(href, truckNo) {
 
     return reason;
   } catch (ex) {
-    if (ex.message.toLowerCase().includes('execution context')) {
+    if (/(execution context)|(network)/i.test(ex.message)) {
       await exports.tagInit(href);
       return exports.tagVehicle(href, truckNo);
     }
@@ -573,11 +584,13 @@ export async function permitVehicles(href, permitNo, fromdate, todate) {
       .format('DD-MMM-YYYY'));
   todate || (todate = moment().format('DD-MMM-YYYY'));
 
-  try {
-    console.log('waiting for navigation idle2');
-    let r = 3;
+  console.log('waiting for navigation idle2');
+  let r = 3;
 
-    while (r == 3) {
+  while (r == 3) {
+    
+    try {
+
       await typeInTextBox('#txtpermit', permitNo);
 
       await typeInTextBox('#frm_txt_date', fromdate);
@@ -611,6 +624,8 @@ export async function permitVehicles(href, permitNo, fromdate, todate) {
           trucks: []
         };
       }
+    } catch (ex) {
+      console.error(ex);
     }
 
     await delay(10000);
@@ -622,11 +637,11 @@ export async function permitVehicles(href, permitNo, fromdate, todate) {
     result.trucks = await extractTable('#grdpermitwise');
 
     return result;
-  } catch (ex) {
-    return {
-      trucks: []
-    };
   }
+
+  return {
+    trucks: []
+  };
 }
 
 export async function getTrips(href) {

@@ -1,13 +1,14 @@
 const frappe = require('frappejs');
-const BaseDocument = require('frappejs/model/document');
+const BaseDocument = require('@/basedocument');
 
 module.exports = class Permit extends BaseDocument {
+
   async getNumberOfTrips() {
     let { count } = (
       await frappe.db
         .knex('Trip')
         .where('permit', this.name)
-        .count('name as count')
+        .count('name')
     )[0];
 
     console.log('trips', count);
@@ -30,7 +31,7 @@ module.exports = class Permit extends BaseDocument {
       await frappe.db
         .knex('Trip')
         .where('permit', this.name)
-        .sum('loadQty as sum')
+        .sum('loadQty')
     )[0];
 
     return sum;

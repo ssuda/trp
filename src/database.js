@@ -1,6 +1,6 @@
 const frappe = require('frappejs');
 const Database = require('frappejs/backends/database');
-const debug = process.env.NODE_ENV === 'development';
+const debug = false;process.env.NODE_ENV === 'development';
 
 module.exports = class mysqlDatabase extends Database {
   constructor(options) {

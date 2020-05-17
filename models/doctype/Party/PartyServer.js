@@ -1,4 +1,4 @@
-const BaseDocument = require('frappejs/model/document');
+const BaseDocument = require('@/basedocument');
 const frappe = require('frappejs');
 
 module.exports = class PartyServer extends BaseDocument {

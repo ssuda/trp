@@ -15,6 +15,11 @@ module.exports = {
       required: 1
     },
     {
+      label: 'Label',
+      fieldname: 'label',
+      fieldtype: 'Data'
+    },
+    {
       fieldname: 'permit',
       label: 'Permit',
       fieldtype: 'Link',
