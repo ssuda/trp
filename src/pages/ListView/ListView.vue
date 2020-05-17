@@ -92,7 +92,7 @@ export default {
   methods: {
     selectItem(d) {
       if (d.action) {
-        d.action(this);
+        d.action(this.$router);
       }
     },
     async makeNewDoc() {

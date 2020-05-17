@@ -71,7 +71,7 @@ module.exports = {
     {
       fieldname: 'numTagged',
       label: 'Tagged',
-      fieldtype: 'Float',
+      fieldtype: 'Data',
       formulaDependsOn: ['tagged'],
       formula: doc => doc.getNumberOfTagged(),
       readOnly: true
@@ -79,7 +79,7 @@ module.exports = {
     {
       fieldname: 'numTrips',
       label: 'Trips',
-      fieldtype: 'Float',
+      fieldtype: 'Data',
       formula: doc => doc.getNumberOfTrips(),
       readOnly: true
     },
@@ -99,15 +99,16 @@ module.exports = {
       action: async function(permit) {
         try {
           const doc = await frappe.getNewDoc('PermitAction');
-          await doc.set({
-            name: _('Refresh Permit'),
+          doc.set({
+            label: _('Refresh Permit'),
             action: 'refresh',
             permit
           });
+
           router.push({
             name: 'PermitAction',
             params: {
-              doc: doc
+              name: doc.name
             }
           });
         } catch (ex) {
@@ -127,15 +128,16 @@ module.exports = {
       action: async function(permit) {
         try {
           const doc = await frappe.getNewDoc('PermitAction');
-          await doc.set({
-            name: _('Tagging'),
+          doc.set({
+            label: _('Tagging'),
             action: 'tagging',
             permit
           });
+
           router.push({
             name: 'PermitAction',
             params: {
-              doc: doc
+              name: doc.name
             }
           });
         } catch (ex) {

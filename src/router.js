@@ -46,7 +46,7 @@ const routes = [
     }
   },
   {
-    path: '/PermitAction',
+    path: '/PermitAction/:name',
     name: 'PermitAction',
     components: {
       default: PermitActionForm,

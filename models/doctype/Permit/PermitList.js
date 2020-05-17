@@ -16,17 +16,18 @@ export default {
   actions: [
     {
       label: 'Fetch',
-      action: async function(listView) {
+      action: async function(router) {
         try {
           const doc = await frappe.getNewDoc('PermitAction');
-          await doc.set({
-            name: _('Fetch Permits From I3MS'),
+          doc.set({
+            label: _('Fetch Permits From I3MS'),
             action: 'fetchNew'
           });
-          listView.$router.push({
+
+          router.push({
             name: 'PermitAction',
             params: {
-              doc: doc
+              name: doc.name,
             }
           });
         } catch (ex) {

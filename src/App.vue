@@ -81,7 +81,7 @@ export default {
   async mounted() {
     let lastSelectedDB = config.get('lastSelectedDB', null);
     if (lastSelectedDB) {
-      await connectToRemoteDatabase(lastSelectedFilePath);
+      await connectToRemoteDatabase(lastSelectedDB);
       this.showSetupWizardOrDesk();
     } else {
       let lastSelectedFilePath = config.get('lastSelectedFilePath', null);
@@ -102,11 +102,11 @@ export default {
         this.activeScreen = 'Settings';
       } else {
         //check whether he is logged in or not
-        if (firebaseAuth.currentUser) {
+        //if (firebaseAuth.currentUser) {
           this.activeScreen = 'Desk';
-        } else {
-          this.activeScreen = 'LoginRegister';
-        }
+        //} else {
+        //  this.activeScreen = 'LoginRegister';
+        //}
         this.checkForUpdates();
       }
       if (resetRoute) {

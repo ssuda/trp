@@ -16,27 +16,21 @@ import Notifications from 'vue-notification';
 import App from './App';
 import router from './router';
 
+
 (async () => {
   frappe.isServer = true;
   frappe.isElectron = true;
   frappe.init();
+  frappe.getDocumentClass = (doctype) => {
+    const meta = frappe.getMeta(doctype);
+    return meta.documentClass || NewBaseDocument;
+  };
   frappe.registerLibs(common);
   frappe.registerModels(coreModels);
   frappe.registerModels(models);
   frappe.fetch = window.fetch.bind();
 
-  frappe.events.on('reload-main-window', () => {
-    ipcRenderer.send('reload-main-window');
-  });
-
-  frappe.events.on('permits-details', args => {
-    ipcRenderer.send('permits-details', args);
-    ipcRenderer.removeAllListeners();
-    ipcRenderer.on('permits-details-results', e => {
-      frappe.events.trigger('permits-details-results', e);
-    });
-
-    ipcRenderer.on('permit-details-results', async (e, permit) => {
+  async function savePermit(permit, args) {
       console.log('Got result from i3ms', permit);
       //save permit
       await frappe.syncDoc({
@@ -83,6 +77,30 @@ import router from './router';
           startDate: trip.tp_date
         });
       }
+  }
+
+  frappe.events.on('reload-main-window', () => {
+    ipcRenderer.send('reload-main-window');
+  });
+
+  frappe.events.on('permit-details', args => {
+    ipcRenderer.send('permit-details', args);
+    ipcRenderer.removeAllListeners();
+    ipcRenderer.on('permit-details-results', (e, permit) => {
+      savePermit(permit, args);
+      frappe.events.trigger('permit-details-results', e);
+    });
+  });
+
+  frappe.events.on('permits-details', args => {
+    ipcRenderer.send('permits-details', args);
+    ipcRenderer.removeAllListeners();
+    ipcRenderer.on('permits-details-results', e => {
+      frappe.events.trigger('permits-details-results', e);
+    });
+
+    ipcRenderer.on('permit-details-results', async (e, permit) => {
+      savePermit(permit, args);
     });
   });
 
