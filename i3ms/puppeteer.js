@@ -2,6 +2,8 @@ const puppeteer = require('puppeteer');
 const _ = require('lodash');
 const moment = require('moment');
 
+const monitorInternet = require('./monitor-internet-connection');
+
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const html = async (page, handle) => page.evaluate(el => el.innerHTML, handle);
@@ -46,7 +48,7 @@ async function browsePage(href) {
 
   previousUrl = href;
 
-  while (numAttempts < 5) {
+  while (numAttempts < 80) {
     try {
       await page.goto(href, { waitUntil: 'networkidle2' });
       success = true;
@@ -103,6 +105,7 @@ async function login(myAttempt) {
     await page.goto(previousUrl, { waitUntil: 'networkidle2' });
   } catch (ex) {
     console.error(ex);
+    login(myAttempt);
   }
 }
 
@@ -117,6 +120,8 @@ async function createPage() {
   const pages = await browser.pages();
 
   page = pages[0];
+
+  monitorInternet(page);
 
   page.on('dialog', async dialog => {
     console.log('the dialog message is', dialog.message());
@@ -157,8 +162,8 @@ async function createPage() {
     });
   } catch(ex) {}
 
-  page.setDefaultTimeout(60000);
-  page.setDefaultNavigationTimeout(60000);
+  page.setDefaultTimeout(300000);
+  page.setDefaultNavigationTimeout(300000);
 }
 
 function disconnectHandler(e) {
@@ -296,42 +301,47 @@ export async function releaseVehicle(href, trucks, permitNo) {
 
   let option = 2;
   while (true) {
-    await selectOption('#ddlTransporter', option);
+    try {
+      await selectOption('#ddlTransporter', option);
 
-    if (permitNo[0] == 'L') {
-      await page.select('#ddlPermitType', '1');
-    } else {
-      await page.select('#ddlPermitType', '2');
-    }
-    await typeInTextBox('#txtPermitNo', permitNo);
-    await page.click('#btnGetVehicle');
-
-    console.log('waiting for selector');
-
-    await page.waitForSelector('#lstFrom');
-    const r = await page.$eval('#lstFrom', el => {
-      const arr = [];
-
-      for (let i = 0; i < el.options.length; ++i) {
-        arr.push(el.options[i].value);
+      if (permitNo[0] == 'L') {
+        await page.select('#ddlPermitType', '1');
+      } else {
+        await page.select('#ddlPermitType', '2');
       }
+      await typeInTextBox('#txtPermitNo', permitNo);
+      const [response] = await Promise.all([
+        page.waitForNavigation(), // The promise resolves after navigation has finished
+        page.click('#btnGetVehicle'), // Clicking the link will indirectly cause a navigation
+      ]);
 
-      return arr;
-    });
+      console.log('waiting for selector');
 
-    if (!r.length && option < numberOfOptions) {
-      option++;
-    } else {
-      for (let truckNo of trucks) {
-        console.log('releasing trucks', truckNo);
-        await page.select('#lstFrom', truckNo);
+      await page.waitForSelector('#lstFrom');
+      const r = await page.$eval('#lstFrom', el => {
+        const arr = [];
+
+        for (let i = 0; i < el.options.length; ++i) {
+          arr.push(el.options[i].value);
+        }
+
+        return arr;
+      });
+
+      if (!r.length && option < numberOfOptions) {
+        option++;
+      } else {
+        for (let truckNo of trucks) {
+          console.log('releasing trucks', truckNo);
+          await page.select('#lstFrom', truckNo);
+          await delay(2000);
+          await page.click('#btnAdd');
+        }
+        await page.click('#btnRelease');
         await delay(2000);
-        await page.click('#btnAdd');
+        break;
       }
-      await page.click('#btnRelease');
-      await delay(2000);
-      break;
-    }
+    } catch(ex) {}
   }
 }
 
@@ -349,34 +359,41 @@ export async function taggedVehicles(href, permitNo) {
 
   let option = 2;
   while (true) {
-    await selectOption('#ddlTransporter', option);
+    try {
+      await selectOption('#ddlTransporter', option);
 
-    if (permitNo[0] == 'L') {
-      await page.select('#ddlPermitType', '1');
-    } else {
-      await page.select('#ddlPermitType', '2');
-    }
-    await typeInTextBox('#txtPermitNo', permitNo);
-    await page.click('#btnGetVehicle');
-
-    console.log('waiting for selector');
-
-    await page.waitForSelector('#lstFrom');
-    const r = await page.$eval('#lstFrom', el => {
-      const arr = [];
-
-      for (let i = 0; i < el.options.length; ++i) {
-        arr.push(el.options[i].value);
+      if (permitNo[0] == 'L') {
+        await page.select('#ddlPermitType', '1');
+      } else {
+        await page.select('#ddlPermitType', '2');
       }
+      await typeInTextBox('#txtPermitNo', permitNo);
+      const [response] = await Promise.all([
+        page.waitForNavigation(), // The promise resolves after navigation has finished
+        page.click('#btnGetVehicle'), // Clicking the link will indirectly cause a navigation
+      ]);
 
-      return arr;
-    });
+      console.log('waiting for selector');
 
-    if (!r.length && option < numberOfOptions) {
-      option++;
-    } else {
-      console.log('returning', r);
-      return r;
+      await page.waitForSelector('#lstFrom');
+      const r = await page.$eval('#lstFrom', el => {
+        const arr = [];
+
+        for (let i = 0; i < el.options.length; ++i) {
+          arr.push(el.options[i].value);
+        }
+
+        return arr;
+      });
+
+      if (!r.length && option < numberOfOptions) {
+        option++;
+      } else {
+        console.log('returning', r);
+        return r;
+      }
+    } catch (ex) {
+      console.error(ex);
     }
   }
 }
@@ -598,7 +615,10 @@ export async function permitVehicles(href, permitNo, fromdate, todate) {
       await typeInTextBox('#to_txt_date', todate);
 
       console.log('Retrying in loop');
-      await page.click('#btnsearch');
+      const [response] = await Promise.all([
+        page.waitForNavigation(), // The promise resolves after navigation has finished
+        page.click('#btnsearch'), // Clicking the link will indirectly cause a navigation
+      ]);
 
       try {
         r = await promiseAny(

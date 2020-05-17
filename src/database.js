@@ -26,7 +26,7 @@ module.exports = class mysqlDatabase extends Database {
   }
 
   async runRemoveColumnQuery(doctype, column) {
-    await this.run(`ALTER TABLE ${doctype} REMOVE COLUMN ${column}`);
+    await this.run(`ALTER TABLE ${doctype} DROP COLUMN IF EXISTS ${column}`);
   }
 
   async addForeignKeys(doctype, newForeignKeys) {

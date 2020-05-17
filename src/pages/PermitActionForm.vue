@@ -55,6 +55,16 @@
               {{ buttonText }}
             </Button>
           </div>
+
+           <div class="flex text-sm px-8 mt-5 window-no-drag" v-if="doc.action === 'tagging'">
+             <p>Total: {{ total }}</p>
+             <p class="ml-8">Failed: {{ failed }}</p>
+          </div>
+
+          <div class="px-8 mt-5 font-medium text-green-600" v-if="doc.action === 'tagging'">
+             <p> {{ message }}</p>
+          </div>
+
         </div>
       </div>
     </div>
@@ -83,7 +93,10 @@ export default {
   data() {
     return {
       doc: null,
-      loading: false
+      loading: false,
+      failed: '',
+      total: '',
+      message: ''
     };
   },
   computed: {
@@ -168,9 +181,14 @@ export default {
             trucks
           });
 
+          frappe.events.on('total', total => this.total = total);
+          frappe.events.on('failed', failed => this.failed = failed);
+
           frappe.events.once('tag-results', () => {
             this.loading = false;
-            this.$router.back();
+            frappe.events.off('total');
+            frappe.events.off('failed');
+            this.message = 'success';
           });
         } else {
           showMessageDialog({ message: this._('All Trucks Already Tagged') });

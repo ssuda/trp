@@ -14,7 +14,10 @@ export default {
     columnValue() {
       let { column, doc } = this;
       let value = doc[column.fieldname];
-      return frappe.format(value, column, doc);
+      if (value) {
+        return frappe.format(value, column, doc);
+      }
+      return value;
     },
     customRenderer() {
       if (!this.column.render) return;

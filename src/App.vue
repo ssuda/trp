@@ -23,6 +23,7 @@
     <Settings v-if="activeScreen === 'Settings'" />
     <portal-target name="popovers" multiple></portal-target>
     <notifications group="trp" position="bottom center" />
+    <v-dialog />
   </div>
 </template>
 
@@ -37,7 +38,7 @@ import DatabaseSelector from './pages/DatabaseSelector';
 import Settings from '@/pages/Settings/Settings.vue';
 import WindowsTitleBar from '@/components/WindowsTitleBar';
 import LoginRegister from './pages/SetupWizard/LoginRegister';
-
+import Vue from 'vue';
 import { remote } from 'electron';
 import config from '@/config';
 import { connectToLocalDatabase, connectToRemoteDatabase } from '@/utils';
@@ -79,6 +80,7 @@ export default {
     LoginRegister
   },
   async mounted() {
+    Vue.modal = this.$modal;
     let lastSelectedDB = config.get('lastSelectedDB', null);
     console.log('connected db', lastSelectedDB);
     if (lastSelectedDB) {
