@@ -16,15 +16,13 @@ import Notifications from 'vue-notification';
 import App from './App';
 import router from './router';
 
+import BaseDocument from '@/basedocument';
 
 (async () => {
   frappe.isServer = true;
   frappe.isElectron = true;
+  frappe.BaseDocument = BaseDocument;
   frappe.init();
-  frappe.getDocumentClass = (doctype) => {
-    const meta = frappe.getMeta(doctype);
-    return meta.documentClass || NewBaseDocument;
-  };
   frappe.registerLibs(common);
   frappe.registerModels(coreModels);
   frappe.registerModels(models);

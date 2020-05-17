@@ -1,6 +1,7 @@
-import frappe from 'frappejs';
+const FrappeBaseDocument = require('frappejs/model/document')
+const frappe = require('frappejs')
 
-class BaseDocument extends frappe.BaseDocument {
+module.exports = class BaseDocument extends FrappeBaseDocument {
   async compareWithCurrentDoc() {
     if (frappe.isServer && !this.isNew()) {
       let currentDoc = await frappe.db.get(this.doctype, this.name);

@@ -13,6 +13,7 @@ export default {
     'numTrips',
     'delivered'
   ],
+  orderBy: 'name',
   actions: [
     {
       label: 'Fetch',
