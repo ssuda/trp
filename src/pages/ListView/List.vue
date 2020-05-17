@@ -114,7 +114,8 @@ export default {
         doctype: this.doctype,
         fields: ['*'],
         filters,
-        orderBy: 'creation',
+        orderBy: this.listConfig.orderBy || 'creation',
+        order: this.listConfig.order || 'desc',
         limit: this.listConfig.limit
       });
     },
