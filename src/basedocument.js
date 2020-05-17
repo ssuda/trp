@@ -6,13 +6,21 @@ module.exports = class BaseDocument extends FrappeBaseDocument {
     if (frappe.isServer && !this.isNew()) {
       let currentDoc = await frappe.db.get(this.doctype, this.name);
 
+      if (typeof (this.modified) === 'string') {
+        this.modified = new Date(this.modified);
+      }
+
+      if (typeof (currentDoc.modified) === 'string') {
+        currentDoc.modified = new Date(currentDoc.modified);
+      }
+
       // check for conflict
       console.log(
         'modified',
         this.modified,
         currentDoc.modified,
         typeof this.modified,
-        this.modified.getTime() == currentDoc.modified.getTime()
+        new Date(this.modified).getTime() == new Date(currentDoc.modified).getTime()
       );
 
       if (

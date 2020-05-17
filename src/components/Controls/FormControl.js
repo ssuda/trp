@@ -11,6 +11,7 @@ import Int from './Int';
 import Float from './Float';
 import Currency from './Currency';
 import Text from './Text';
+import LongText from './LongText';
 import Color from './Color';
 import Password from './Password';
 
@@ -31,6 +32,7 @@ export default {
       Float,
       Currency,
       Text,
+      LongText,
       Color,
       Password
     };
