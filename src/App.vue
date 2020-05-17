@@ -80,6 +80,7 @@ export default {
   },
   async mounted() {
     let lastSelectedDB = config.get('lastSelectedDB', null);
+    console.log('connected db', lastSelectedDB);
     if (lastSelectedDB) {
       await connectToRemoteDatabase(lastSelectedDB);
       this.showSetupWizardOrDesk();

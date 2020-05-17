@@ -1,5 +1,6 @@
 const { DateTime } = require('luxon');
 const countryList = require('~/fixtures/countryInfo.json');
+const bankNames = require('~/fixtures/bankNames').default;
 
 module.exports = {
   name: 'SetupWizard',
@@ -62,9 +63,10 @@ module.exports = {
     {
       fieldname: 'bankName',
       label: 'Bank Name',
-      fieldtype: 'Data',
+      fieldtype: 'AutoComplete',
       placeholder: 'Prime Bank',
-      required: 1
+      required: 1,
+      getList: () => bankNames
     },
 
     {

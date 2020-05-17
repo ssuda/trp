@@ -167,6 +167,11 @@ export default {
             ...this.doc.permit,
             trucks
           });
+
+          frappe.events.once('tag-results', () => {
+            this.loading = false;
+            this.$router.back();
+          });
         } else {
           showMessageDialog({ message: this._('All Trucks Already Tagged') });
           return;
