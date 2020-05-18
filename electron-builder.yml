@@ -1,5 +1,22 @@
 productName: SpinBi TRP
-appId: io.frappe.books
+appId: com.spinbi.trp
+win:
+  target:
+      - target: nsis
+        arch:
+          - x64
+          - ia32
+nsis:
+  perMachine: true
+  oneClick: true
+
+publish:
+  provider: s3
+  bucket: spinbi-trp
+  acl: private,
+  endpoint: https://s3.ap-south-1.amazonaws.com
+  region: ap-south-1
+
 afterSign: build/notarize.js
 snap:
   publish:
