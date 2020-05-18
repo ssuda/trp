@@ -23,7 +23,7 @@ module.exports = class Permit extends BaseDocument {
 
   getNumberOfTagged() {
     console.log(this.tagged);
-    const tagged = JSON.parse(this.tagged);
+    const tagged = JSON.parse(this.tagged || '{}');
 
     if (tagged.success) {
       return tagged.success.length;
