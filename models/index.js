@@ -40,6 +40,7 @@ module.exports = {
   FuelSlip: require('./doctype/Trip/FuelSlip.js'),
   PermitAction: require('./doctype/Permit/PermitAction.js'),
   Trip: require('./doctype/Trip/Trip.js'),
+  SpinBiUser: require('./doctype/User/SpinBiUser.js'),
 
   JournalEntry: require('./doctype/JournalEntry/JournalEntry.js'),
   JournalEntryAccount: require('./doctype/JournalEntryAccount/JournalEntryAccount.js'),

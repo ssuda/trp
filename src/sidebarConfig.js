@@ -145,8 +145,8 @@ const config = {
       items: [
         {
           label: _('Users'),
-          route: '/list/User',
-          doctype: 'User',
+          route: '/list/SpinBiUser',
+          doctype: 'SpinBiUser',
           condition: () => frappe.session.user === 'Administrator'
         },
         {

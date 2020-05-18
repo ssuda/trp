@@ -10,12 +10,12 @@
       class="flex flex-1 items-center justify-between mr-8 mt-5 window-no-drag"
     >
       <div class=""></div>
-      <button
+      <!-- <button
         @click="toggleLoginRegister"
         class="cursor-pointer text-sm text-blue-700"
       >
         {{ flatText }}
-      </button>
+      </button> -->
       <Button
         @click="submit"
         type="primary"
@@ -32,9 +32,9 @@ import frappe from 'frappejs';
 import TwoColumnForm from '@/components/TwoColumnForm';
 import FormControl from '@/components/Controls/FormControl';
 import Button from '@/components/Button';
-import setupCompany from './setupCompany';
 import Popover from '@/components/Popover';
-import { firebaseAuth } from '@/firebase';
+import Users from '@/users';
+import { connectToRemoteDatabase } from '@/utils';
 
 import {
   getErrorMessage,
@@ -74,7 +74,7 @@ export default {
   },
   methods: {
     toggleLoginRegister() {
-      this.login = !this.login;
+      //this.login = !this.login;
     },
 
     allValuesFilled() {
@@ -93,10 +93,8 @@ export default {
       }
       try {
         this.loading = true;
-        await firebaseAuth.signInWithEmailAndPassword(
-          this.doc.email,
-          this.doc.password
-        );
+        await Users.login(this.doc);
+        await connectToRemoteDatabase();
         this.$emit('login-complete');
       } catch (e) {
         this.loading = false;
@@ -125,7 +123,7 @@ export default {
       );
     },
     buttonText() {
-      return this.loading ? this._('Setting Up...') : this._('Next');
+      return this.loading ? this._('Logging in...') : this._('Next');
     }
   }
 };

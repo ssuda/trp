@@ -31,7 +31,8 @@
 import './styles/index.css';
 import 'frappe-charts/dist/frappe-charts.min.css';
 import frappe from 'frappejs';
-import { firebaseAuth, getCurrentUser } from '@/firebase';
+import { firebaseAuth  } from '@/firebase';
+import Users from '@/users';
 import Desk from './pages/Desk';
 import SetupWizard from './pages/SetupWizard/SetupWizard';
 import DatabaseSelector from './pages/DatabaseSelector';
@@ -84,16 +85,11 @@ export default {
     let lastSelectedDB = config.get('lastSelectedDB', null);
     console.log('connected db', lastSelectedDB);
     if (lastSelectedDB) {
-      await connectToRemoteDatabase(lastSelectedDB);
+      await connectToRemoteDatabase();
       this.showSetupWizardOrDesk();
     } else {
-      let lastSelectedFilePath = config.get('lastSelectedFilePath', null);
-      if (!lastSelectedFilePath) {
-        this.activeScreen = 'DatabaseSelector';
-      } else {
-        await connectToLocalDatabase(lastSelectedFilePath);
-        this.showSetupWizardOrDesk();
-      }
+      await connectToLocalDatabase('./spin-trp.db');
+      this.showSetupWizardOrDesk();
     }
   },
   methods: {
@@ -109,7 +105,7 @@ export default {
         let user;
 
         try {
-          user = await getCurrentUser();
+          user = await Users.getCurrentUser();
         } catch (ex) {}
 
         if (user) {

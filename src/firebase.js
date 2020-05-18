@@ -47,49 +47,14 @@ firebase.auth().onAuthStateChanged(function(user) {
   }
 });
 
-function getCurrentUser() {
-  return new Promise((resolve, reject) => {
-    const unsubscribe = firebase.auth().onAuthStateChanged(user => {
-      unsubscribe();
-      resolve(user);
-    }, reject);
-  });
-}
-
-async function registerUserAndCompany(user) {
-  const { email, password } = user;
-  try {
-    await firebase.auth().createUserWithEmailAndPassword(email, password);
-  } catch (ex) {
-    console.error(ex);
-  }
-
-  await firebase.auth().signInWithEmailAndPassword(email, password);
-
-  // const fbuser = firebase.auth().currentUser;
-  // const token = await user.getIdToken(true);
-
-  // return  axios.post(`${cloudfunctionsBaseUrl}/setupCompany`, {
-  //   uid: fbuser.uid,
-  //   email: user.email,
-  //   companyName: user.companyName
-  // }, {
-  //   headers: {
-  //     Authorization: 'Bearer ' + token
-  //   }
-  // })
-}
-
-const cloudfunctionsBaseUrl =
-  'https://us-central1-' + getFirebaseProjectId() + '.cloudfunctions.net/app';
+const cloudfunctionsBaseUrl = 'http://localhost:3000';
+  //'https://us-central1-' + getFirebaseProjectId() + '.cloudfunctions.net/app';
 
 export {
-  getCurrentUser,
   firebaseAuth,
   firebaseDb,
   FieldValue,
   Timestamp,
   getFirebaseProjectId,
-  cloudfunctionsBaseUrl,
-  registerUserAndCompany
+  cloudfunctionsBaseUrl
 };
