@@ -11,6 +11,7 @@ import router from '@/router';
 import Avatar from '@/components/Avatar';
 import config from '@/config';
 import Vue from 'vue';
+import FileSaver from 'file-saver';
 
 //import keytar from 'keytar';
 
@@ -127,11 +128,26 @@ export function showMessageDialog({ message, description, buttons = [] }) {
     buttons: buttons.map(a => ({
       title: a.label,
       handler: () => {
-        a.action()
-        Vue.modal.hide('dialog')
+        a.action && a.action();
+        Vue.modal.hide('dialog');
       }
     }))
   })
+}
+
+export async function exportData(title, columns, rows) {
+  let csvDataArray = [columns, ...rows];
+  console.log(csvDataArray);
+  csvDataArray = csvDataArray.map(r => r.join(','));
+  let csvData = csvDataArray.join('\n');
+  let d = new Date();
+  let fileName = [
+    title.replace(/\s/g, '-'),
+    [d.getDate(), d.getMonth(), d.getFullYear()].join('-'),
+    `${d.getTime()}.csv`
+  ].join('_');
+  var blob = new Blob([csvData], { type: 'text/plain;charset=utf-8' });
+  await FileSaver.saveAs(blob, fileName);
 }
 
 export function deleteDocWithPrompt(doc) {

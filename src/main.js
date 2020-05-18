@@ -115,22 +115,34 @@ import BaseDocument from '@/basedocument';
 
     ipcRenderer.on('tag-results', function(e, response) {
       // End of the tagging
+      frappe.syncDoc({
+        doctype: 'Permit',
+        name: permit.name,
+        tagged: permit.tagged
+      });
       frappe.events.trigger('tag-results', response);
     });
 
     ipcRenderer.removeAllListeners('tag-truck-result');
-    ipcRenderer.on('tag-truck-result', async function(e, response) {
+
+    let batchSize = 0;
+
+    ipcRenderer.on('tag-truck-result', function(e, response) {
       console.log('received failed from main process', response);
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
-      tagged = JSON.stringify(Object.assign(tagged, response));
+      permit.tagged = JSON.stringify(Object.assign(tagged, response));
       console.log('finally tagged', tagged);
 
-      await frappe.syncDoc({
-        doctype: 'Permit',
-        name: permit.name,
-        tagged
-      });
+      batchSize++;
+      if (batchSize >= 100) {
+        batchSize = 0;
+        frappe.syncDoc({
+          doctype: 'Permit',
+          name: permit.name,
+          tagged: permit.tagged
+        });
+      }
     });
 
     ipcRenderer.removeAllListeners('failed');

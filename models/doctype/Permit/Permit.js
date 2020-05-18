@@ -1,6 +1,7 @@
 const frappe = require('frappejs');
 const router = require('@/router').default;
 const { _ } = require('frappejs/utils');
+const { exportData } = require('@/utils');
 
 module.exports = {
   name: 'Permit',
@@ -140,6 +141,39 @@ module.exports = {
               name: doc.name
             }
           });
+        } catch (ex) {
+          console.error(ex);
+        }
+      }
+    },
+    {
+      label: 'Trips',
+      condition: doc => !doc.isNew(),
+      action: async function(permit) {
+        try {
+          router.push({
+            name: 'ListView',
+            params: {
+              doctype: 'Trip',
+              filters: {
+                permit: permit.name
+              }
+            }
+          });
+        } catch (ex) {
+          console.error(ex);
+        }
+      }
+    },
+    {
+      label: 'Tag Report',
+      condition: doc => !doc.isNew(),
+      action: async function(permit) {
+        try {
+          let tagged = JSON.parse(permit.tagged || '{}');
+          tagged = Object.keys(tagged).map(t => [permit.name, t, tagged[t] ? 'Fail' : 'Success', tagged[t]]);
+          console.log(tagged);
+          exportData(`${permit.name} Tag Report`, ['Permit', 'Truck No', 'Status', 'Reason'], tagged);
         } catch (ex) {
           console.error(ex);
         }
