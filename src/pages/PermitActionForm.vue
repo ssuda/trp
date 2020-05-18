@@ -56,16 +56,21 @@
             </Button>
           </div>
 
-           <div class="flex text-sm px-8 mt-5 window-no-drag" v-if="doc.action === 'tagging'">
-             <p>Total: {{ total }}</p>
-             <p class="ml-8">Success: {{ success }}</p>
-             <p class="ml-8">Failed: {{ failed }}</p>
+          <div
+            class="flex text-sm px-8 mt-5 window-no-drag"
+            v-if="doc.action === 'tagging'"
+          >
+            <p>Total: {{ total }}</p>
+            <p class="ml-8">Success: {{ success }}</p>
+            <p class="ml-8">Failed: {{ failed }}</p>
           </div>
 
-          <div class="px-8 mt-5 font-medium text-green-600" v-if="doc.action === 'tagging'">
-             <p> {{ message }}</p>
+          <div
+            class="px-8 mt-5 font-medium text-green-600"
+            v-if="doc.action === 'tagging'"
+          >
+            <p>{{ message }}</p>
           </div>
-
         </div>
       </div>
     </div>
@@ -80,6 +85,8 @@ import FormControl from '@/components/Controls/FormControl';
 import BackLink from '@/components/BackLink';
 import _ from 'lodash';
 import { handleErrorWithDialog, showMessageDialog } from '@/utils';
+
+import { refreshPermit } from '@/permit';
 
 export default {
   name: 'PermitActionForm',
@@ -105,7 +112,9 @@ export default {
       return frappe.getMeta('PermitAction');
     },
     buttonText() {
-      return this.loading ? this._(`${this.doc.buttonText}...`) : this._('Next');
+      return this.loading
+        ? this._(`${this.doc.buttonText}...`)
+        : this._('Next');
     },
     success() {
       if (this.total && this.failed) {
@@ -174,10 +183,7 @@ export default {
         });
       } else if (this.doc.action === 'tagging') {
         const permit = this.doc.permit;
-        const credentials = await frappe.getDoc(
-          'I3MSAccount',
-          permit.account
-        );
+        const credentials = await frappe.getDoc('I3MSAccount', permit.account);
         const truckList = await frappe.getDoc('TruckList', this.doc.truckList);
         console.log(credentials, truckList);
         let trucks = truckList.trucks.split('\n').filter(Boolean);
@@ -196,8 +202,8 @@ export default {
             trucks
           });
 
-          frappe.events.on('total', total => this.total = total);
-          frappe.events.on('failed', failed => this.failed = failed);
+          frappe.events.on('total', total => (this.total = total));
+          frappe.events.on('failed', failed => (this.failed = failed));
 
           frappe.events.once('tag-results', () => {
             this.loading = false;
@@ -206,34 +212,20 @@ export default {
             this.message = 'success';
           });
         } else {
-          showMessageDialog({ 
+          showMessageDialog({
             description: this._('All Trucks Already Tagged'),
-            buttons:[
+            buttons: [
               {
                 label: _('Ok')
               }
             ]
           });
-          this.loading = false
+          this.loading = false;
           return;
         }
       } else if (this.doc.action === 'refresh') {
         //call permit refresh
-        console.log('fefresh called')
-        const permit = this.doc.permit;
-        const credentials = await frappe.getDoc(
-          'I3MSAccount',
-          this.doc.account
-        );
-        frappe.events.trigger('permit-details', {
-          credentials,
-          tag_url: permit.taggingUrl,
-          vehicle_details: permit.vehicleDetails,
-          permit_number: permit.name,
-          start_date: permit.startDate,
-          end_date: permit.endDate
-        });
-        frappe.events.once('permit-details-results', () => {
+        refreshPermit(this.doc.permit, () => {
           this.loading = false;
           this.$router.back();
         });

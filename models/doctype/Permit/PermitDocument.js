@@ -1,7 +1,11 @@
 const frappe = require('frappejs');
 const BaseDocument = require('@/basedocument');
+const { refreshPermit } = require('@/permit');
 
 module.exports = class Permit extends BaseDocument {
+  afterInsert() {
+    refreshPermit(this);
+  }
 
   async getNumberOfTrips() {
     console.log('name', this.name);
@@ -33,7 +37,6 @@ module.exports = class Permit extends BaseDocument {
   }
 
   async getQuantityDelivered() {
-
     let { count, sum } = (
       await frappe.db
         .knex('Trip')

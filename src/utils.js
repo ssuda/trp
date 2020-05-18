@@ -132,7 +132,7 @@ export function showMessageDialog({ message, description, buttons = [] }) {
         Vue.modal.hide('dialog');
       }
     }))
-  })
+  });
 }
 
 export async function exportData(title, columns, rows) {
@@ -230,12 +230,16 @@ export function openQuickEdit({ doctype, name, hideFields, defaults = {} }) {
 
 export function getErrorMessage(e, doc) {
   let errorMessage = e.message || _('An error occurred');
+
   if (e.type === frappe.errors.LinkValidationError) {
     errorMessage = _('{0} {1} is linked with existing records.', [
       doc.doctype,
       doc.name
     ]);
-  } else if (e.type === frappe.errors.DuplicateEntryError) {
+  } else if (
+    e.type === frappe.errors.DuplicateEntryError ||
+    /duplicate key/i.test(e.message)
+  ) {
     errorMessage = _('{0} {1} already exists.', [doc.doctype, doc.name]);
   }
   return errorMessage;
