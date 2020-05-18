@@ -97,7 +97,6 @@ export default {
       loading: false,
       failed: '',
       total: '',
-      success: '',
       message: ''
     };
   },
@@ -106,7 +105,22 @@ export default {
       return frappe.getMeta('PermitAction');
     },
     buttonText() {
-      return this.loading ? this._('Setting Up...') : this._('Next');
+      return this.loading ? this._(`${this.doc.buttonText}...`) : this._('Next');
+    },
+    success() {
+      if (this.total && this.failed) {
+        return parseInt(this.total) - parseInt(this.failed);
+      }
+
+      if (this.total) {
+        return parseInt(this.total);
+      }
+
+      if (this.failed) {
+        return 0;
+      }
+
+      return '';
     }
   },
   async created() {

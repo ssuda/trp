@@ -102,6 +102,7 @@ module.exports = {
           const doc = await frappe.getNewDoc('PermitAction');
           doc.set({
             label: _('Refresh Permit'),
+            buttonText: _('Refreshing'),
             action: 'refresh',
             permit
           });
@@ -132,6 +133,7 @@ module.exports = {
           doc.set({
             label: _('Tagging'),
             action: 'tagging',
+            buttonText: _('Tagging'),
             permit
           });
 
