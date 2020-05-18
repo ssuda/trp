@@ -1,23 +1,24 @@
 const frappe = require('frappejs');
 const Database = require('frappejs/backends/database');
-const debug = false;process.env.NODE_ENV === 'development';
+const debug = process.env.NODE_ENV === 'development';
 
 module.exports = class mysqlDatabase extends Database {
   constructor(options) {
     super();
     this.timestamps = false;
-    this.db_name = options.database;
     this.connectionParams = {
       client: 'pg',
-      connection: options,
+      ...options,
       pool: { min: 0, max: 7 },
       debug: debug
     };
+
+    console.log(this.connectionParams);
   }
 
   async getTableColumns(doctype) {
     let ret = await this.sql(
-      `select column_name from information_schema.columns where table_schema = 'public' and table_name = '${doctype}'`
+      `select column_name from information_schema.columns where table_name = '${doctype}'`
     );
     console.log('called get columns for', doctype, ret);
     ret = ret.rows.map(d => d.column_name);

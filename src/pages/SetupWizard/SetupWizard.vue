@@ -84,6 +84,7 @@ import FormControl from '@/components/Controls/FormControl';
 import Button from '@/components/Button';
 import setupCompany from './setupCompany';
 import Popover from '@/components/Popover';
+import Users from '@/users';
 
 import {
   getErrorMessage,
@@ -149,8 +150,17 @@ export default {
       }
       try {
         this.loading = true;
-        await registerUserAndCompany(this.doc);
-        await connectToRemoteDatabase('spinbi');
+        const fbuser = await Users.signup(this.doc);
+        await connectToRemoteDatabase();
+        const doc = frappe.newDoc({
+          doctype: 'SpinBiUser',
+          name: this.doc.email,
+          password: this.doc.password,
+          userId: fbuser.uid,
+          fullName: this.doc.fullname,
+          role: 'Administrator',
+        });
+        await doc.insert();
         await setupCompany(this.doc);
         this.$emit('setup-complete');
       } catch (e) {

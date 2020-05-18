@@ -1,4 +1,5 @@
 const countryList = Object.keys(require('~/fixtures/countryInfo.json')).sort();
+const { uuid } =  require('uuidv4');
 
 module.exports = {
   name: 'AccountingSettings',
@@ -111,7 +112,15 @@ module.exports = {
       label: 'Auto Update',
       fieldtype: 'Check',
       default: 1
-    }
+    },
+
+    {
+      fieldname: 'accountId',
+      label: 'Account Id',
+      fieldtype: 'Data',
+      hidden: 1,
+      formula: doc => doc.accountId ? doc.accountId : uuid()
+    },
   ],
   quickEditFields: [
     'fullname',

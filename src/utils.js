@@ -4,7 +4,7 @@ import { _ } from 'frappejs/utils';
 import migrate from './migrate';
 import { remote, shell, ipcRenderer } from 'electron';
 import SQLite from 'frappejs/backends/sqlite';
-import mysql from '@/database';
+import Database from '@/database';
 
 import postStart from '../server/postStart';
 import router from '@/router';
@@ -70,29 +70,32 @@ export function loadExistingDatabase() {
   });
 }
 
-export async function connectToRemoteDatabase(dbname) {
+
+export async function connectToRemoteDatabase() {
   //const credentials = keytar.findCredentials(dbname)[0];
   // const host = config.get('dbhostname', 'spinbitrp.carfhb845pe3.ap-south-1.rds.amazonaws.com');
   // const username = config.get('username', 'fe9fd197e0040f2c');
   // const password = config.get('password', 'x9wj29ZpXHYmp&5n');
 
-  const host = 'localhost';
-  const user = 'postgres';
-  const password = 'postgrespassword';
-
+  // const host = 'localhost';
+  // const user = 'postgres';
+  // const password = 'postgrespassword';
   frappe.login('Administrator');
-  frappe.db = new mysql({
-    host,
-    password,
-    user,
-    database: 'postgres'
-  });
+  //const dbname = config.get('lastSelectedDB');
+  //const connection = JSON.parse(dbname);
+  // const conn = {
+  //   connection: 'postgres://n7fwxfglzvwksnq2:gyv3wm0wcembt1bz@localhost:5432/postgres',
+  // }
+
+  // config.set('lastSelectedDB', JSON.stringify(conn));
+
+  const conn = JSON.parse(config.get('lastSelectedDB'))
+
+  frappe.db = new Database(conn);
   await frappe.db.connect();
 
   await migrate();
   await postStart();
-
-  config.set('lastSelectedDB', dbname);
 }
 
 export async function connectToLocalDatabase(filepath) {

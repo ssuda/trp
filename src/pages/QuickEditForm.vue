@@ -118,9 +118,11 @@ export default {
       return frappe.getMeta(this.doctype);
     },
     fields() {
-      return this.meta
+      const f = this.meta
         .getQuickEditFields()
         .filter(df => !(this.hideFields || []).includes(df.fieldname));
+      console.log('fields', f);
+      return f;
     },
     actions() {
       return getActionsForDocument(this.doc);

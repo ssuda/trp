@@ -15,10 +15,10 @@
         </svg>
         <div class="flex flex-col w-56 ml-4 truncate">
           <span class="font-semibold">{{ companyName }}</span>
-          <span class="text-xs text-gray-600">{{ dbPath }}</span>
+          <span class="text-xs text-gray-600">{{ companyId }}</span>
         </div>
       </div>
-      <Button class="text-sm" @click="changeFile">
+      <Button class="text-sm" v-if="dbPath" @click="changeFile">
         {{ _('Change File') }}
       </Button>
     </div>
@@ -63,12 +63,14 @@ export default {
   data() {
     return {
       companyName: null,
+      companyId: null,
       doc: null
     };
   },
   async mounted() {
     this.doc = frappe.SystemSettings;
     this.companyName = frappe.AccountingSettings.companyName;
+    this.companyId = frappe.AccountingSettings.companyId;
   },
   methods: {
     changeFile() {
