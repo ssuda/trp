@@ -250,7 +250,11 @@ export async function tagVehicle(href, truckNo) {
     await page.waitForSelector('#txtVehicleNo');
     await page.$eval('#txtVehicleNo', el => (el.disabled = false));
     await typeInTextBox('#txtVehicleNo', truckNo);
-    await page.click('#btnsearch');
+    //await page.click('#btnsearch');
+    const [response] = await Promise.all([
+      page.waitForNavigation(), // The promise resolves after navigation has finished
+      page.click('#btnsearch'), // Clicking the link will indirectly cause a navigation
+    ]);
 
     // await page.waitForNavigation();
     const r = await promiseAny(

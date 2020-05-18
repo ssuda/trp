@@ -6,7 +6,7 @@ module.exports = {
   //printTemplate: InvoiceTemplate,
   isSingle: 0,
   isChild: 0,
-  keywordFields: ['name', 'supplier'],
+  keywordFields: ['name', 'supplier', 'passingWeight', 'wheels'],
   tableFields: ['name', 'supplier'],
   showTitle: true,
   fields: [
@@ -18,6 +18,16 @@ module.exports = {
       required: 1
     },
     {
+      fieldname: 'wheels',
+      label: 'Number Of Wheels',
+      fieldtype: 'Int',
+    },
+    {
+      fieldname: 'passingWeight',
+      label: 'Passing Weight',
+      fieldtype: 'Float',
+    },
+    {
       fieldname: 'supplier',
       label: 'Truck Owner',
       fieldtype: 'Link',
@@ -26,5 +36,5 @@ module.exports = {
     }
   ],
 
-  quickEditFields: ['name', 'supplier']
+  quickEditFields: ['name', 'supplier', 'passingWeight', 'wheels']
 };

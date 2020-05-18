@@ -58,6 +58,7 @@
 
            <div class="flex text-sm px-8 mt-5 window-no-drag" v-if="doc.action === 'tagging'">
              <p>Total: {{ total }}</p>
+             <p class="ml-8">Success: {{ success }}</p>
              <p class="ml-8">Failed: {{ failed }}</p>
           </div>
 
@@ -96,6 +97,7 @@ export default {
       loading: false,
       failed: '',
       total: '',
+      success: '',
       message: ''
     };
   },
@@ -157,19 +159,18 @@ export default {
           this.$router.back();
         });
       } else if (this.doc.action === 'tagging') {
+        const permit = this.doc.permit;
         const credentials = await frappe.getDoc(
           'I3MSAccount',
-          this.doc.account
+          permit.account
         );
         const truckList = await frappe.getDoc('TruckList', this.doc.truckList);
-        console.log(this.doc.credentials, truckList);
+        console.log(credentials, truckList);
         let trucks = truckList.trucks.split('\n').filter(Boolean);
 
-        let tagged = this.doc.tagged ? JSON.parse(this.doc.tagged) : {};
-        tagged = Object.keys(tagged)
-          .map(t => !tagged[t] && t)
-          .filter(Boolean);
-        trucks = _.difference(trucks, tagged);
+        // let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
+        // tagged = Object.keys(tagged);
+        // trucks = _.difference(trucks, tagged);
 
         console.log('Trucks remaining', trucks);
 
@@ -177,7 +178,7 @@ export default {
           this.loading = true;
           frappe.events.trigger('tag-vehicles', {
             credentials,
-            ...this.doc.permit,
+            ...permit,
             trucks
           });
 
@@ -191,7 +192,15 @@ export default {
             this.message = 'success';
           });
         } else {
-          showMessageDialog({ message: this._('All Trucks Already Tagged') });
+          showMessageDialog({ 
+            description: this._('All Trucks Already Tagged'),
+            buttons:[
+              {
+                label: _('Ok')
+              }
+            ]
+          });
+          this.loading = false
           return;
         }
       } else if (this.doc.action === 'refresh') {
