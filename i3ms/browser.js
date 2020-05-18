@@ -74,6 +74,7 @@ async function login(myAttempt) {
       return;
     }
 
+    console.log('goto default.aspx');
     await page.goto('https://i3ms.orissaminerals.gov.in/Default.aspx?id=1');
     if (myAttempt != loginAttempt) {
       return;
@@ -162,7 +163,7 @@ async function createPage() {
     });
   } catch(ex) {}
 
-  page.setDefaultTimeout(300000);
+  //page.setDefaultTimeout(5000);
   page.setDefaultNavigationTimeout(300000);
 }
 
@@ -247,18 +248,23 @@ export async function tagVehicle(href, truckNo) {
   console.log('Trying to tag vehicle', truckNo);
   let reason = '';
   try {
-    await page.waitForSelector('#txtVehicleNo');
+    console.log('waiting for vehicle no box', truckNo);
+    await page.waitForSelector('#txtVehicleNo', { timeout: 5000 });
+    console.log('checking disabled box', truckNo);
     await page.$eval('#txtVehicleNo', el => (el.disabled = false));
     await typeInTextBox('#txtVehicleNo', truckNo);
     //await page.click('#btnsearch');
+    console.log('clicking btnsearch', truckNo);
     const [response] = await Promise.all([
-      page.waitForNavigation(), // The promise resolves after navigation has finished
+      page.waitForNavigation({timeout: 5000}), // The promise resolves after navigation has finished
       page.click('#btnsearch'), // Clicking the link will indirectly cause a navigation
     ]);
 
     // await page.waitForNavigation();
+    console.log('waiting for radio or error message', truckNo);
+
     const r = await promiseAny(
-      page.waitForSelector('#rdo_GPS_0'),
+      page.waitForSelector('#rdo_GPS_0', {timeout: 5000}),
       page.waitForSelector('#lblMsg')
     );
 
@@ -269,23 +275,28 @@ export async function tagVehicle(href, truckNo) {
       await page.click('#Rdo_VTS_0');
       await page.click('#Rdo_SIM_0');
       await page.click('#chkClick');
-      await page.click('#btnSubmit');
+      //await page.click('#btnSubmit');
+      const [response] = await Promise.all([
+        page.waitForNavigation({timeout: 5000}), // The promise resolves after navigation has finished
+        page.click('#btnSubmit'), // Clicking the link will indirectly cause a navigation
+      ]);
+  
     } else {
       reason = page.$eval('#lblMsg', el => el.innerText);
       console.log('failed vehicle retrying...', truckNo);
 
       if (/something wrong/i.test(reason)) {
-        return exports.tagVehicle(href, truckNo);
+        return tagVehicle(href, truckNo);
       }
     }
 
     return reason;
   } catch (ex) {
-    if (/(execution context)|(network)/i.test(ex.message)) {
-      await exports.tagInit(href);
-      return exports.tagVehicle(href, truckNo);
-    }
     console.error(ex);
+    if (/(execution context)|(network|timeout)/i.test(ex.message)) {
+      await tagInit(href);
+      return tagVehicle(href, truckNo);
+    }
     console.log('failed vehicle', truckNo);
     return false;
   }
@@ -728,7 +739,7 @@ export async function openBrowser(headless) {
   console.log('Calling createPage');
 
   await createPage();
-  console.log('Calling init finished');
+  console.log('Calling browseInit finished');
 }
 
 export async function getDetails() {
@@ -766,7 +777,7 @@ export async function getDetails() {
 
   await hrefs.reduce(async (p, href) => {
     await p;
-    const r = await exports.getTrips(href);
+    const r = await getTrips(href);
     rows = rows.concat(r);
     return Promise.resolve();
   }, Promise.resolve());
@@ -776,7 +787,7 @@ export async function getDetails() {
 
 let credentials;
 
-export async function init(cred, headless) {
+export async function browserInit(cred, headless) {
   credentials = cred;
   // if (browser) {
   //   await disconnect();
@@ -787,7 +798,7 @@ export async function init(cred, headless) {
 if (require.main == module) {
   console.log('loading');
   (async () => {
-    await init({
+    await browseInit({
       username: 'AABCN5129K4',
       password: 'Aabcnnecc@5129'
     });
@@ -797,32 +808,6 @@ if (require.main == module) {
       '#grdRequestList',
       true
     );
-
-    // const r = await exports.tpDetails('https://i3ms.orissaminerals.gov.in/i3MS/epass/ViewPassDetail_M.aspx?J88I/CpSFfzTAqqTsuGyT8EkmqRtcA60cfpQQIwx7c4=');
-
-    // const r = await exports.permitVehicles(
-    //     'https://i3ms.orissaminerals.gov.in/i3MS/ePassReports/PermitWiseTransportDetails.aspx?linkn=313&linkm=15&Openstate=0',
-    //     'L111900783');
-    // const r = await exports.transportAssignVehicles('https://i3ms.orissaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?ziK6GBCckRR5klR3RWHt/vF/B7IvSQVEVq6DGZAKn7w+wXAoCGtfL6fsfIZziUcp');
-
-    // console.log(r);
-    // const r = await exports.receiveMineral(
-    //     'https://i3ms.orissaminerals.gov.in/i3ms/OMPTSNEW/LicenseeRecieveePass.aspx',
-    //     'L101902686',
-    //     '#grdRecvPass',
-    //     // {
-    //     //     'L101902686/499': '11/11/2019 09:48:22 AM'
-    //     // }
-    // );
-    // const r = await exports.receiveConfirm(
-    //         'https://i3ms.orissaminerals.gov.in/i3ms/OMPTSNEW/LicenseeConfirmReceiveePass.aspx',
-    //         'L111901720',
-    //     )
-    // const result = await exports.getPermitDetails('https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterRequestDetails.aspx?ulI6njdYjn1UHtMl0JvnEH355iDzTZqy4sVRL5E36p6mHDjlXwJicw58QoapJM/X', '#grdRequestDTLS');
-    // console.log(result);
-    // const r = await exports.taggedVehicles('https://i3ms.orissaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
-    //     'L111902330');
-
     console.log(r);
   })();
 }

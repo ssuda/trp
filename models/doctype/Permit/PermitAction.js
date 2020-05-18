@@ -44,6 +44,12 @@ module.exports = {
       label: 'Action',
       fieldtype: 'Data',
       required: true
+    },
+    {
+      fieldname: 'buttonText',
+      label: 'Button Text',
+      fieldtype: 'Data',
+      required: true
     }
   ]
 };

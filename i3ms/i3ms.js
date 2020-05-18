@@ -1,6 +1,6 @@
 const moment = require('moment');
 
-const i3ms = require('./puppeteer');
+const i3ms = require('./browser');
 const _ = require('lodash');
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -118,7 +118,7 @@ export async function permitReport(args) {
 export async function successDownload(permitNo, credentials) {
   if (credentials) {
     console.log(credentials);
-    await i3ms.init(credentials);
+    await i3ms.browserInit(credentials);
   }
 
   console.log('permitno', permitNo);
@@ -275,7 +275,7 @@ export async function tagVehicles(options, sse) {
   const { taggingUrl, credentials, trucks } = options;
   try {
     if (trucks.length) {
-      await i3ms.init(credentials);
+      await i3ms.browserInit(credentials);
       await i3ms.tagInit(taggingUrl);
 
       let retries = await tag(trucks, options, sse);
@@ -301,7 +301,7 @@ export async function releaseVehicles(options, sse) {
   console.log('release was called');
   try {
     if (trucks.length) {
-      await i3ms.init(credentials);
+      await i3ms.browserInit(credentials);
       const chunks = _.chunk(trucks, 20);
 
       for (let chunk of chunks) {
@@ -325,7 +325,7 @@ if (require.main === module) {
   (async function() {
     console.log(process.argv);
     try {
-      await i3ms.init();
+      await i3ms.browserInit();
     } catch (ex) {
       console.error(ex);
     }

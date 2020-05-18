@@ -17,7 +17,7 @@ import {
   permitReport,
   releaseVehicles
 } from '../i3ms/i3ms';
-import { init, openBrowser } from '../i3ms/puppeteer';
+import { browserInit, openBrowser } from '../i3ms/browser';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isMac = process.platform === 'darwin';
@@ -104,7 +104,7 @@ openBrowser(false);
 
 ipcMain.on('permit-report', async (event, args) => {
   console.log(args.startDate, args.endDate);
-  await init(args.credentials);
+  await browserInit(args.credentials);
   const r = await permitReport(args);
   console.log('sending results to browser', r);
   event.sender.send('permit-report-results', r);
@@ -132,7 +132,7 @@ ipcMain.on('release-vehicles', async (event, args) => {
 
 ipcMain.on('permit-details', async (event, args) => {
   console.log(args);
-  await init(args.credentials, false);
+  await browserInit(args.credentials, false);
   const r = await permitDetails(args);
   console.log('sending results to browser', r);
   event.sender.send('permit-details-results', r);
@@ -143,7 +143,7 @@ ipcMain.on('permits-details', async (event, args) => {
 
   if (args.refresh) {
     for (let permit of args.permits) {
-      await init(permit.credentials, false);
+      await browserInit(permit.credentials, false);
       await permitDetails({
         ...permit,
         sender: event.sender
@@ -152,7 +152,7 @@ ipcMain.on('permits-details', async (event, args) => {
     return event.sender.send('permits-details-results');
   }
 
-  await init(args.credentials, false);
+  await browserInit(args.credentials, false);
   args.sender = event.sender;
   console.log('calling permits details');
   const r = await permitsDetails(args);
