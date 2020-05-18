@@ -60,8 +60,7 @@ module.exports = {
     {
       fieldname: 'quantity',
       label: 'Quantity',
-      fieldtype: 'Float',
-      required: true
+      fieldtype: 'Float'
     },
     {
       fieldname: 'tagged',
@@ -173,9 +172,18 @@ module.exports = {
       action: async function(permit) {
         try {
           let tagged = JSON.parse(permit.tagged || '{}');
-          tagged = Object.keys(tagged).map(t => [permit.name, t, tagged[t] ? 'Fail' : 'Success', tagged[t]]);
+          tagged = Object.keys(tagged).map(t => [
+            permit.name,
+            t,
+            tagged[t] ? 'Fail' : 'Success',
+            tagged[t]
+          ]);
           console.log(tagged);
-          exportData(`${permit.name} Tag Report`, ['Permit', 'Truck No', 'Status', 'Reason'], tagged);
+          exportData(
+            `${permit.name} Tag Report`,
+            ['Permit', 'Truck No', 'Status', 'Reason'],
+            tagged
+          );
         } catch (ex) {
           console.error(ex);
         }
