@@ -9,7 +9,7 @@ exports.default = async context => {
   const appName = context.packager.appInfo.productFilename;
 
   return await notarize({
-    appBundleId: 'io.frappe.books',
+    appBundleId: 'com.spinbi.trp',
     appPath: `${appOutDir}/${appName}.app`,
     appleId: process.env.APPLE_ID,
     appleIdPassword: process.env.APPLE_APP_PASSWORD
