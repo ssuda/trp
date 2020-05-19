@@ -31,7 +31,7 @@
 import './styles/index.css';
 import 'frappe-charts/dist/frappe-charts.min.css';
 import frappe from 'frappejs';
-import { firebaseAuth  } from '@/firebase';
+import { firebaseAuth } from '@/firebase';
 import Users from '@/users';
 import Desk from './pages/Desk';
 import SetupWizard from './pages/SetupWizard/SetupWizard';
@@ -41,7 +41,6 @@ import WindowsTitleBar from '@/components/WindowsTitleBar';
 import LoginRegister from './pages/SetupWizard/LoginRegister';
 import Vue from 'vue';
 import { remote } from 'electron';
-import config from '@/config';
 import { connectToLocalDatabase, connectToRemoteDatabase } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
 
@@ -82,9 +81,15 @@ export default {
   },
   async mounted() {
     Vue.modal = this.$modal;
-    let lastSelectedDB = config.get('lastSelectedDB', null);
-    console.log('connected db', lastSelectedDB);
-    if (lastSelectedDB) {
+    let user;
+    try {
+      user = await Users.getCurrentUser();
+    } catch (ex) {
+      console.error(ex);
+    }
+    console.log('connected db');
+
+    if (user) {
       await connectToRemoteDatabase();
       this.showSetupWizardOrDesk();
     } else {
@@ -101,14 +106,8 @@ export default {
         this.activeScreen = 'Settings';
       } else {
         //check whether he is logged in or not
-        console.log(firebaseAuth.currentUser);
-        let user;
-
-        try {
-          user = await Users.getCurrentUser();
-        } catch (ex) {}
-
-        if (user) {
+        console.log('firebaseUser', firebaseAuth.currentUser);
+        if (firebaseAuth.currentUser) {
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';
