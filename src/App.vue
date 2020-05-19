@@ -87,9 +87,11 @@ export default {
     } catch (ex) {
       console.error(ex);
     }
-    console.log('connected db');
 
-    if (user) {
+    console.log(user);
+
+    if (user && user.displayName) {
+      console.log('connected db', user.displayName);
       await connectToRemoteDatabase();
       this.showSetupWizardOrDesk();
     } else {

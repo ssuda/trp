@@ -59,8 +59,12 @@ export async function permitsDetails(args) {
       console.log(permit.tag_url);
 
       if (permit.tag_url) {
-        const l = await permitDetails(permit);
-        out.push(l);
+        try {
+          const l = await permitDetails(permit);
+          out.push(l);
+        } catch (ex) {
+          console.error(ex);
+        }
       }
     } else {
       console.log('Permit already exists', r['Permit No.']);
@@ -69,6 +73,7 @@ export async function permitsDetails(args) {
     return Promise.resolve();
   }, Promise.resolve());
 
+  console.log('permits details', out);
   return out;
 }
 

@@ -161,9 +161,9 @@ async function createPage() {
     await page.evaluateOnNewDocument(() => {
       addEventListener('error', e => onPageError(e));
     });
-  } catch(ex) {}
+  } catch (ex) {}
 
-  //page.setDefaultTimeout(5000);
+  //page.setDefaultTimeout(120000);
   page.setDefaultNavigationTimeout(300000);
 }
 
@@ -256,15 +256,15 @@ export async function tagVehicle(href, truckNo) {
     //await page.click('#btnsearch');
     console.log('clicking btnsearch', truckNo);
     const [response] = await Promise.all([
-      page.waitForNavigation({timeout: 5000}), // The promise resolves after navigation has finished
-      page.click('#btnsearch'), // Clicking the link will indirectly cause a navigation
+      page.waitForNavigation({ timeout: 5000 }), // The promise resolves after navigation has finished
+      page.click('#btnsearch') // Clicking the link will indirectly cause a navigation
     ]);
 
     // await page.waitForNavigation();
     console.log('waiting for radio or error message', truckNo);
 
     const r = await promiseAny(
-      page.waitForSelector('#rdo_GPS_0', {timeout: 5000}),
+      page.waitForSelector('#rdo_GPS_0', { timeout: 5000 }),
       page.waitForSelector('#lblMsg')
     );
 
@@ -277,10 +277,9 @@ export async function tagVehicle(href, truckNo) {
       await page.click('#chkClick');
       //await page.click('#btnSubmit');
       const [response] = await Promise.all([
-        page.waitForNavigation({timeout: 5000}), // The promise resolves after navigation has finished
-        page.click('#btnSubmit'), // Clicking the link will indirectly cause a navigation
+        page.waitForNavigation({ timeout: 5000 }), // The promise resolves after navigation has finished
+        page.click('#btnSubmit') // Clicking the link will indirectly cause a navigation
       ]);
-  
     } else {
       reason = page.$eval('#lblMsg', el => el.innerText);
       console.log('failed vehicle retrying...', truckNo);
@@ -317,6 +316,8 @@ export async function releaseVehicle(href, trucks, permitNo) {
   let option = 2;
   while (true) {
     try {
+      console.log('before ddlTransporter');
+
       await selectOption('#ddlTransporter', option);
 
       if (permitNo[0] == 'L') {
@@ -327,7 +328,7 @@ export async function releaseVehicle(href, trucks, permitNo) {
       await typeInTextBox('#txtPermitNo', permitNo);
       const [response] = await Promise.all([
         page.waitForNavigation(), // The promise resolves after navigation has finished
-        page.click('#btnGetVehicle'), // Clicking the link will indirectly cause a navigation
+        page.click('#btnGetVehicle') // Clicking the link will indirectly cause a navigation
       ]);
 
       console.log('waiting for selector');
@@ -356,7 +357,7 @@ export async function releaseVehicle(href, trucks, permitNo) {
         await delay(2000);
         break;
       }
-    } catch(ex) {}
+    } catch (ex) {}
   }
 }
 
@@ -375,6 +376,8 @@ export async function taggedVehicles(href, permitNo) {
   let option = 2;
   while (true) {
     try {
+      console.log('before ddlTransporter');
+
       await selectOption('#ddlTransporter', option);
 
       if (permitNo[0] == 'L') {
@@ -385,7 +388,7 @@ export async function taggedVehicles(href, permitNo) {
       await typeInTextBox('#txtPermitNo', permitNo);
       const [response] = await Promise.all([
         page.waitForNavigation(), // The promise resolves after navigation has finished
-        page.click('#btnGetVehicle'), // Clicking the link will indirectly cause a navigation
+        page.click('#btnGetVehicle') // Clicking the link will indirectly cause a navigation
       ]);
 
       console.log('waiting for selector');
@@ -620,9 +623,7 @@ export async function permitVehicles(href, permitNo, fromdate, todate) {
   let r = 3;
 
   while (r == 3) {
-    
     try {
-
       await typeInTextBox('#txtpermit', permitNo);
 
       await typeInTextBox('#frm_txt_date', fromdate);
@@ -632,7 +633,7 @@ export async function permitVehicles(href, permitNo, fromdate, todate) {
       console.log('Retrying in loop');
       const [response] = await Promise.all([
         page.waitForNavigation(), // The promise resolves after navigation has finished
-        page.click('#btnsearch'), // Clicking the link will indirectly cause a navigation
+        page.click('#btnsearch') // Clicking the link will indirectly cause a navigation
       ]);
 
       try {
@@ -798,7 +799,7 @@ export async function browserInit(cred, headless) {
 if (require.main == module) {
   console.log('loading');
   (async () => {
-    await browseInit({
+    await browserInit({
       username: 'AABCN5129K4',
       password: 'Aabcnnecc@5129'
     });
