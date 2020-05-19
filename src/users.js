@@ -1,9 +1,23 @@
-import { firebaseAuth, cloudfunctionsBaseUrl } from '@/firebase';
+import { firebaseAuth, firebase, cloudfunctionsBaseUrl } from '@/firebase';
 
 import axios from 'axios';
 import frappe from 'frappejs';
 
 let currentUser;
+
+function waitForUser() {
+  return new Promise((resolve, reject) => {
+    const unsubscribe = firebaseAuth.onAuthStateChanged(async user => {
+      unsubscribe();
+      user.token = await user.getIdToken(true);
+      try {
+        user.local = await frappe.getDoc('SpinBiUser', user.email);
+      } catch (ex) {}
+      //frappe.session.user = user;
+      resolve(user);
+    }, reject);
+  });
+}
 
 export default {
   async getCurrentUser() {
@@ -11,7 +25,7 @@ export default {
       return currentUser;
     }
 
-    let user = (currentUser = await firebaseAuth.currentUser);
+    let user = (currentUser = firebaseAuth.currentUser);
 
     if (user) {
       user.token = await user.getIdToken(true);
@@ -23,18 +37,9 @@ export default {
       return currentUser;
     }
 
-    return new Promise((resolve, reject) => {
-      const unsubscribe = firebaseAuth.onAuthStateChanged(async user => {
-        unsubscribe();
-        user.token = await user.getIdToken(true);
-        try {
-          user.local = await frappe.getDoc('SpinBiUser', user.email);
-        } catch (ex) {}
-        //frappe.session.user = user;
-        currentUser == user;
-        resolve(user);
-      }, reject);
-    });
+    currentUser = await waitForUser();
+
+    return currentUser;
   },
 
   async login(email, password) {
@@ -52,8 +57,13 @@ export default {
       await firebaseAuth.signInWithEmailAndPassword(email, password);
     }
 
-    const fbuser = await this.getCurrentUser();
-    const connectionString = await axios.post(
+    let fbuser = await this.getCurrentUser();
+
+    if (fbuser.displayName) {
+      return fbuser;
+    }
+
+    await axios.post(
       `${cloudfunctionsBaseUrl}/setupCompany`,
       {
         email: user.email,
@@ -66,16 +76,21 @@ export default {
       }
     );
 
-    await fbuser.updateProfile({
-      displayName: connectionString
-    });
+    console.log('Before reauth');
+    const credential = firebase.auth.EmailAuthProvider.credential(
+      email,
+      password
+    );
+    await fbuser.reauthenticateWithCredential(credential);
+    fbuser = await waitForUser();
 
+    console.log(firebaseAuth.currentUser);
     return fbuser;
   },
 
   async createUser(user) {
     const fbuser = await this.getCurrentUser();
-    const uid = await axios.post(
+    const { uid } = await axios.post(
       `${cloudfunctionsBaseUrl}/createUser`,
       {
         email: user.email,

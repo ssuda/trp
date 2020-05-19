@@ -4,7 +4,6 @@ import * as firebase from 'firebase/app';
 // Add the Firebase products that you want to use
 import 'firebase/auth';
 import 'firebase/firestore';
-import axios from 'axios';
 
 // Firebase Config
 const firebaseConfig = {
@@ -34,27 +33,19 @@ function getFirebaseProjectId() {
   return firebase.app().options.authDomain.split('.')[0];
 }
 
-let firebaseUser;
-
-firebase.auth().onAuthStateChanged(function(user) {
-  console.log('user', user);
-  console.log('firebase auth user', firebaseAuth.currentUser);
-
-  if (user) {
-    firebaseUser = user;
-  } else {
-    firebaseUser = null;
-  }
-});
-
-const cloudfunctionsBaseUrl = 'http://localhost:3000';
-  //'https://us-central1-' + getFirebaseProjectId() + '.cloudfunctions.net/app';
+const cloudfunctionsBaseUrl =
+  process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3000'
+    : 'https://us-central1-' +
+      getFirebaseProjectId() +
+      '.cloudfunctions.net/app';
 
 export {
   firebaseAuth,
   firebaseDb,
   FieldValue,
   Timestamp,
+  firebase,
   getFirebaseProjectId,
   cloudfunctionsBaseUrl
 };
