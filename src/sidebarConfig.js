@@ -147,7 +147,7 @@ const config = {
           label: _('Users'),
           route: '/list/SpinBiUser',
           doctype: 'SpinBiUser',
-          condition: () => frappe.session.user === 'Administrator'
+          condition: () => frappe.currentUser.role === 'Administrator'
         },
         {
           label: _('Chart of Accounts'),

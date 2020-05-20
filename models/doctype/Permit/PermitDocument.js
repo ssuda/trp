@@ -4,7 +4,9 @@ const { refreshPermit } = require('@/permit');
 
 module.exports = class Permit extends BaseDocument {
   afterInsert() {
-    refreshPermit(this);
+    if (!this.quantity || !this.startDate || !this.vehicleDetails) {
+      refreshPermit(this);
+    }
   }
 
   async getNumberOfTrips() {

@@ -59,7 +59,7 @@ module.exports = {
     {
       fieldname: 'endDate',
       label: 'End Date',
-      fieldtype: 'Date',
+      fieldtype: 'Date'
     },
     {
       fieldname: 'tpNumber',
@@ -97,8 +97,7 @@ module.exports = {
     {
       fieldname: 'fuel',
       label: 'Fuel',
-      fieldtype: 'Currency',
-      target: 'FuelSlip'
+      fieldtype: 'Currency'
     }
   ],
 

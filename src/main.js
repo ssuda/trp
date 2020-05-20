@@ -12,23 +12,20 @@ import { ipcRenderer } from 'electron';
 import Vue from 'vue';
 import PortalVue from 'portal-vue';
 import Notifications from 'vue-notification';
-import VModal from 'vue-js-modal'
-
-
+import VModal from 'vue-js-modal';
 
 import App from './App';
 import router from './router';
 
 import BaseDocument from '@/basedocument';
+import Document from 'frappejs/model/document';
 
 (async () => {
   frappe.isServer = true;
   frappe.isElectron = true;
-  frappe.getDocumentClass = function (doctype) {
-    const meta = this.getMeta(doctype);
-    return meta.documentClass || BaseDocument;
-  };
-  
+  Document.prototype.compareWithCurrentDoc =
+    BaseDocument.prototype.compareWithCurrentDoc;
+
   frappe.init();
   frappe.registerLibs(common);
   frappe.registerModels(coreModels);
@@ -36,52 +33,52 @@ import BaseDocument from '@/basedocument';
   frappe.fetch = window.fetch.bind();
 
   async function savePermit(permit, args) {
-      console.log('Got result from i3ms', permit);
-      //save permit
+    console.log('Got result from i3ms', permit);
+    //save permit
+    await frappe.syncDoc({
+      doctype: 'Permit',
+      name: permit.permit_number,
+      account: args.credentials.name,
+      taggingUrl: permit.tag_url,
+      vehicleDetails: permit.vehicle_details,
+      startDate: permit.start_date,
+      endDate: permit.end_date,
+      quantity: permit.quantity,
+      tagged: JSON.stringify(permit.tagged)
+    });
+
+    // insertOrUpdate Trucks
+    for (let truck of permit.trips.map(t => t.truck_number)) {
+      console.log('inserting truck', truck);
       await frappe.syncDoc({
-        doctype: 'Permit',
-        name: permit.permit_number,
-        account: args.credentials.name,
-        taggingUrl: permit.tag_url,
-        vehicleDetails: permit.vehicle_details,
-        startDate: permit.start_date,
-        endDate: permit.end_date,
-        quantity: permit.quantity,
-        tagged: JSON.stringify(permit.tagged)
+        doctype: 'Truck',
+        name: truck
+      });
+    }
+
+    for (let trip of permit.trips) {
+      console.log('inserting trip', {
+        doctype: 'Trip',
+        name: trip.tp_number,
+        permit: permit.permit_number,
+        truck: trip.truck_number,
+        tpNumber: trip.tp_number,
+        tpUrl: trip.tp_url,
+        loadQty: trip.load_carrying,
+        startDate: trip.tp_date
       });
 
-      // insertOrUpdate Trucks
-      for (let truck of permit.trips.map(t => t.truck_number)) {
-        console.log('inserting truck', truck);
-        await frappe.syncDoc({
-          doctype: 'Truck',
-          name: truck
-        });
-      }
-
-      for (let trip of permit.trips) {
-        console.log('inserting trip', {
-          doctype: 'Trip',
-          name: trip.tp_number,
-          permit: permit.permit_number,
-          truck: trip.truck_number,
-          tpNumber: trip.tp_number,
-          tpUrl: trip.tp_url,
-          loadQty: trip.load_carrying,
-          startDate: trip.tp_date
-        });
-
-        await frappe.syncDoc({
-          doctype: 'Trip',
-          name: trip.tp_number,
-          permit: permit.permit_number,
-          truck: trip.truck_number,
-          tpNumber: trip.tp_number,
-          tpUrl: trip.tp_url,
-          loadQty: trip.load_carrying,
-          startDate: trip.tp_date
-        });
-      }
+      await frappe.syncDoc({
+        doctype: 'Trip',
+        name: trip.tp_number,
+        permit: permit.permit_number,
+        truck: trip.truck_number,
+        tpNumber: trip.tp_number,
+        tpUrl: trip.tp_url,
+        loadQty: trip.load_carrying,
+        startDate: trip.tp_date
+      });
+    }
   }
 
   frappe.events.on('reload-main-window', () => {
@@ -172,7 +169,7 @@ import BaseDocument from '@/basedocument';
   Vue.directive('on-outside-click', outsideClickDirective);
   Vue.use(PortalVue);
   Vue.use(Notifications);
-  Vue.use(VModal, { dialog: true});
+  Vue.use(VModal, { dialog: true });
   Vue.mixin({
     computed: {
       frappe() {

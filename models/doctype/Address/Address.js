@@ -19,7 +19,7 @@ module.exports = {
       label: 'Address Line 1',
       placeholder: 'Address Line 1',
       fieldtype: 'Data',
-      required: 1,
+      required: 1
     },
     {
       fieldname: 'addressLine2',
@@ -47,7 +47,8 @@ module.exports = {
       placeholder: 'Country',
       required: 1,
       fieldtype: 'AutoComplete',
-      getList: () => Object.keys(countryList).sort()
+      getList: () => Object.keys(countryList).sort(),
+      default: 'India'
     },
     {
       fieldname: 'postalCode',
@@ -99,6 +100,6 @@ module.exports = {
     'country',
     'postalCode'
   ],
-  
+
   inlineEditDisplayField: 'addressDisplay'
 };
