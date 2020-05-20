@@ -2,7 +2,7 @@ const frappe = require('frappejs');
 const Database = require('frappejs/backends/database');
 const debug = process.env.NODE_ENV === 'development';
 
-module.exports = class mysqlDatabase extends Database {
+module.exports = class SpinBiDatabase extends Database {
   constructor(options) {
     super();
     this.timestamps = false;
@@ -101,6 +101,7 @@ module.exports = class mysqlDatabase extends Database {
       AutoComplete: 'string(140)',
       Currency: 'float',
       integer: 'integer',
+      Int: 'integer',
       Float: 'decimal(18,6)',
       Percent: 'float',
       Check: 'integer(1)',

@@ -103,10 +103,10 @@ ipcMain.on('reload-main-window', () => {
 openBrowser(false);
 
 ipcMain.on('permit-report', async (event, args) => {
-  console.log(args.startDate, args.endDate);
+  console.log('permit-report', args.startDate, args.endDate);
   await browserInit(args.credentials);
   const r = await permitReport(args);
-  console.log('sending results to browser', r);
+  console.log('sending permit-report results to browser', r);
   event.sender.send('permit-report-results', r);
 });
 
@@ -117,24 +117,24 @@ ipcMain.on('permit-report', async (event, args) => {
 // });
 
 ipcMain.on('tag-vehicles', async (event, args) => {
-  console.log(args);
+  console.log('tag-vehicles', args);
   const r = await tagVehicles(args, event.sender);
-  console.log('sending results to browser', r);
+  console.log('sending tag-vehicles results to browser', r);
   event.sender.send('tag-results', r);
 });
 
 ipcMain.on('release-vehicles', async (event, args) => {
-  console.log(args);
+  console.log('release-vehicles', args);
   const r = await releaseVehicles(args, event.sender);
-  console.log('sending results to browser', r);
+  console.log('sending release-vehicles results to browser', r);
   event.sender.send('release-vehicles-results', r);
 });
 
 ipcMain.on('permit-details', async (event, args) => {
-  console.log(args);
+  console.log('permit-details', args);
   await browserInit(args.credentials, false);
   const r = await permitDetails(args);
-  console.log('sending results to browser', r);
+  console.log('sending permit-details results to browser', r);
   event.sender.send('permit-details-results', r);
 });
 
@@ -156,7 +156,7 @@ ipcMain.on('permits-details', async (event, args) => {
   args.sender = event.sender;
   console.log('calling permits details');
   const r = await permitsDetails(args);
-  console.log('sending results to browser', r);
+  console.log('sending permits-details results to browser', r);
   event.sender.send('permits-details-results', r);
 });
 

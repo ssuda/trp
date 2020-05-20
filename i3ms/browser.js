@@ -163,7 +163,7 @@ async function createPage() {
     });
   } catch (ex) {}
 
-  //page.setDefaultTimeout(120000);
+  //page.setDefaultTimeout(300000);
   page.setDefaultNavigationTimeout(300000);
 }
 
@@ -314,7 +314,7 @@ export async function releaseVehicle(href, trucks, permitNo) {
   );
 
   let option = 2;
-  while (true) {
+  while (option < numberOfOptions) {
     try {
       console.log('before ddlTransporter');
 
@@ -357,7 +357,9 @@ export async function releaseVehicle(href, trucks, permitNo) {
         await delay(2000);
         break;
       }
-    } catch (ex) {}
+    } catch (ex) {
+      await browsePage(href);
+    }
   }
 }
 
@@ -374,7 +376,7 @@ export async function taggedVehicles(href, permitNo) {
   );
 
   let option = 2;
-  while (true) {
+  while (option < numberOfOptions) {
     try {
       console.log('before ddlTransporter');
 
@@ -407,11 +409,12 @@ export async function taggedVehicles(href, permitNo) {
       if (!r.length && option < numberOfOptions) {
         option++;
       } else {
-        console.log('returning', r);
+        console.log('returning');
         return r;
       }
     } catch (ex) {
       console.error(ex);
+      await browsePage(href);
     }
   }
 }
@@ -531,7 +534,7 @@ export async function getPermits(href, selector, previous, attempts) {
     let p = await extractTable(selector);
     rows = rows.concat(p || []);
   }
-  console.log(rows);
+  //console.log(rows);
   return rows;
 }
 
@@ -576,7 +579,7 @@ async function extractTable(selector, txtField) {
             }
             i++;
           });
-          console.log(obj);
+          //console.log(obj);
           rows.push(obj);
         }
       });
@@ -610,7 +613,9 @@ export async function permitVehiclesInit(href) {
 }
 
 export async function permitVehicles(href, permitNo, fromdate, todate) {
-  await browsePage(href);
+  if (href) {
+    await browsePage(href);
+  }
   await page.waitForSelector('#txtpermit');
 
   fromdate ||
@@ -632,7 +637,7 @@ export async function permitVehicles(href, permitNo, fromdate, todate) {
 
       console.log('Retrying in loop');
       const [response] = await Promise.all([
-        page.waitForNavigation(), // The promise resolves after navigation has finished
+        page.waitForNavigation({ timeout: 120000 }), // The promise resolves after navigation has finished
         page.click('#btnsearch') // Clicking the link will indirectly cause a navigation
       ]);
 
@@ -668,7 +673,7 @@ export async function permitVehicles(href, permitNo, fromdate, todate) {
 
     const result = await extractRowDetails('#tabdata');
 
-    console.log(result);
+    //console.log(result);
 
     result.trucks = await extractTable('#grdpermitwise');
 
@@ -714,7 +719,7 @@ export async function getTrips(href) {
 
           i++;
         });
-        console.log(obj);
+        //console.log(obj);
         rows.push(obj);
       }
     });

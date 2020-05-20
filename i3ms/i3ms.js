@@ -14,12 +14,18 @@ export async function permitsDetails(args) {
   permits = permits.map(p => p.permit_number);
 
   console.log('Number of permits in last two months', permits.length);
+  let result;
 
-  const result = await i3ms.getPermits(
-    'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
-    '#grdTransporterActions',
-    true
-  );
+  for (let attempts = 0; attempts < 3; ++attempts) {
+    try {
+      result = await i3ms.getPermits(
+        'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
+        '#grdTransporterActions',
+        true
+      );
+      break;
+    } catch (ex) {}
+  }
 
   const out = [];
 
@@ -60,7 +66,9 @@ export async function permitsDetails(args) {
 
       if (permit.tag_url) {
         try {
+          console.log('fetching permit', permit.permit_number);
           const l = await permitDetails(permit);
+          console.log('finished fetching permit', permit.permit_number);
           out.push(l);
         } catch (ex) {
           console.error(ex);
@@ -91,7 +99,6 @@ export async function permitReport(args) {
   let trips = r.trucks.filter(t => t['Pass Number']);
 
   trips = _.map(trips, tpDetails => {
-    console.log(tpDetails);
     let uom;
     let wt;
     _.each(tpDetails, (v, k) => {
@@ -114,8 +121,7 @@ export async function permitReport(args) {
     };
   });
 
-  console.log(trips);
-
+  //console.log(trips);
   return trips;
 }
 
@@ -220,13 +226,14 @@ export async function permitDetails(permit) {
   permit.trips = await permitReport(permit);
 
   if (permit.sender) {
-    console.log('sending results to browser', permit);
-    return permit.sender.send(
+    console.log('sending results to browser', permit.permit_number);
+    permit.sender.send(
       'permit-details-results',
-      _.omit(permit, ['sender'])
+      _.omit(permit, ['sender', 'credentials'])
     );
   }
 
+  console.log('returning from permitdetails', permit.permit_number);
   return permit;
 }
 

@@ -12,7 +12,11 @@
           :key="column.label"
           class="py-4 truncate"
           :class="
-            ['Float', 'Currency'].includes(column.fieldtype) ? 'text-right' : ''
+            column.fieldtype == 'Int'
+              ? 'text-center'
+              : ['Float', 'Currency'].includes(column.fieldtype)
+              ? 'text-right'
+              : ''
           "
         >
           {{ column.label }}
@@ -38,6 +42,7 @@
             v-for="column in columns"
             :key="column.label"
             :class="{
+              'text-center': column.fieldtype == 'Int',
               'text-right': ['Float', 'Currency'].includes(column.fieldtype)
             }"
             :doc="doc"

@@ -3,48 +3,50 @@ import { firebaseAuth, firebase, cloudfunctionsBaseUrl } from '@/firebase';
 import axios from 'axios';
 import frappe from 'frappejs';
 
-let currentUser;
-
 function waitForUser() {
   return new Promise((resolve, reject) => {
-    const unsubscribe = firebaseAuth.onAuthStateChanged(async user => {
-      unsubscribe();
-      user.token = await user.getIdToken(true);
-      try {
-        user.local = await frappe.getDoc('SpinBiUser', user.email);
-      } catch (ex) {}
-      //frappe.session.user = user;
-      resolve(user);
-    }, reject);
+    const unsubscribe = firebaseAuth.onAuthStateChanged(
+      async user => {
+        unsubscribe();
+        user.token = await user.getIdToken(true);
+        try {
+          user.local = await frappe.getDoc('SpinBiUser', user.email);
+        } catch (ex) {}
+        resolve(user);
+      },
+      ex => {
+        console.error(ex);
+        unsubscribe();
+        resolve(null);
+      }
+    );
   });
 }
 
 export default {
   async getCurrentUser() {
-    if (currentUser) {
-      return currentUser;
+    if (frappe.currentUser) {
+      return frappe.currentUser;
     }
 
-    let user = (currentUser = firebaseAuth.currentUser);
+    let user = (frappe.currentUser = firebaseAuth.currentUser);
 
-    if (user) {
+    if (user && !user.token) {
       user.token = await user.getIdToken(true);
       try {
         user.local = await frappe.getDoc('SpinBiUser', user.email);
       } catch (ex) {}
 
       //frappe.session.user = user;
-      return currentUser;
+      return frappe.currentUser;
     }
 
-    currentUser = await waitForUser();
-
-    return currentUser;
+    frappe.currentUser = await waitForUser();
+    return frappe.currentUser;
   },
 
   async login(email, password) {
     await firebaseAuth.signInWithEmailAndPassword(email, password);
-
     return await this.getCurrentUser();
   },
 

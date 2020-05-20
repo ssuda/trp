@@ -63,6 +63,16 @@ module.exports = {
       fieldtype: 'Float'
     },
     {
+      fieldname: 'source',
+      label: 'Source',
+      fieldtype: 'Data'
+    },
+    {
+      fieldname: 'destination',
+      label: 'Destination',
+      fieldtype: 'Data'
+    },
+    {
       fieldname: 'tagged',
       label: 'Tagged',
       fieldtype: 'Text',
@@ -71,7 +81,7 @@ module.exports = {
     {
       fieldname: 'numTagged',
       label: 'Tagged',
-      fieldtype: 'Data',
+      fieldtype: 'Int',
       formulaDependsOn: ['tagged'],
       formula: doc => doc.getNumberOfTagged(),
       readOnly: true
@@ -79,7 +89,7 @@ module.exports = {
     {
       fieldname: 'numTrips',
       label: 'Trips',
-      fieldtype: 'Data',
+      fieldtype: 'Int',
       formula: doc => doc.getNumberOfTrips(),
       readOnly: true
     },
@@ -190,5 +200,12 @@ module.exports = {
       }
     }
   ],
-  quickEditFields: ['account', 'name', 'taggingUrl', 'customer']
+  quickEditFields: [
+    'account',
+    'name',
+    'taggingUrl',
+    'source',
+    'destination',
+    'customer'
+  ]
 };

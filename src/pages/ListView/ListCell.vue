@@ -24,7 +24,9 @@ export default {
       return this.column.render(this.doc);
     },
     cellClass() {
-      return ['Int', 'Float', 'Currency'].includes(this.column.fieldtype)
+      return ['Int'].includes(this.column.fieldtype)
+        ? 'justify-center'
+        : ['Float', 'Currency'].includes(this.column.fieldtype)
         ? 'justify-end'
         : '';
     }
