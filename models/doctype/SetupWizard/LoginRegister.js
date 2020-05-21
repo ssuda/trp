@@ -12,12 +12,6 @@ module.exports = {
   keywordFields: [],
   fields: [
     {
-      fieldname: 'fullname',
-      label: 'Your Name',
-      fieldtype: 'Data',
-      placeholder: 'John Doe'
-    },
-    {
       fieldname: 'email',
       label: 'Email',
       fieldtype: 'Data',
@@ -33,12 +27,6 @@ module.exports = {
       fieldtype: 'Password',
       required: 1
     },
-    {
-      fieldname: 'companyName',
-      label: 'Company Name',
-      placeholder: 'Company Name',
-      fieldtype: 'Data'
-    }
   ],
-  quickEditFields: ['fullname', 'email', 'password', 'companyName']
+  quickEditFields: ['email', 'password']
 };

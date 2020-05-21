@@ -113,4 +113,5 @@ function updateCompanyNameInConfig() {
     }
   });
   config.set('files', files);
+  config.set('setupComplete', 'true');
 }

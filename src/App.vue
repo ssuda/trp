@@ -18,7 +18,7 @@
     />
     <LoginRegister
       v-if="activeScreen === 'LoginRegister'"
-      @login-complete="showSetupWizardOrDesk(true)"
+      @login-complete="showSetupWizardOrDesk(true, true)"
     />
     <Settings v-if="activeScreen === 'Settings'" />
     <portal-target name="popovers" multiple></portal-target>
@@ -43,6 +43,7 @@ import Vue from 'vue';
 import { remote } from 'electron';
 import { connectToLocalDatabase, connectToRemoteDatabase } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
+import config from '@/config';
 
 export default {
   name: 'App',
@@ -95,8 +96,9 @@ export default {
       await connectToRemoteDatabase();
       this.showSetupWizardOrDesk();
     } else {
+      const setupComplete = config.get('setupComplete', false);
       await connectToLocalDatabase('./spin-trp.db');
-      this.showSetupWizardOrDesk();
+      this.showSetupWizardOrDesk(false, setupComplete);
     }
   },
   methods: {
