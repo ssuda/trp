@@ -1,24 +1,42 @@
 const frappe = require('frappejs');
 const numberFormat = require('frappejs/utils/numberFormat.js');
+
 class Trip {
   async run(params) {
+
+    const period = frappe.db.knex.raw(`date_trunc('${params.period}',Trip.startDate) as period`)
+
     let trips = frappe.db
-      .knex('Trip')
-      .join('Permit', 'Permit.name', 'Trip.permit')
-      .join('Truck', 'Truck.name', 'Trip.truck')
-      .select('Permit.customer as customer', 'Truck.supplier as truckOwner')
+      .knex('Trip');
+      // .join('Permit', 'Permit.name', 'Trip.permit')
+      // .join('Truck', 'Truck.name', 'Trip.truck');
+
+    if (params.period) {
+      trips = trips.select(period);
+      //trips = trips.select('Permit.customer as customer', 'Truck.supplier as truckOwner', period)
+    } else {
+      //trips = trips.select('Permit.customer as customer', 'Truck.supplier as truckOwner')
+    }
+
+    trips = trips
       .count('* as numTrips')
       .sum('loadQty as loadQty')
-      .sum('unloadQty as unloadQty')
-      .groupBy('Permit.customer', 'Truck.supplier');
+      .sum('unloadQty as unloadQty');
 
-    if (params.customer) {
-      trips = trips.where('Permit.customer', params.customer);
+    if (params.period) {
+      trips = trips.groupByRaw('1');
+      trips = trips.orderByRaw('1 desc');
+    } else {
+      //trips = trips.groupByRaw('1, 2');
     }
 
-    if (params.truckOwner) {
-      trips = trips.where('Truck.supplier', params.truckOwner);
-    }
+    // if (params.customer) {
+    //   trips = trips.where('Permit.customer', params.customer);
+    // }
+
+    // if (params.truckOwner) {
+    //   trips = trips.where('Truck.supplier', params.truckOwner);
+    // }
 
     if (params.fromDate) {
       trips = trips.where('Trip.startDate', '>=', params.fromDate);
@@ -47,12 +65,17 @@ class Trip {
       entry.numTrips = numberFormat.formatNumber(entry.numTrips, '#,###');
       entry.loadQty = numberFormat.formatNumber(entry.loadQty);
       entry.unloadQty = numberFormat.formatNumber(entry.unloadQty);
+      if (entry.period) {
+        entry.period = frappe.format(entry.period, 'Date');
+      }
+      console.log(entry.period);
       glEntries.push(entry);
     }
 
     glEntries.push({
       customer: '',
-      truckOwner: { template: '<b>Total</b>' },
+      truckOwner: '',
+      period: { template: '<b>Total</b>' },
       loadQty: numberFormat.formatNumber(loaded),
       unloadQty: numberFormat.formatNumber(unloaded),
       numTrips: numberFormat.formatNumber(numTrips, '#,###')

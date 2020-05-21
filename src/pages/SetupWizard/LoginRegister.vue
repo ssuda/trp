@@ -1,7 +1,7 @@
 <template>
   <div class="flex-1 py-10 bg-white window-drag">
     <div class="px-12">
-      <h1 class="text-2xl font-semibold">{{ _(heading) }}</h1>
+      <h1 class="text-2xl font-semibold">{{ _('Login') }}</h1>
     </div>
     <div class="px-8 mt-5 window-no-drag" v-if="doc">
       <TwoColumnForm :fields="fields" :doc="doc" />
@@ -10,12 +10,6 @@
       class="flex flex-1 items-center justify-between mr-8 mt-5 window-no-drag"
     >
       <div class=""></div>
-      <!-- <button
-        @click="toggleLoginRegister"
-        class="cursor-pointer text-sm text-blue-700"
-      >
-        {{ flatText }}
-      </button> -->
       <Button
         @click="submit"
         type="primary"
@@ -73,10 +67,7 @@ export default {
     });
   },
   methods: {
-    toggleLoginRegister() {
-      //this.login = !this.login;
-    },
-
+   
     allValuesFilled() {
       let values = this.fields.map(f => this.doc[f.fieldname]);
       return values.every(Boolean);
@@ -93,7 +84,7 @@ export default {
       }
       try {
         this.loading = true;
-        await Users.login(this.doc);
+        await Users.login(this.doc.email, this.doc.password);
         await connectToRemoteDatabase();
         this.$emit('login-complete');
       } catch (e) {
@@ -103,24 +94,11 @@ export default {
     }
   },
   computed: {
-    flatText() {
-      return this.login
-        ? 'Not Registered? Register'
-        : 'Already Registered? Login';
-    },
-    heading() {
-      return !this.login ? 'Register' : 'Login';
-    },
     meta() {
       return frappe.getMeta('LoginRegister');
     },
     fields() {
-      const fs = this.meta.getQuickEditFields();
-      return fs.filter(
-        f =>
-          !this.login ||
-          (f.fieldname !== 'fullname' && f.fieldname !== 'companyName')
-      );
+      return this.meta.getQuickEditFields();
     },
     buttonText() {
       return this.loading ? this._('Logging in...') : this._('Next');

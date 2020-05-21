@@ -18,6 +18,19 @@ const viewConfig = {
       placeholder: 'Type'
     },
     {
+      fieldtype: 'Select',
+      options: [
+        { label: '', value: '' },
+        { label: 'DayWise', value: 'day' },
+        { label: 'WeekWise', value: 'week' },
+        { label: 'MonthWise', value: 'month' }
+      ],
+      size: 'small',
+      label: 'Period',
+      fieldname: 'period',
+      placeholder: 'Period'
+    },
+    {
       fieldtype: 'Link',
       size: 'small',
       target: 'Supplier',
@@ -75,6 +88,11 @@ const viewConfig = {
         label: 'Truck Owner',
         fieldtype: 'Link',
         fieldname: 'truckOwner'
+      },
+      {
+        label: 'Period',
+        fieldtype: 'Data',
+        fieldname: 'period'
       },
       {
         label: 'Number of Trips',

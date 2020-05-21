@@ -172,7 +172,7 @@ const config = {
           label: _('Sign Out'),
           async action() {
             await firebaseAuth.signOut();
-            router.go();
+            router.go('/');
           }
         }
       ]
