@@ -7,7 +7,7 @@ export default {
   columns: [
     'name',
     'customer',
-    'endDate',
+    'startDate',
     'quantity',
     'numTagged',
     'numTrips',
@@ -29,7 +29,7 @@ export default {
           router.push({
             name: 'PermitAction',
             params: {
-              name: doc.name,
+              name: doc.name
             }
           });
         } catch (ex) {

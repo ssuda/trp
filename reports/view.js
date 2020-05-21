@@ -1,4 +1,5 @@
 module.exports = {
+  'trip-report': require('./Trip/viewConfig').default,
   'general-ledger': require('./GeneralLedger/viewConfig').default,
   'sales-register': require('./SalesRegister/viewConfig'),
   'purchase-register': require('./PurchaseRegister/viewConfig'),

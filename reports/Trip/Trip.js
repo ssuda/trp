@@ -1,83 +1,63 @@
 const frappe = require('frappejs');
-
+const numberFormat = require('frappejs/utils/numberFormat.js');
 class Trip {
   async run(params) {
-    const filters = {};
-    if (params.account) filters.account = params.account;
-    if (params.party) filters.party = params.party;
-    if (params.referenceType) filters.referenceType = params.referenceType;
-    if (params.referenceName) filters.referenceName = params.referenceName;
-    if (params.toDate || params.fromDate) {
-      filters.date = [];
-      if (params.toDate) filters.date.push('<=', params.toDate);
-      if (params.fromDate) filters.date.push('>=', params.fromDate);
+    let trips = frappe.db
+      .knex('Trip')
+      .join('Permit', 'Permit.name', 'Trip.permit')
+      .join('Truck', 'Truck.name', 'Trip.truck')
+      .select('Permit.customer as customer', 'Truck.supplier as truckOwner')
+      .count('* as numTrips')
+      .sum('loadQty as loadQty')
+      .sum('unloadQty as unloadQty')
+      .groupBy('Permit.customer', 'Truck.supplier');
+
+    if (params.customer) {
+      trips = trips.where('Permit.customer', params.customer);
     }
 
-    let data = await frappe.db.getAll({
-      doctype: 'Trip',
-      fields: [
-        'date',
-        'account',
-        'party',
-        'referenceType',
-        'referenceName',
-        'debit',
-        'credit'
-      ],
-      filters: filters
-    });
+    if (params.truckOwner) {
+      trips = trips.where('Truck.supplier', params.truckOwner);
+    }
+
+    if (params.fromDate) {
+      trips = trips.where('Trip.startDate', '>=', params.fromDate);
+    }
+
+    if (params.toDate) {
+      trips = trips.where('Trip.startDate', '<=', params.toDate);
+    }
+
+    let data = await trips;
 
     return this.appendTotalEntry(data);
   }
-  appendOpeningEntry(data) {
-    let glEntries = [];
-    let balance = 0,
-      debitTotal = 0,
-      creditTotal = 0;
 
-    glEntries.push({
-      date: '',
-      account: { template: '<b>Opening</b>' },
-      party: '',
-      debit: 0,
-      credit: 0,
-      balance: 0,
-      referenceType: '',
-      referenceName: ''
-    });
+  appendTotalEntry(data) {
+    let glEntries = [];
+    let loaded = 0,
+      numTrips = 0,
+      unloaded = 0;
+
     for (let entry of data) {
-      balance += entry.debit > 0 ? entry.debit : -entry.credit;
-      debitTotal += entry.debit;
-      creditTotal += entry.credit;
-      entry.balance = balance;
-      if (entry.debit === 0) {
-        entry.debit = '';
-      }
-      if (entry.credit === 0) {
-        entry.credit = '';
-      }
+      numTrips += +entry.numTrips;
+      loaded += +entry.loadQty;
+      entry.unloadQty = entry.unloadQty || 0;
+      unloaded += entry.unloadQty;
+      entry.numTrips = numberFormat.formatNumber(entry.numTrips, '#,###');
+      entry.loadQty = numberFormat.formatNumber(entry.loadQty);
+      entry.unloadQty = numberFormat.formatNumber(entry.unloadQty);
       glEntries.push(entry);
     }
+
     glEntries.push({
-      date: '',
-      account: { template: '<b>Total</b>' },
-      party: '',
-      debit: debitTotal,
-      credit: creditTotal,
-      balance: balance,
-      referenceType: '',
-      referenceName: ''
+      customer: '',
+      truckOwner: { template: '<b>Total</b>' },
+      loadQty: numberFormat.formatNumber(loaded),
+      unloadQty: numberFormat.formatNumber(unloaded),
+      numTrips: numberFormat.formatNumber(numTrips, '#,###')
     });
-    glEntries.push({
-      date: '',
-      account: { template: '<b>Closing</b>' },
-      party: '',
-      debit: debitTotal,
-      credit: creditTotal,
-      balance: balance,
-      referenceType: '',
-      referenceName: ''
-    });
+
     return glEntries;
   }
 }
