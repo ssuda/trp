@@ -118,9 +118,13 @@ const config = {
       title: _('Reports'),
       icon: getIcon('reports'),
       action() {
-        router.push('/report/general-ledger');
+        router.push('/report/trip-report');
       },
       items: [
+        {
+          label: _('Trip Report'),
+          route: '/report/trip-report'
+        },
         {
           label: _('General Ledger'),
           route: '/report/general-ledger'

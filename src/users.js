@@ -8,8 +8,8 @@ function waitForUser() {
     const unsubscribe = firebaseAuth.onAuthStateChanged(
       async user => {
         unsubscribe();
-        user.token = await user.getIdToken(true);
         try {
+          user.token = await user.getIdToken();
           user.local = await frappe.getDoc('SpinBiUser', user.email);
         } catch (ex) {}
         resolve(user);

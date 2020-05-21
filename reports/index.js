@@ -1,5 +1,6 @@
 const frappe = require('frappejs');
 const GeneralLedger = require('./GeneralLedger/GeneralLedger');
+const TripReport = require('./Trip/Trip');
 const ProfitAndLoss = require('./ProfitAndLoss/ProfitAndLoss');
 const BalanceSheet = require('./BalanceSheet/BalanceSheet');
 const TrialBalance = require('./TrialBalance/TrialBalance');
@@ -13,6 +14,10 @@ const AccountsReceivablePayable = require('./AccountsReceivablePayable/AccountsR
 // called on server side
 function registerReportMethods() {
   const reports = [
+    {
+      method: 'trip-report',
+      class: TripReport
+    },
     {
       method: 'general-ledger',
       class: GeneralLedger

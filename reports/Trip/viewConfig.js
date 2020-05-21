@@ -13,15 +13,16 @@ const viewConfig = {
         { label: 'Non I3MS', value: 'nonI3ms' }
       ],
       size: 'small',
-      label: 'Reference Type',
+      label: 'Type',
       fieldname: 'referenceType',
-      placeholder: 'Reference Type'
+      placeholder: 'Type'
     },
     {
       fieldtype: 'Link',
       size: 'small',
+      target: 'Supplier',
       placeholder: 'Truck Owner',
-      references: 'referenceType',
+      fieldname: 'truckOwner',
       label: 'Truck Owner'
     },
     {
@@ -71,36 +72,24 @@ const viewConfig = {
         fieldname: 'customer'
       },
       {
-        label: 'Start Date',
-        fieldtype: 'Date',
-        fieldname: 'date'
+        label: 'Truck Owner',
+        fieldtype: 'Link',
+        fieldname: 'truckOwner'
       },
       {
-        label: 'End Date',
-        fieldtype: 'Date',
-        fieldname: 'date'
-      },
-      {
-        label: 'LR Number',
-        fieldtype: 'Data',
-        fieldname: 'lrNumber'
-      },
-      {
-        label: 'TP No',
-        fieldtype: 'Date',
-        fieldname: 'tpNumber'
+        label: 'Number of Trips',
+        fieldtype: 'Int',
+        fieldname: 'numTrips'
       },
       {
         label: 'Loaded',
         fieldtype: 'Float',
-        fieldname: 'loadQty',
-        width: 0.5
+        fieldname: 'loadQty'
       },
       {
         label: 'Unloaded',
         fieldtype: 'Float',
-        fieldname: 'unloadQty',
-        width: 0.5
+        fieldname: 'unloadQty'
       }
     ];
   }

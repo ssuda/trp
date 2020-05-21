@@ -11,7 +11,7 @@ module.exports = {
   isSingle: 0,
   isChild: 0,
   isSubmittable: 0,
-  keywordFields: ['name', 'endDate', 'customer', 'quantity'],
+  keywordFields: ['name', 'startDate', 'customer', 'quantity'],
   //settings: 'PurchaseInvoiceSettings',
   showTitle: false,
   fields: [

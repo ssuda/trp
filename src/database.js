@@ -2,7 +2,7 @@ const frappe = require('frappejs');
 const Database = require('frappejs/backends/database');
 const debug = process.env.NODE_ENV === 'development';
 
-module.exports = class SpinBiDatabase extends Database {
+module.exports = class PostgresDatabase extends Database {
   constructor(options) {
     super();
     this.timestamps = false;
