@@ -26,7 +26,7 @@ module.exports = {
       label: 'Password',
       fieldtype: 'Password',
       required: 1
-    },
+    }
   ],
   quickEditFields: ['email', 'password']
 };

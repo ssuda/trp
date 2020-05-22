@@ -16,7 +16,7 @@ export default {
   orderBy: 'name',
   actions: [
     {
-      label: 'Fetch',
+      label: 'Fetch from i3ms',
       action: async function(router) {
         try {
           const doc = await frappe.getNewDoc('PermitAction');

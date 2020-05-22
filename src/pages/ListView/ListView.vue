@@ -3,7 +3,13 @@
     <PageHeader>
       <h1 slot="title" class="text-2xl font-bold" v-if="title">{{ title }}</h1>
       <template slot="actions">
+        <!-- <Button v-if="listConfig.upload" class="mr-2" :icon="true" type="primary" @click="gotoImport">
+          <feather-icon name="upload" class="w-4 h-4 text-white" />
+        </Button> -->
+        <DropdownWithActions :actions="actions" v-if="listConfig.actions" />
+
         <FilterDropdown
+          class="ml-2 "
           ref="filterDropdown"
           @change="applyFilter"
           :fields="meta.fields"
@@ -14,7 +20,7 @@
         <SearchBar @input="search" class="ml-2" v-model="searchText" />
       </template>
     </PageHeader>
-    <div class="my-2 flex flex-row items-center">
+    <!-- <div class="my-2 flex flex-row items-center">
       <div v-if="listConfig.actions" class="flex flex-col">
         <Button
           :key="action.label"
@@ -26,21 +32,7 @@
           {{ action.label }}
         </Button>
       </div>
-
-      <div v-if="listConfig.upload" class="flex flex-col">
-        <div class="flex flex-row">
-          <Button :icon="true" class="ml-8 text-white" type="primary">
-            <feather-icon
-              name="download"
-              class="w-4 h-4 font-weight-bold text-white"
-            />
-            <span class="ml-4">Template</span>
-          </Button>
-
-          <FileSelect class="ml-8" label="Upload" v-model="uploadedFile" />
-        </div>
-      </div>
-    </div>
+    </div> -->
 
     <div class="flex-1 flex h-full">
       <List
@@ -50,6 +42,13 @@
         class="flex-1"
       />
     </div>
+    <!-- <div class="flex justify-end">
+      <Paginate
+        container-class="flex flex-row"
+        :page-count="10">
+      </Paginate>
+    </div> -->
+
   </div>
 </template>
 <script>
@@ -63,6 +62,9 @@ import listConfigs from './listConfig';
 //import Icon from '@/components/Icon';
 import FilterDropdown from '@/components/FilterDropdown';
 import FileSelect from '@/components/FileSelect';
+import { exportData, getActionsForList  } from "@/utils";
+import Paginate from 'vuejs-paginate'
+import DropdownWithActions from '@/components/DropdownWithActions';
 
 export default {
   name: 'ListView',
@@ -74,7 +76,9 @@ export default {
     SearchBar,
     //Icon,
     FilterDropdown,
-    FileSelect
+    FileSelect,
+    Paginate,
+    DropdownWithActions
   },
   data() {
     return {
@@ -90,6 +94,26 @@ export default {
     }
   },
   methods: {
+
+    gotoImport() {
+      const route = {
+        path: `/import/${this.doctype}`,
+      };
+      this.$router.push(route)
+    },
+
+    importTemplate() {
+      const meta = frappe.getMeta(this.doctype);
+      let columns;
+      if (meta.importFields) {
+        columns = meta.importFields.map(field => meta.fields.find(f => f.fieldname == field).label);
+      } else {
+        columns = meta.fields.filter(field => !meta.importFields || meta.importFields.includes(field.fieldname))
+          .map(field => field.required ? field.label : `${field.label}(Optional)` );
+      }
+      exportData(`${this.doctype} Import Template`, columns);
+    },
+
     selectItem(d) {
       if (d.action) {
         d.action(this.$router);
@@ -149,6 +173,9 @@ export default {
           columns: this.meta.getKeywordFields()
         };
       }
+    },
+    actions() {
+      return getActionsForList(this.listConfig);
     },
     title() {
       return this.listConfig.title || this.doctype;

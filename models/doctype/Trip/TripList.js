@@ -13,6 +13,7 @@ export default {
     'startDate',
     'endDate'
   ],
+  orderBy: 'name',
   limit: 100,
   upload: true
 };

@@ -125,7 +125,7 @@ export function showMessageDialog({ message, description, buttons = [] }) {
   });
 }
 
-export async function exportData(title, columns, rows) {
+export async function exportData(title, columns, rows = []) {
   let csvDataArray = [columns, ...rows];
   console.log(csvDataArray);
   csvDataArray = csvDataArray.map(r => r.join(','));
@@ -296,6 +296,22 @@ export function makePDF(html, destination) {
       );
     });
   });
+}
+
+export function getActionsForList(listConfig) {
+  if (!listConfig) return [];
+
+  let actions = (listConfig.actions || [])
+    .filter(d => (d.condition ? d.condition() : true))
+    .map(d => {
+      return {
+        label: d.label,
+        component: d.component,
+        action: d.action.bind(this, router)
+      };
+    });
+
+  return actions;
 }
 
 export function getActionsForDocument(doc) {

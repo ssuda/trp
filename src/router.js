@@ -14,6 +14,7 @@ import ChartOfAccounts from '@/pages/ChartOfAccounts';
 import InvoiceForm from '@/pages/InvoiceForm';
 import JournalEntryForm from '@/pages/JournalEntryForm';
 import PermitActionForm from '@/pages/PermitActionForm';
+import DataImport from '@/pages/DataImport';
 
 Vue.use(Router);
 
@@ -50,6 +51,18 @@ const routes = [
     name: 'PermitAction',
     components: {
       default: PermitActionForm,
+      edit: QuickEditForm
+    },
+    props: {
+      default: true,
+      edit: route => route.query
+    }
+  },
+  {
+    path: '/import/:doctype',
+    name: 'ImportData',
+    components: {
+      default: DataImport,
       edit: QuickEditForm
     },
     props: {

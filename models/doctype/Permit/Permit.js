@@ -25,13 +25,11 @@ module.exports = {
       fieldname: 'startDate',
       label: 'Start Date',
       fieldtype: 'Date',
-      default: new Date().toISOString().slice(0, 10)
     },
     {
       fieldname: 'endDate',
       label: 'Expiry Date',
       fieldtype: 'Date',
-      default: new Date().toISOString().slice(0, 10)
     },
     {
       fieldname: 'taggingUrl',

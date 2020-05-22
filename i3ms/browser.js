@@ -314,7 +314,7 @@ export async function releaseVehicle(href, trucks, permitNo) {
   );
 
   let option = 2;
-  while (option < numberOfOptions) {
+  while (option <= numberOfOptions) {
     try {
       console.log('before ddlTransporter');
 
@@ -376,7 +376,7 @@ export async function taggedVehicles(href, permitNo) {
   );
 
   let option = 2;
-  while (option < numberOfOptions) {
+  while (option <= numberOfOptions) {
     try {
       console.log('before ddlTransporter');
 
