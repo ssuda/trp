@@ -12,7 +12,6 @@ module.exports = {
   isChild: 0,
   isSubmittable: 0,
   keywordFields: ['name', 'startDate', 'customer', 'quantity'],
-  //settings: 'PurchaseInvoiceSettings',
   showTitle: false,
   fields: [
     {
@@ -24,12 +23,12 @@ module.exports = {
     {
       fieldname: 'startDate',
       label: 'Start Date',
-      fieldtype: 'Date',
+      fieldtype: 'Date'
     },
     {
       fieldname: 'endDate',
       label: 'Expiry Date',
-      fieldtype: 'Date',
+      fieldtype: 'Date'
     },
     {
       fieldname: 'taggingUrl',
@@ -88,15 +87,13 @@ module.exports = {
       fieldname: 'numTrips',
       label: 'Trips',
       fieldtype: 'Int',
-      formula: doc => doc.getNumberOfTrips(),
-      readOnly: true
+      formula: doc => doc.getNumberOfTrips()
     },
     {
       fieldname: 'delivered',
       label: 'Delivered',
       fieldtype: 'Float',
-      formula: doc => doc.getQuantityDelivered(),
-      readOnly: true
+      formula: doc => doc.getQuantityDelivered()
     }
   ],
 

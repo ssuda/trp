@@ -352,9 +352,13 @@ export async function syncDoc(data) {
   if (await frappe.db.exists(data.doctype, data.name)) {
     doc = await frappe.getDoc(data.doctype, data.name);
     Object.assign(doc, data);
+    const changed = await doc.applyFormula();
+    console.log('formula applied', changed);
     await doc.update();
   } else {
     doc = frappe.newDoc(data);
+    const changed = await doc.applyFormula();
+    console.log('formula applied', changed);
     await doc.insert();
   }
 

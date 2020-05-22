@@ -58,7 +58,7 @@ import frappe from 'frappejs';
 import Row from '@/components/Row';
 import ListCell from './ListCell';
 import Avatar from '@/components/Avatar';
-import Paginate from 'vuejs-paginate'
+import Paginate from 'vuejs-paginate';
 import { openQuickEdit } from '@/utils';
 
 export default {

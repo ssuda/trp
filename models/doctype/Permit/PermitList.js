@@ -13,7 +13,7 @@ export default {
     'numTrips',
     'delivered'
   ],
-  orderBy: 'name',
+  orderBy: 'startDate',
   actions: [
     {
       label: 'Fetch from i3ms',

@@ -30,6 +30,7 @@ export default {
   computed: {
     iconComponent() {
       try {
+        console.log(components, this.name, this.size);
         return components[this.size][this.name];
       } catch (error) {
         return null;

@@ -19,7 +19,14 @@ module.exports = {
     'endDate'
   ],
 
-  importFields: ['tpNumber', 'endDate', 'unloadQty', 'advance', 'discount', 'fuel'],
+  importFields: [
+    'tpNumber',
+    'endDate',
+    'unloadQty',
+    'advance',
+    'discount',
+    'fuel'
+  ],
 
   //settings: 'PurchaseInvoiceSettings',
   showTitle: true,
