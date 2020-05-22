@@ -34,6 +34,7 @@ import Document from 'frappejs/model/document';
 
   async function savePermit(permit, args) {
     console.log('Got result from i3ms', permit);
+
     //save permit
     await frappe.syncDoc({
       doctype: 'Permit',
@@ -44,6 +45,8 @@ import Document from 'frappejs/model/document';
       startDate: permit.start_date,
       endDate: permit.end_date,
       quantity: permit.quantity,
+      delivered: permit.trips.reduce((p, t) => p + +t.load_carrying, 0),
+      numTrips: permit.trips.length,
       tagged: JSON.stringify(permit.tagged)
     });
 

@@ -33,6 +33,22 @@ const viewConfig = {
     {
       fieldtype: 'Link',
       size: 'small',
+      target: 'Permit',
+      placeholder: 'Permit',
+      fieldname: 'permit',
+      label: 'Permit'
+    },
+    {
+      fieldtype: 'Link',
+      size: 'small',
+      target: 'Truck',
+      placeholder: 'Truck',
+      fieldname: 'truck',
+      label: 'Truck'
+    },
+    {
+      fieldtype: 'Link',
+      size: 'small',
       target: 'Supplier',
       placeholder: 'Truck Owner',
       fieldname: 'truckOwner',

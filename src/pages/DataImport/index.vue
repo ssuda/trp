@@ -1,9 +1,13 @@
 <template>
   <div>
-    <div class="p-4">
+    <div class="p-4 flex flex-row">
       <h4 class="pb-2">{{ _('Data Import') }}</h4>
-      <Button secondary v-if="doctype" primary @click="uploadCSV">Upload CSV</Button>
-      <Button secondary v-if="doctype" primary @click="downloadCSV">Download CSV Template</Button>
+      <Button secondary v-if="doctype" primary @click="uploadCSV"
+        >Upload CSV</Button
+      >
+      <Button secondary v-if="doctype" primary @click="downloadCSV"
+        >Download CSV Template</Button
+      >
       <Button primary @click="importData">Submit</Button>
 
       <!-- <frappe-control
@@ -32,7 +36,6 @@ import Popover from '@/components/Popover';
 import Button from '@/components/Button';
 import Icon from '@/components/Icon';
 import FormControl from '@/components/Controls/FormControl';
-
 
 export default {
   components: {
