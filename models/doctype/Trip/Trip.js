@@ -18,6 +18,9 @@ module.exports = {
     'startDate',
     'endDate'
   ],
+
+  importFields: ['tpNumber', 'endDate', 'unloadQty', 'advance', 'discount', 'fuel'],
+
   //settings: 'PurchaseInvoiceSettings',
   showTitle: true,
   fields: [
@@ -39,7 +42,7 @@ module.exports = {
     //   target: 'Delivery Order'
     // },
     {
-      label: 'Truck',
+      label: 'Truck No',
       fieldname: 'truck',
       fieldtype: 'Link',
       target: 'Truck',

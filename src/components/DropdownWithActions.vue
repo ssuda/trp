@@ -6,8 +6,8 @@
     right
   >
     <template v-slot="{ toggleDropdown }">
-      <Button class="text-gray-900" :icon="true" @click="toggleDropdown()">
-        <feather-icon name="more-horizontal" class="w-4 h-4" />
+      <Button class="text-md text-base" :icon="true" @click="toggleDropdown()">
+        <feather-icon name="more-horizontal" class="w-4 h-4 mr-2 stroke-current text-gray-800" /> More
       </Button>
     </template>
   </Dropdown>

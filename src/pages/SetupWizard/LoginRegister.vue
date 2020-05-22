@@ -67,7 +67,6 @@ export default {
     });
   },
   methods: {
-   
     allValuesFilled() {
       let values = this.fields.map(f => this.doc[f.fieldname]);
       return values.every(Boolean);

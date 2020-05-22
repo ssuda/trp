@@ -2,19 +2,11 @@
   <div>
     <div class="p-4">
       <h4 class="pb-2">{{ _('Data Import') }}</h4>
-      <frappe-control
-        :docfield="{
-            fieldtype: 'Select',
-            fieldname: 'referenceDoctype',
-            options: ['Select...', 'Item', 'Party', 'Account']
-          }"
-        @change="doctype => showTable(doctype)"
-      />
-      <f-button secondary v-if="doctype" primary @click="uploadCSV">Upload CSV</f-button>
-      <f-button secondary v-if="doctype" primary @click="downloadCSV">Download CSV Template</f-button>
-      <f-button primary @click="importData">Submit</f-button>
+      <Button secondary v-if="doctype" primary @click="uploadCSV">Upload CSV</Button>
+      <Button secondary v-if="doctype" primary @click="downloadCSV">Download CSV Template</Button>
+      <Button primary @click="importData">Submit</Button>
 
-      <frappe-control
+      <!-- <frappe-control
         v-if="doctype"
         ref="fileInput"
         style="position: absolute; display: none;"
@@ -23,7 +15,7 @@
             fieldname: 'CSV File',
           }"
         @change="uploadCSV"
-      />
+      /> -->
       <div class="pt-2" ref="datatable" v-once></div>
     </div>
   </div>
@@ -36,18 +28,34 @@ import { writeFile } from 'frappejs/server/utils';
 import path from 'path';
 import csv2json from 'csvjson-csv2json';
 const { remote } = require('electron');
+import Popover from '@/components/Popover';
+import Button from '@/components/Button';
+import Icon from '@/components/Icon';
+import FormControl from '@/components/Controls/FormControl';
+
 
 export default {
+  components: {
+    Popover,
+    Button,
+    Icon,
+    FormControl
+  },
+
+  props: ['doctype'],
+
   data() {
     return {
-      doctype: undefined,
       fileUploaded: false
     };
   },
+
+  mounted() {
+    this.showTable();
+  },
   methods: {
-    showTable(doctype) {
-      this.doctype = doctype;
-      const meta = frappe.getMeta(doctype);
+    showTable() {
+      const meta = frappe.getMeta(this.doctype);
       const columns = convertFieldsToDatatableColumns(meta.fields);
       this.renderTable(columns);
     },

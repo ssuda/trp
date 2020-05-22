@@ -3,13 +3,13 @@ const numberFormat = require('frappejs/utils/numberFormat.js');
 
 class Trip {
   async run(params) {
+    const period = frappe.db.knex.raw(
+      `date_trunc('${params.period}',Trip.startDate) as period`
+    );
 
-    const period = frappe.db.knex.raw(`date_trunc('${params.period}',Trip.startDate) as period`)
-
-    let trips = frappe.db
-      .knex('Trip');
-      // .join('Permit', 'Permit.name', 'Trip.permit')
-      // .join('Truck', 'Truck.name', 'Trip.truck');
+    let trips = frappe.db.knex('Trip');
+    // .join('Permit', 'Permit.name', 'Trip.permit')
+    // .join('Truck', 'Truck.name', 'Trip.truck');
 
     if (params.period) {
       trips = trips.select(period);

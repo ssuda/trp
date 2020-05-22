@@ -58,6 +58,7 @@ import frappe from 'frappejs';
 import Row from '@/components/Row';
 import ListCell from './ListCell';
 import Avatar from '@/components/Avatar';
+import Paginate from 'vuejs-paginate'
 import { openQuickEdit } from '@/utils';
 
 export default {
@@ -66,7 +67,8 @@ export default {
   components: {
     Row,
     ListCell,
-    Avatar
+    Avatar,
+    Paginate
   },
   watch: {
     listConfig(oldValue, newValue) {
@@ -77,7 +79,11 @@ export default {
   },
   data() {
     return {
-      data: []
+      data: [],
+      pagination: {
+        limit: 20,
+        page: 0
+      }
     };
   },
   computed: {
@@ -121,7 +127,8 @@ export default {
         filters,
         orderBy: this.listConfig.orderBy || 'creation',
         order: this.listConfig.order || 'desc',
-        limit: this.listConfig.limit
+        limit: this.pagination.limit,
+        start: this.pagination.page * this.pagination.limit
       });
     },
     getFilters() {
