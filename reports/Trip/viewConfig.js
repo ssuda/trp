@@ -1,6 +1,6 @@
-import { partyWithAvatar } from '@/utils';
+import { DateTime } from 'luxon';
 
-let title = 'Trip';
+let title = 'Trip Report';
 
 const viewConfig = {
   title,
@@ -21,9 +21,69 @@ const viewConfig = {
       fieldtype: 'Select',
       options: [
         { label: '', value: '' },
-        { label: 'DayWise', value: 'day' },
-        { label: 'WeekWise', value: 'week' },
-        { label: 'MonthWise', value: 'month' }
+        { label: 'Today', value: 'today' },
+        { label: 'This Week', value: 'thisweek' },
+        { label: 'Last 7 Days', value: '7days' },
+        { label: 'This Month', value: 'thismonth' },
+        { label: 'Last 6 Months', value: '6months' },
+        { label: 'This Year', value: 'thisyear' },
+        { label: 'Custom', value: 'custom' }
+      ],
+      size: 'small',
+      label: 'Date Range',
+      fieldname: 'dateRange',
+      placeholder: 'Date Range'
+    },
+    {
+      fieldtype: 'Date',
+      size: 'small',
+      placeholder: 'From Date',
+      condition: filters => filters['dateRange'] === 'custom',
+      formula: filters => {
+        if (!filters['dateRange'] || filters['dateRange'] === 'custom') {
+          console.log(typeof filters['fromDate'], filters['fromDate']);
+          return filters['fromDate'];
+        }
+        console.log('received daterange', filters);
+        const d = DateTime.local();
+        switch (filters['dateRange']) {
+          case 'today':
+            return d.toFormat('yyyy-LL-dd');
+
+          case 'thisweek':
+            return d.startOf('week').toFormat('yyyy-LL-dd');
+
+          case '7days':
+            return d.minus({ days: 7 }).toFormat('yyyy-LL-dd');
+
+          case 'thismonth':
+            return d.startOf('month').toFormat('yyyy-LL-dd');
+
+          case 'thisyear':
+            return d.startOf('year').toFormat('yyyy-LL-dd');
+
+          case '6months':
+            return d.minus({ months: 6 }).toFormat('yyyy-LL-dd');
+        }
+      },
+      label: 'From Date',
+      fieldname: 'fromDate'
+    },
+    {
+      fieldtype: 'Date',
+      size: 'small',
+      placeholder: 'To Date',
+      label: 'To Date',
+      fieldname: 'toDate',
+      condition: filters => filters['dateRange'] === 'custom'
+    },
+    {
+      fieldtype: 'Select',
+      options: [
+        { label: '', value: '' },
+        { label: 'Daily', value: 'day' },
+        { label: 'Weekly', value: 'week' },
+        { label: 'Monthly', value: 'month' }
       ],
       size: 'small',
       label: 'Period',
@@ -61,20 +121,6 @@ const viewConfig = {
       placeholder: 'Customer',
       label: 'Customer',
       fieldname: 'customer'
-    },
-    {
-      fieldtype: 'Date',
-      size: 'small',
-      placeholder: 'From Date',
-      label: 'From Date',
-      fieldname: 'fromDate'
-    },
-    {
-      fieldtype: 'Date',
-      size: 'small',
-      placeholder: 'To Date',
-      label: 'To Date',
-      fieldname: 'toDate'
     }
   ],
   method: 'trip-report',

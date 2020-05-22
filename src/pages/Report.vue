@@ -9,7 +9,7 @@
     <div class="mt-2 flex text-base px-8" v-if="report.filterFields">
       <div
         class="ml-3 first:ml-0 w-32"
-        v-for="df in report.filterFields"
+        v-for="df in filterFields"
         :key="df.fieldname"
       >
         <FormControl
@@ -129,6 +129,8 @@ export default {
       });
     },
     async fetchReportData() {
+      await this.populateFormulaFields();
+
       let data = await frappe.call({
         method: this.report.method,
         args: this.filters
@@ -211,6 +213,20 @@ export default {
       }
     },
 
+    async populateFormulaFields() {
+      for (let df of this.report.filterFields) {
+        if (df.formula) {
+          let value;
+          if (typeof df.formula === 'function') {
+            value = await df.formula(this.filters);
+          } else {
+            value = df.formula;
+          }
+          this.filters[df.fieldname] = value;
+        }
+      }
+    },
+
     cellComponent(cellValue, column) {
       if (typeof cellValue === 'object') {
         // cellValue has a component definition
@@ -256,6 +272,12 @@ export default {
     }
   },
   computed: {
+    filterFields() {
+      return this.report.filterFields.filter(
+        df => !df.condition || df.condition(this.filters)
+      );
+    },
+
     columns() {
       return this.loading
         ? this.blankStateData.columns

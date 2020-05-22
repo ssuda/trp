@@ -5,6 +5,8 @@ const { DateTime } = require('luxon');
 
 class Trip {
   async run(params) {
+    console.log(params);
+
     const period = frappe.db.knex.raw(
       `date_trunc('${params.period}',"startDate") as period`
     );
