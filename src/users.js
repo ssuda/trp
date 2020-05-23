@@ -1,5 +1,6 @@
 import { firebaseAuth, firebase, cloudfunctionsBaseUrl } from '@/firebase';
 
+import Database from '@/database';
 import axios from 'axios';
 import frappe from 'frappejs';
 
@@ -62,7 +63,18 @@ export default {
     let fbuser = await this.getCurrentUser();
 
     if (fbuser.displayName) {
-      return fbuser;
+      try {
+        frappe.db = new Database({
+          connection: fbuser.displayName
+        });
+        await frappe.db.connect();
+
+        return fbuser;
+      } catch (ex) {
+        // if (!/acquire/i.test(ex.message)) {
+        //   return fbuser;
+        // }
+      }
     }
 
     await axios.post(
