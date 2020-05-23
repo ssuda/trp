@@ -125,17 +125,19 @@ export function showMessageDialog({ message, description, buttons = [] }) {
   });
 }
 
-export async function exportData(title, columns, rows = []) {
+export async function exportData(title, columns, rows = [], titleOnly = false) {
   let csvDataArray = [columns, ...rows];
   console.log(csvDataArray);
   csvDataArray = csvDataArray.map(r => r.join(','));
   let csvData = csvDataArray.join('\n');
   let d = new Date();
-  let fileName = [
-    title.replace(/\s/g, '-'),
-    [d.getDate(), d.getMonth(), d.getFullYear()].join('-'),
-    `${d.getTime()}.csv`
-  ].join('_');
+  let fileName = titleOnly
+    ? `${title}.csv`
+    : [
+        title.replace(/\s/g, '-'),
+        [d.getDate(), d.getMonth(), d.getFullYear()].join('-'),
+        `${d.getTime()}.csv`
+      ].join('_');
   var blob = new Blob([csvData], { type: 'text/plain;charset=utf-8' });
   await FileSaver.saveAs(blob, fileName);
 }
@@ -360,6 +362,20 @@ export async function syncDoc(data) {
     const changed = await doc.applyFormula();
     console.log('formula applied', changed);
     await doc.insert();
+  }
+
+  return doc;
+}
+
+export async function getDoc(data) {
+  let doc;
+  if (await frappe.db.exists(data.doctype, data.name)) {
+    doc = await frappe.getDoc(data.doctype, data.name);
+    Object.assign(doc, data);
+    await doc.applyFormula();
+  } else {
+    doc = frappe.newDoc(data);
+    await doc.applyFormula();
   }
 
   return doc;

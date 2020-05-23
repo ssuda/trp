@@ -14,7 +14,7 @@ import ChartOfAccounts from '@/pages/ChartOfAccounts';
 import InvoiceForm from '@/pages/InvoiceForm';
 import JournalEntryForm from '@/pages/JournalEntryForm';
 import PermitActionForm from '@/pages/PermitActionForm';
-import DataImport from '@/pages/DataImport';
+import DataImport from '@/pages/Import';
 
 Vue.use(Router);
 
