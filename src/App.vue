@@ -92,11 +92,13 @@ export default {
     console.log(user);
 
     if (user && user.displayName) {
-      console.log('connected db', user.displayName);
+      console.log('connecting db', user.displayName);
       try {
         await connectToRemoteDatabase();
+        console.log('connected db', user.displayName);
         this.showSetupWizardOrDesk();
-      } catch(ex) {
+      } catch (ex) {
+        console.log('failed to connect to db', user.displayName);
         await connectToLocalDatabase('./spin-trp.db');
         this.showSetupWizardOrDesk(false);
       }
