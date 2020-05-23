@@ -3,9 +3,15 @@
     <PageHeader>
       <h1 slot="title" class="text-2xl font-bold" v-if="title">{{ title }}</h1>
       <template slot="actions">
-        <!-- <Button v-if="listConfig.upload" class="mr-2" :icon="true" type="primary" @click="gotoImport">
+        <Button
+          v-if="listConfig.upload"
+          class="mr-2"
+          :icon="true"
+          type="primary"
+          @click="gotoImport"
+        >
           <feather-icon name="upload" class="w-4 h-4 text-white" />
-        </Button> -->
+        </Button>
         <DropdownWithActions :actions="actions" v-if="listConfig.actions" />
 
         <FilterDropdown
@@ -60,9 +66,8 @@ import List from './List';
 import listConfigs from './listConfig';
 //import Icon from '@/components/Icon';
 import FilterDropdown from '@/components/FilterDropdown';
-import FileSelect from '@/components/FileSelect';
-import { exportData, getActionsForList } from '@/utils';
-import Paginate from 'vuejs-paginate';
+import { getActionsForList } from '@/utils';
+//import Paginate from 'vuejs-paginate';
 import DropdownWithActions from '@/components/DropdownWithActions';
 
 export default {
@@ -75,13 +80,12 @@ export default {
     SearchBar,
     //Icon,
     FilterDropdown,
-    FileSelect,
-    Paginate,
+    //FileSelect,
+    //Paginate,
     DropdownWithActions
   },
   data() {
     return {
-      uploadedFile: null,
       searchText: '',
       currentFilters: null
     };
@@ -98,26 +102,6 @@ export default {
         path: `/import/${this.doctype}`
       };
       this.$router.push(route);
-    },
-
-    importTemplate() {
-      const meta = frappe.getMeta(this.doctype);
-      let columns;
-      if (meta.importFields) {
-        columns = meta.importFields.map(
-          field => meta.fields.find(f => f.fieldname == field).label
-        );
-      } else {
-        columns = meta.fields
-          .filter(
-            field =>
-              !meta.importFields || meta.importFields.includes(field.fieldname)
-          )
-          .map(field =>
-            field.required ? field.label : `${field.label}(Optional)`
-          );
-      }
-      exportData(`${this.doctype} Import Template`, columns);
     },
 
     selectItem(d) {

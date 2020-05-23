@@ -54,6 +54,39 @@ module.exports = {
     },
 
     {
+      fieldname: 'gstin',
+      label: 'GST Number',
+      fieldtype: 'Data',
+      placeholder: '29AAGCB7383J1Z4',
+      required: 1,
+      validate: (value, _) => {
+        let isValid = /\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}/.test(
+          value
+        );
+
+        if (isValid) {
+          let a = 65,
+            b = 55,
+            c = 36;
+          isValid = Array.from(value).reduce((i, j, k) => {
+            let p =
+              (p =
+                (j.charCodeAt(0) < a ? parseInt(j) : j.charCodeAt(0) - b) *
+                ((k % 2) + 1)) > c
+                ? 1 + (p - c)
+                : p;
+            return k < 14
+              ? i + p
+              : j == ((c = c - (i % c)) < 10 ? c : String.fromCharCode(c + b));
+          }, 0);
+        }
+        if (!isValid) {
+          throw new frappe.errors.ValidationError(`Invalid gstin: ${value}`);
+        }
+      }
+    },
+
+    {
       fieldname: 'companyName',
       label: 'Company Name',
       placeholder: 'Company Name',
