@@ -3,7 +3,9 @@ const Users = require('@/users').default;
 
 module.exports = class SpinBiUser extends BaseDocument {
   async afterInsert() {
-    await Users.createUser(this);
+    if (!this.userId) {
+      await Users.createUser(this);
+    }
   }
 
   async afterUpdate() {
