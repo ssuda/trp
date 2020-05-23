@@ -105,7 +105,10 @@ export default {
     } else {
       const setupComplete = config.get('setupComplete', false);
       await connectToLocalDatabase('./spin-trp.db');
-      this.showSetupWizardOrDesk(false, setupComplete);
+      this.showSetupWizardOrDesk(
+        false,
+        setupComplete && process.env.NODE_ENV !== 'development'
+      );
     }
   },
   methods: {
