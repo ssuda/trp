@@ -2,6 +2,8 @@ const frappe = require('frappejs');
 const Database = require('frappejs/backends/database');
 const debug = process.env.NODE_ENV === 'development';
 
+const { DateTime } = require('luxon');
+
 module.exports = class PostgresDatabase extends Database {
   constructor(options) {
     super();
@@ -14,6 +16,19 @@ module.exports = class PostgresDatabase extends Database {
     };
 
     console.log(this.connectionParams);
+  }
+
+  getFormattedValue(field, value) {
+    if (value instanceof Date) {
+      if (field.fieldtype === 'Date') {
+        // date
+        return DateTime.fromJSDate(value).toFormat('yyyy-LL-dd');
+      } else {
+        // datetime
+        return DateTime.fromJSDate(value).toISO();
+      }
+    }
+    return super.getFormattedValue(field, value);
   }
 
   async getTableColumns(doctype) {
