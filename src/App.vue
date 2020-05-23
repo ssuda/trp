@@ -93,8 +93,13 @@ export default {
 
     if (user && user.displayName) {
       console.log('connected db', user.displayName);
-      await connectToRemoteDatabase();
-      this.showSetupWizardOrDesk();
+      try {
+        await connectToRemoteDatabase();
+        this.showSetupWizardOrDesk();
+      } catch(ex) {
+        await connectToLocalDatabase('./spin-trp.db');
+        this.showSetupWizardOrDesk(false);
+      }
     } else {
       const setupComplete = config.get('setupComplete', false);
       await connectToLocalDatabase('./spin-trp.db');
