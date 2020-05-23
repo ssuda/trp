@@ -1,6 +1,6 @@
 import { firebaseAuth, firebase, cloudfunctionsBaseUrl } from '@/firebase';
 
-import Database from '@/database';
+import { connectToRemoteDatabase } from '@/utils';
 import axios from 'axios';
 import frappe from 'frappejs';
 
@@ -64,18 +64,16 @@ export default {
 
     if (fbuser.displayName) {
       try {
-        frappe.db = new Database({
-          connection: fbuser.displayName
-        });
-        await frappe.db.connect();
-
+        await connectToRemoteDatabase();
         return fbuser;
       } catch (ex) {
-        // if (!/acquire/i.test(ex.message)) {
-        //   return fbuser;
-        // }
+        if (!/(password)/i.test(ex.message)) {
+          return fbuser;
+        }
       }
     }
+
+    console.error('creating company', user);
 
     await axios.post(
       `${cloudfunctionsBaseUrl}/setupCompany`,

@@ -11,7 +11,14 @@ module.exports = class PostgresDatabase extends Database {
     this.connectionParams = {
       client: 'pg',
       ...options,
-      pool: { min: 0, max: 7 },
+      pool: {
+        afterCreate(conn, callback) {
+          conn.on('error', console.error.bind(console));
+          callback(null, conn);
+        },
+        min: 0,
+        max: 7
+      },
       debug: debug
     };
 

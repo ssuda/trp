@@ -98,9 +98,13 @@ export default {
         console.log('connected db', user.displayName);
         this.showSetupWizardOrDesk();
       } catch (ex) {
+        console.error(ex);
         console.log('failed to connect to db', user.displayName);
-        await connectToLocalDatabase('./spin-trp.db');
-        this.showSetupWizardOrDesk(false);
+        if (/(password)/i.test(ex.message)) {
+          await connectToLocalDatabase('./spin-trp.db');
+          await user.updateProfile({ displayName: '' });
+          this.activeScreen = 'SetupWizard';
+        }
       }
     } else {
       const setupComplete = config.get('setupComplete', false);
