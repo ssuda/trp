@@ -21,6 +21,7 @@ module.exports = {
 
   importFields: [
     'tpNumber',
+    'lrNumber',
     'endDate',
     'unloadQty',
     'advance',
