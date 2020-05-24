@@ -7,6 +7,8 @@ import SQLite from 'frappejs/backends/sqlite';
 import Database from '@/database';
 
 import postStart from '../server/postStart';
+import getSingle from '../server/getSingle';
+
 import router from '@/router';
 import Avatar from '@/components/Avatar';
 import config from '@/config';
@@ -68,6 +70,19 @@ export function loadExistingDatabase() {
       }
     );
   });
+}
+
+export async function onlyConnectToRemoteDatabase() {
+  frappe.login('Administrator');
+
+  const userProfile = firebaseAuth.currentUser;
+
+  frappe.db = new Database({
+    connection: userProfile.displayName
+  });
+
+  await frappe.db.connect();
+  await getSingle();
 }
 
 export async function connectToRemoteDatabase() {

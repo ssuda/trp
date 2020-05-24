@@ -49,7 +49,7 @@ module.exports = class PostgresDatabase extends Database {
   }
 
   async runRemoveColumnQuery(doctype, column) {
-    await this.run(`ALTER TABLE ${doctype} DROP COLUMN IF EXISTS ${column}`);
+    await this.run(`ALTER TABLE "${doctype}" DROP COLUMN IF EXISTS ${column}`);
   }
 
   async addForeignKeys(doctype, newForeignKeys) {

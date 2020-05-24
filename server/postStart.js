@@ -2,6 +2,8 @@ const frappe = require('frappejs');
 const naming = require('frappejs/model/naming');
 const registerServerMethods = require('./registerServerMethods');
 
+const getSingle = require('./getSingle');
+
 module.exports = async function postStart() {
   // set server-side modules
   frappe.models.SalesInvoice.documentClass = require('../models/doctype/SalesInvoice/SalesInvoiceServer.js');
@@ -24,28 +26,7 @@ module.exports = async function postStart() {
   await naming.createNumberSeries('PO-', 'PurchaseOrderSettings');
   await naming.createNumberSeries('PREC-', 'PurchaseReceiptSettings');
 
-  // fetch singles
-  // so that they are available synchronously
-  await frappe.getSingle('SystemSettings');
-  await frappe.getSingle('AccountingSettings');
-  await frappe.getSingle('GetStarted');
-
-  // cache currency symbols for frappe.format
-  frappe.currencySymbols = await getCurrencySymbols();
+  await getSingle();
 
   registerServerMethods();
 };
-
-function getCurrencySymbols() {
-  return frappe.db
-    .getAll({
-      doctype: 'Currency',
-      fields: ['name', 'symbol']
-    })
-    .then(data => {
-      return data.reduce((obj, currency) => {
-        obj[currency.name] = currency.symbol;
-        return obj;
-      }, {});
-    });
-}

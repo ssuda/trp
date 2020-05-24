@@ -1,6 +1,6 @@
 import { firebaseAuth, firebase, cloudfunctionsBaseUrl } from '@/firebase';
 
-import { connectToRemoteDatabase } from '@/utils';
+import { onlyConnectToRemoteDatabase } from '@/utils';
 import axios from 'axios';
 import frappe from 'frappejs';
 
@@ -25,6 +25,10 @@ function waitForUser() {
 }
 
 export default {
+  async forgotPassword(emailAddress) {
+    return firebaseAuth.sendPasswordResetEmail(emailAddress);
+  },
+
   async getCurrentUser() {
     if (frappe.currentUser) {
       return frappe.currentUser;
@@ -64,7 +68,7 @@ export default {
 
     if (fbuser.displayName) {
       try {
-        await connectToRemoteDatabase();
+        await onlyConnectToRemoteDatabase();
         return fbuser;
       } catch (ex) {
         if (!/(password)/i.test(ex.message)) {
