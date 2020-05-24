@@ -1,8 +1,7 @@
-
 const frappe = require('frappejs');
+const registerServerMethods = require('./registerServerMethods');
 
 module.exports = async function getSingle() {
-
   frappe.metaCache = frappe.metaCache || {};
 
   // fetch singles
@@ -13,7 +12,9 @@ module.exports = async function getSingle() {
 
   // cache currency symbols for frappe.format
   frappe.currencySymbols = await getCurrencySymbols();
-}
+
+  registerServerMethods();
+};
 
 function getCurrencySymbols() {
   return frappe.db

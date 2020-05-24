@@ -48,7 +48,7 @@ class Trip {
     console.log(params);
 
     const period = frappe.db.knex.raw(
-      `date_trunc('${params.period}',"startDate") as period`
+      `date_trunc('${params.period}',"Trip"."startDate") as period`
     );
 
     let trips = frappe.db.knex('Trip');

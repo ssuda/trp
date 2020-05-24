@@ -1,6 +1,5 @@
 const frappe = require('frappejs');
 const naming = require('frappejs/model/naming');
-const registerServerMethods = require('./registerServerMethods');
 
 const getSingle = require('./getSingle');
 
@@ -27,6 +26,4 @@ module.exports = async function postStart() {
   await naming.createNumberSeries('PREC-', 'PurchaseReceiptSettings');
 
   await getSingle();
-
-  registerServerMethods();
 };

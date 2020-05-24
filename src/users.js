@@ -1,8 +1,14 @@
-import { firebaseAuth, firebase, cloudfunctionsBaseUrl } from '@/firebase';
+import {
+  firebaseAuth,
+  firebase,
+  firestore,
+  cloudfunctionsBaseUrl
+} from '@/firebase';
 
 import { onlyConnectToRemoteDatabase } from '@/utils';
 import axios from 'axios';
 import frappe from 'frappejs';
+import { DateTime } from 'luxon';
 
 function waitForUser() {
   return new Promise((resolve, reject) => {
@@ -78,6 +84,19 @@ export default {
     }
 
     console.error('creating company', user);
+    //store in firestore
+    await firestore
+      .collection('customers')
+      .doc(user.gstin)
+      .set({
+        name: user.companyName,
+        email: user.email,
+        gstin: user.gstin,
+        phoneNumber: user.phoneNumber,
+        trial_expires_on: DateTime.local()
+          .plus(1, 'month')
+          .toJSDate()
+      });
 
     await axios.post(
       `${cloudfunctionsBaseUrl}/setupCompany`,

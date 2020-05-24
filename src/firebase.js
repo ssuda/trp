@@ -19,8 +19,9 @@ const firebaseConfig = {
 // Initialize Firebase
 const firebaseApp = firebase.initializeApp(firebaseConfig);
 const firebaseAuth = firebaseApp.auth();
-const firebaseDb = firebaseApp.firestore();
-firebaseDb.enablePersistence({
+const firestore = firebaseApp.firestore();
+
+firestore.enablePersistence({
   synchronizeTabs: true
 });
 
@@ -42,7 +43,7 @@ const cloudfunctionsBaseUrl =
 
 export {
   firebaseAuth,
-  firebaseDb,
+  firestore as firebaseDb,
   FieldValue,
   Timestamp,
   firebase,

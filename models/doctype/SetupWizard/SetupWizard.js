@@ -52,7 +52,16 @@ module.exports = {
         type: 'email'
       }
     },
-
+    {
+      fieldname: 'phoneNumber',
+      label: 'Phone Number',
+      fieldtype: 'Data',
+      placeholder: '8788898898',
+      required: 1,
+      validate: {
+        type: 'phone'
+      }
+    },
     {
       fieldname: 'gstin',
       label: 'GST Number',
@@ -159,6 +168,8 @@ module.exports = {
   quickEditFields: [
     'fullname',
     'password',
+    'gstin',
+    'phoneNumber',
     'bankName',
     'country',
     'currency',
