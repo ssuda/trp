@@ -41,7 +41,7 @@ import WindowsTitleBar from '@/components/WindowsTitleBar';
 import LoginRegister from './pages/SetupWizard/LoginRegister';
 import Vue from 'vue';
 import { remote } from 'electron';
-import { connectToLocalDatabase, connectToRemoteDatabase } from '@/utils';
+import { connectToLocalDatabase, onlyConnectToRemoteDatabase } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
 import config from '@/config';
 
@@ -94,7 +94,7 @@ export default {
     if (user && user.displayName) {
       console.log('connecting db', user.displayName);
       try {
-        await connectToRemoteDatabase();
+        await onlyConnectToRemoteDatabase();
         console.log('connected db', user.displayName);
         this.showSetupWizardOrDesk();
       } catch (ex) {
@@ -109,10 +109,7 @@ export default {
     } else {
       const setupComplete = config.get('setupComplete', false);
       await connectToLocalDatabase('./spin-trp.db');
-      this.showSetupWizardOrDesk(
-        false,
-        setupComplete && process.env.NODE_ENV !== 'development'
-      );
+      this.showSetupWizardOrDesk(false, setupComplete);
     }
   },
   methods: {

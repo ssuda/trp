@@ -25,14 +25,17 @@ const viewConfig = {
         { label: 'This Week', value: 'thisweek' },
         { label: 'Last 7 Days', value: '7days' },
         { label: 'This Month', value: 'thismonth' },
+        { label: 'Last 30 Days', value: '30days' },
         { label: 'Last 6 Months', value: '6months' },
         { label: 'This Year', value: 'thisyear' },
+        { label: 'Last 12 Months', value: '12months' },
         { label: 'Custom', value: 'custom' }
       ],
       size: 'small',
       label: 'Date Range',
       fieldname: 'dateRange',
-      placeholder: 'Date Range'
+      placeholder: 'Date Range',
+      default: 'thisyear'
     },
     {
       fieldtype: 'Date',
@@ -56,6 +59,9 @@ const viewConfig = {
           case '7days':
             return d.minus({ days: 7 }).toFormat('yyyy-LL-dd');
 
+          case '30days':
+            return d.minus({ days: 30 }).toFormat('yyyy-LL-dd');
+
           case 'thismonth':
             return d.startOf('month').toFormat('yyyy-LL-dd');
 
@@ -64,6 +70,9 @@ const viewConfig = {
 
           case '6months':
             return d.minus({ months: 6 }).toFormat('yyyy-LL-dd');
+
+          case '12months':
+            return d.minus({ months: 12 }).toFormat('yyyy-LL-dd');
         }
       },
       label: 'From Date',
@@ -81,9 +90,9 @@ const viewConfig = {
       fieldtype: 'Select',
       options: [
         { label: '', value: '' },
-        { label: 'Daily', value: 'day' },
-        { label: 'Weekly', value: 'week' },
-        { label: 'Monthly', value: 'month' }
+        { label: 'Daywise', value: 'day' },
+        { label: 'Weekwise', value: 'week' },
+        { label: 'Monthwise', value: 'month' }
       ],
       size: 'small',
       label: 'Period',
@@ -155,6 +164,11 @@ const viewConfig = {
         label: 'Period',
         fieldtype: 'Data',
         fieldname: 'period'
+      },
+      {
+        label: 'Number of Permits',
+        fieldtype: 'Int',
+        fieldname: 'numPermits'
       },
       {
         label: 'Number of Trips',

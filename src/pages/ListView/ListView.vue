@@ -90,6 +90,7 @@ export default {
       currentFilters: null
     };
   },
+
   activated() {
     if (typeof this.filters === 'object') {
       this.currentFilters = this.filters;
