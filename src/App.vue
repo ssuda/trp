@@ -121,8 +121,15 @@ export default {
         this.activeScreen = 'Settings';
       } else {
         //check whether he is logged in or not
-        console.log('firebaseUser', firebaseAuth.currentUser);
-        if (firebaseAuth.currentUser) {
+        if (frappe.currentUser) {
+          try {
+            let user = frappe.currentUser;
+            if (user.local && user.local.status != 'Active') {
+              return showMessageDialog({ description: 'Your account is disabled, please contact your administrator'});
+            }
+          } catch (ex) {
+            console.error(ex);
+          }
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';
