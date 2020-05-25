@@ -109,7 +109,7 @@ export default {
     } else {
       const setupComplete = config.get('setupComplete', false);
       await connectToLocalDatabase('./spin-trp.db');
-      this.showSetupWizardOrDesk(false, setupComplete);
+      this.showSetupWizardOrDesk(false, false);
     }
   },
   methods: {
