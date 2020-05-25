@@ -78,12 +78,11 @@ module.exports = {
             b = 55,
             c = 36;
           isValid = Array.from(value).reduce((i, j, k) => {
-            let p =
-              (p =
-                (j.charCodeAt(0) < a ? parseInt(j) : j.charCodeAt(0) - b) *
-                ((k % 2) + 1)) > c
-                ? 1 + (p - c)
-                : p;
+            let p = (j.charCodeAt(0) < a ? parseInt(j) : j.charCodeAt(0) - b) * ((k % 2) + 1);
+            if (p > c) {
+              p = 1 + (p - c)
+            }
+
             return k < 14
               ? i + p
               : j == ((c = c - (i % c)) < 10 ? c : String.fromCharCode(c + b));
