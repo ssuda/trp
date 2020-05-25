@@ -66,9 +66,12 @@ export default {
     let doc;
 
     try {
-      doc = await firestore.collection('customers').doc(user.gstin).get();
+      doc = await firestore
+        .collection('customers')
+        .doc(user.gstin)
+        .get();
     } catch (ex) {
-      console.log("Error getting document:", ex);
+      console.log('Error getting document:', ex);
     }
 
     if (doc && doc.exists) {
@@ -118,11 +121,19 @@ export default {
         email: user.email,
         gstin: user.gstin,
         phoneNumber: user.phoneNumber,
-        trial_expires_on: DateTime.local()
-          .plus(1, 'month')
+        trialExpiresOn: DateTime.local()
+          .plus(15, 'days')
+          .toJSDate(),
+        billingPeriodStart: DateTime.local()
+          .plus(15, 'days')
+          .toJSDate(),
+        billingPeriodEnd: DateTime.local()
+          .plus(45, 'days')
+          .toJSDate(),
+        billingGracePeriod: DateTime.local()
+          .plus(7, 'days')
           .toJSDate()
       });
-
 
     console.log('Before reauth');
     const credential = firebase.auth.EmailAuthProvider.credential(

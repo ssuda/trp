@@ -9,6 +9,7 @@ export default async function setupCompany(setupWizardValues) {
     country,
     name,
     email,
+    gstin,
     bankName,
     fiscalYearStart,
     fiscalYearEnd
@@ -20,6 +21,7 @@ export default async function setupCompany(setupWizardValues) {
     country,
     fullname: name,
     email,
+    gstin,
     bankName,
     fiscalYearStart,
     fiscalYearEnd,
