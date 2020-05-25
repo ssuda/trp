@@ -43,7 +43,7 @@ const cloudfunctionsBaseUrl =
 
 export {
   firebaseAuth,
-  firestore as firebaseDb,
+  firestore,
   FieldValue,
   Timestamp,
   firebase,
