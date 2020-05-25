@@ -58,11 +58,23 @@ export default {
 
   async login(email, password) {
     await firebaseAuth.signInWithEmailAndPassword(email, password);
-    return await this.getCurrentUser();
+    return this.getCurrentUser();
   },
 
   async signup(user) {
     const { email, password } = user;
+    let doc;
+
+    try {
+      doc = await firestore.collection('customers').doc(user.gstin).get();
+    } catch (ex) {
+      console.log("Error getting document:", error);
+    }
+
+    if (doc && doc.exists) {
+      throw new Error('This company already registered, please login');
+    }
+
     try {
       await firebaseAuth.createUserWithEmailAndPassword(email, password);
     } catch (ex) {
@@ -83,6 +95,19 @@ export default {
       }
     }
 
+    await axios.post(
+      `${cloudfunctionsBaseUrl}/setupCompany`,
+      {
+        email: user.email,
+        companyName: user.companyName
+      },
+      {
+        headers: {
+          Authorization: 'Bearer ' + fbuser.token
+        }
+      }
+    );
+
     console.error('creating company', user);
     //store in firestore
     await firestore
@@ -98,18 +123,6 @@ export default {
           .toJSDate()
       });
 
-    await axios.post(
-      `${cloudfunctionsBaseUrl}/setupCompany`,
-      {
-        email: user.email,
-        companyName: user.companyName
-      },
-      {
-        headers: {
-          Authorization: 'Bearer ' + fbuser.token
-        }
-      }
-    );
 
     console.log('Before reauth');
     const credential = firebase.auth.EmailAuthProvider.credential(
