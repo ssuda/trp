@@ -68,7 +68,7 @@ export default {
     try {
       doc = await firestore.collection('customers').doc(user.gstin).get();
     } catch (ex) {
-      console.log("Error getting document:", error);
+      console.log("Error getting document:", ex);
     }
 
     if (doc && doc.exists) {
