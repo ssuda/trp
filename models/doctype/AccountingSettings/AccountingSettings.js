@@ -77,7 +77,13 @@ module.exports = {
         type: 'email'
       }
     },
-
+    {
+      fieldname: 'gstin',
+      label: 'GST Number',
+      fieldtype: 'Data',
+      placeholder: '29AAGCB7383J1Z4',
+      required: 1
+    },
     {
       fieldname: 'bankName',
       label: 'Bank Name',
