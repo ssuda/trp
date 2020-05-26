@@ -23,6 +23,7 @@ module.exports = class TripDocument extends Document {
       throw new Error('Duplicate LR Number');
     }
   }
+
   async beforeInsert() {
     const prefix = `${this.permit}/`;
     if (this.name.includes(prefix)) {
@@ -31,5 +32,10 @@ module.exports = class TripDocument extends Document {
     await naming.createNumberSeries(prefix, null, 0);
     this.name = await naming.getSeriesNext(prefix);
     console.log('after naming', this.name);
+  }
+
+  async afterInsert() {
+    const permit = await frappe.getDoc('Permit', this.permit);
+    await permit.update();
   }
 };
