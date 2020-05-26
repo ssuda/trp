@@ -4,7 +4,7 @@ const { refreshPermit } = require('@/permit');
 
 module.exports = class Permit extends BaseDocument {
   afterInsert() {
-    if (!this.quantity || !this.startDate || !this.vehicleDetails) {
+    if (this.type == 'I3MS' && (!this.quantity || !this.startDate || !this.vehicleDetails)) {
       refreshPermit(this);
     }
   }

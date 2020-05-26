@@ -167,7 +167,7 @@ const viewConfig = {
         fieldname: 'period'
       },
       {
-        label: 'Number of Permits',
+        label: 'Number of Orders',
         fieldtype: 'Int',
         fieldname: 'numPermits'
       },
