@@ -9,7 +9,7 @@ class Trip {
 
     trips = trips.countDistinct('permit as totalPermits');
 
-    if (params.customer) {
+    if (params.customer || params.type) {
       trips = trips.join('Permit', 'Permit.name', 'Trip.permit');
     }
 

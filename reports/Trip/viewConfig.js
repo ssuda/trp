@@ -9,12 +9,12 @@ const viewConfig = {
       fieldtype: 'Select',
       options: [
         { label: '', value: '' },
-        { label: 'I3MS', value: 'i3ms' },
-        { label: 'Non I3MS', value: 'nonI3ms' }
+        { label: 'I3MS', value: 'I3MS' },
+        { label: 'Non I3MS', value: 'Non I3MS' }
       ],
       size: 'small',
       label: 'Type',
-      default: 'i3ms',
+      default: 'I3MS',
       fieldname: 'type',
       placeholder: 'Type'
     },
