@@ -180,7 +180,7 @@ export default {
     },
 
     async makeNewDoc(data) {
-      const doc = await frappe.getDoc(this.doctype, data.tpNumber);
+      const doc = await frappe.getDoc(this.doctype, data.name);
       Object.assign(doc, data);
       return doc;
     },

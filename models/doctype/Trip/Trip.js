@@ -18,7 +18,7 @@ module.exports = {
   ],
 
   importFields: [
-    'tpNumber',
+    'name',
     'lrNumber',
     'endDate',
     'unloadQty',
@@ -30,7 +30,7 @@ module.exports = {
   showTitle: true,
   fields: [
     {
-      label: 'Name',
+      label: 'Trip Number',
       fieldname: 'name',
       fieldtype: 'Data',
       readOnly: true
