@@ -21,6 +21,10 @@ class Trip {
       trips = trips.where('Permit.customer', params.customer);
     }
 
+    if (params.type) {
+      trips = trips.where('Permit.type', params.type);
+    }
+
     if (params.truckOwner) {
       trips = trips.where('Truck.supplier', params.truckOwner);
     }
@@ -76,7 +80,7 @@ class Trip {
       .sum('loadQty as loadQty')
       .sum('unloadQty as unloadQty');
 
-    if (params.customer) {
+    if (params.customer || params.type) {
       trips = trips.join('Permit', 'Permit.name', 'Trip.permit');
     }
 
@@ -96,6 +100,10 @@ class Trip {
 
     if (params.customer) {
       trips = trips.where('Permit.customer', params.customer);
+    }
+
+    if (params.type) {
+      trips = trips.where('Permit.type', params.type);
     }
 
     if (params.truckOwner) {

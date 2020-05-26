@@ -44,6 +44,7 @@ import { remote } from 'electron';
 import {
   connectToLocalDatabase,
   onlyConnectToRemoteDatabase,
+  connectToRemoteDatabase,
   showMessageDialog
 } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
@@ -65,7 +66,7 @@ export default {
       let size = {
         Desk: [width, height],
         DatabaseSelector: [600, 600],
-        SetupWizard: [600, 650],
+        SetupWizard: [600, 850],
         Settings: [460, 577],
         LoginRegister: [600, 600]
       }[value];
@@ -100,7 +101,11 @@ export default {
     if (user && user.displayName) {
       console.log('connecting db', user.displayName);
       try {
-        await onlyConnectToRemoteDatabase();
+        if (process.env.NODE_ENV === 'development') {
+          await connectToRemoteDatabase();
+        } else {
+          await onlyConnectToRemoteDatabase();
+        }
         console.log('connected db', user.displayName);
         this.showSetupWizardOrDesk();
       } catch (ex) {

@@ -29,7 +29,7 @@ const config = {
       },
       items: [
         {
-          label: _('Permits'),
+          label: _('Orders'),
           route: '/list/Permit',
           doctype: 'Permit'
         },

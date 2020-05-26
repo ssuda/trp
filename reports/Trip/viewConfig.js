@@ -14,7 +14,8 @@ const viewConfig = {
       ],
       size: 'small',
       label: 'Type',
-      fieldname: 'referenceType',
+      default: 'i3ms',
+      fieldname: 'type',
       placeholder: 'Type'
     },
     {

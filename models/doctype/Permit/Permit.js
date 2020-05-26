@@ -15,7 +15,15 @@ module.exports = {
   showTitle: false,
   fields: [
     {
-      label: 'Permit Number',
+      label: 'Order Type',
+      fieldname: 'type',
+      fieldtype: 'Select',
+      options: ['I3MS', 'Non I3MS'],
+      default: 'I3MS',
+      required: 1
+    },
+    {
+      label: 'Order Number',
       fieldname: 'name',
       fieldtype: 'Data',
       required: 1
@@ -33,7 +41,8 @@ module.exports = {
     {
       fieldname: 'taggingUrl',
       label: 'Tagging Link',
-      fieldtype: 'Data'
+      fieldtype: 'Data',
+      hidden: doc => doc.type != 'I3MS'
     },
     {
       fieldname: 'vehicleDetails',
@@ -52,7 +61,7 @@ module.exports = {
       label: 'I3MS Account',
       fieldtype: 'Link',
       target: 'I3MSAccount',
-      required: true
+      hidden: doc => doc.type !== 'I3MS'
     },
     {
       fieldname: 'quantity',
@@ -81,7 +90,8 @@ module.exports = {
       fieldtype: 'Int',
       formulaDependsOn: ['tagged'],
       formula: doc => doc.getNumberOfTagged(),
-      readOnly: true
+      readOnly: true,
+      hidden: doc => doc.type !== 'I3MS'
     },
     {
       fieldname: 'numTrips',
@@ -100,7 +110,7 @@ module.exports = {
   actions: [
     {
       label: 'Refresh',
-      condition: doc => !doc.isNew(),
+      condition: doc => !doc.isNew() && doc.type === 'I3MS',
       action: async function(permit) {
         try {
           const doc = await frappe.getNewDoc('PermitAction');
@@ -130,7 +140,7 @@ module.exports = {
     },
     {
       label: 'Tagging',
-      condition: doc => !doc.isNew(),
+      condition: doc => !doc.isNew() && doc.type === 'I3MS',
       action: async function(permit) {
         try {
           const doc = await frappe.getNewDoc('PermitAction');
@@ -173,7 +183,7 @@ module.exports = {
     },
     {
       label: 'Tag Report',
-      condition: doc => !doc.isNew(),
+      condition: doc => !doc.isNew() && doc.type === 'I3MS',
       action: async function(permit) {
         try {
           let tagged = JSON.parse(permit.tagged || '{}');
@@ -196,6 +206,7 @@ module.exports = {
     }
   ],
   quickEditFields: [
+    'type',
     'account',
     'name',
     'taggingUrl',
