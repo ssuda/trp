@@ -1,10 +1,8 @@
-const { getActions } = require('../Transaction/Transaction');
-
 module.exports = {
   name: 'Trip',
   doctype: 'DocType',
   label: 'Trip',
-  //documentClass: require('./PurchaseInvoiceDocument'),
+  documentClass: require('./TripDocument'),
   isSingle: 0,
   isChild: 0,
   isSubmittable: 0,
@@ -29,26 +27,20 @@ module.exports = {
     'fuel'
   ],
 
-  //settings: 'PurchaseInvoiceSettings',
   showTitle: true,
   fields: [
     {
       label: 'Name',
       fieldname: 'name',
-      fieldtype: 'Data'
+      fieldtype: 'Data',
+      readOnly: true
     },
     {
-      label: 'Permit',
+      label: 'Order',
       fieldname: 'permit',
       fieldtype: 'Link',
       target: 'Permit'
     },
-    // {
-    //   label: 'Delivery Order',
-    //   fieldname: 'order',
-    //   fieldtype: 'Link',
-    //   target: 'Delivery Order'
-    // },
     {
       label: 'Truck No',
       fieldname: 'truck',
@@ -112,7 +104,6 @@ module.exports = {
     }
   ],
 
-  actions: getActions('Permit'),
   quickEditFields: [
     'permit',
     'truck',

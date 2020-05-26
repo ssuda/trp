@@ -41,7 +41,7 @@
         </template>
         <div
           :key="df.fieldname"
-          v-else
+          v-else-if="!isHidden(df, doc)"
           class="grid"
           :class="{ 'border-b': !noBorder }"
           :style="style"
@@ -197,6 +197,13 @@ let TwoColumnForm = {
         await this.doc.loadLinks();
         this.inlineEditField = null;
       }
+    },
+    isHidden(df, doc) {
+      const ret =
+        df.hidden &&
+        (typeof df.hidden === 'function' ? df.hidden(doc) : df.hidden);
+      console.log('isHidden called for', df, doc, ret);
+      return ret;
     }
   },
   computed: {

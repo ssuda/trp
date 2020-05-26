@@ -3,8 +3,9 @@ import frappe from 'frappejs';
 
 export default {
   doctype: 'Permit',
-  title: _('Permits'),
+  title: _('Orders'),
   columns: [
+    'type',
     'name',
     'customer',
     'startDate',
