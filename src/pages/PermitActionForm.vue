@@ -164,7 +164,7 @@ export default {
         let permits = await frappe.db.getAll({
           doctype: 'Permit',
           fields: ['*'],
-          filters: { account: this.doc.account, startDate: ['>=', dt] }
+          filters: { account: this.doc.account, startDate: ['>=', dt], type: 'I3MS' }
         });
         permits = permits.map(permit => ({
           tag_url: permit.taggingUrl,
