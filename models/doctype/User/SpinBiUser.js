@@ -36,11 +36,11 @@ module.exports = {
     {
       fieldname: 'role',
       label: 'Role',
-      fieldtype: 'AutoComplete',
+      fieldtype: 'Select',
       placeholder: 'Role',
       required: 1,
       default: 'Operator',
-      getList: () => [
+      options: [
         'Administrator',
         'Operator',
         'Verifier',

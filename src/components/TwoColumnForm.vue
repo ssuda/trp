@@ -202,7 +202,6 @@ let TwoColumnForm = {
       const ret =
         df.hidden &&
         (typeof df.hidden === 'function' ? df.hidden(doc) : df.hidden);
-      console.log('isHidden called for', df, doc, ret);
       return ret;
     }
   },

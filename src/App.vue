@@ -66,7 +66,7 @@ export default {
       let size = {
         Desk: [width, height],
         DatabaseSelector: [600, 600],
-        SetupWizard: [600, 850],
+        SetupWizard: [600, 750],
         Settings: [460, 577],
         LoginRegister: [600, 600]
       }[value];
@@ -125,7 +125,7 @@ export default {
   },
   methods: {
     async showSetupWizardOrDesk(resetRoute = false, isLogin) {
-      const { setupComplete } = frappe.AccountingSettings;
+      const { setupComplete } = frappe.AccountingSettings || {};
       if (!setupComplete && !isLogin) {
         this.activeScreen = 'SetupWizard';
       } else if (this.$route.path.startsWith('/settings')) {
