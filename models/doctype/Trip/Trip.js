@@ -20,7 +20,9 @@ module.exports = {
   importFields: [
     'name',
     'lrNumber',
+    'startDate',
     'endDate',
+    'loadQty',
     'unloadQty',
     'advance',
     'discount',
@@ -45,7 +47,7 @@ module.exports = {
       label: 'Truck No',
       fieldname: 'truck',
       fieldtype: 'Link',
-      target: 'Truck',
+      target: 'Truck'
       //readOnly: doc => !doc.isNew()
     },
     {
@@ -56,7 +58,7 @@ module.exports = {
     {
       fieldname: 'startDate',
       label: 'Start Date',
-      fieldtype: 'Date',
+      fieldtype: 'Date'
       //readOnly: doc => !doc.isNew()
     },
     {
