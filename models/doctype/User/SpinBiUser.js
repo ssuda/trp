@@ -40,12 +40,7 @@ module.exports = {
       placeholder: 'Role',
       required: 1,
       default: 'Operator',
-      options: [
-        'Administrator',
-        'Operator',
-        'Verifier',
-        'Account Manager'
-      ]
+      options: ['Administrator', 'Operator', 'Verifier', 'Account Manager']
     },
     {
       fieldname: 'status',

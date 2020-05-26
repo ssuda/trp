@@ -1,11 +1,14 @@
 const naming = require('frappejs/model/naming');
-const Document = require('frappejs/model/document');
+const Document = require('frappejs/model/document')
 
 module.exports = class TripDocument extends Document {
   async beforeInsert() {
-    if (this.name) return;
     const prefix = `${this.permit}/`;
-    await naming.createNumberSeries(prefix, null, 1);
+    if (this.name.includes(prefix)) {
+      return;
+    }
+    await naming.createNumberSeries(prefix, null, 0);
     this.name = await naming.getSeriesNext(prefix);
+    console.log('after naming', this.name);
   }
 };
