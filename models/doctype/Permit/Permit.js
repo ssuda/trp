@@ -31,12 +31,14 @@ module.exports = {
     {
       fieldname: 'startDate',
       label: 'Start Date',
-      fieldtype: 'Date'
+      fieldtype: 'Date',
+      hidden: doc => doc.type == 'I3MS'
     },
     {
       fieldname: 'endDate',
       label: 'Expiry Date',
-      fieldtype: 'Date'
+      fieldtype: 'Date',
+      hidden: doc => doc.type == 'I3MS'
     },
     {
       fieldname: 'taggingUrl',
@@ -66,7 +68,8 @@ module.exports = {
     {
       fieldname: 'quantity',
       label: 'Quantity',
-      fieldtype: 'Float'
+      fieldtype: 'Float',
+      hidden: doc => doc.type == 'I3MS'
     },
     {
       fieldname: 'source',
@@ -210,6 +213,9 @@ module.exports = {
     'account',
     'name',
     'taggingUrl',
+    'startDate',
+    'endDate',
+    'quantity',
     'source',
     'destination',
     'customer'
