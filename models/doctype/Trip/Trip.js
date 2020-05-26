@@ -46,7 +46,7 @@ module.exports = {
       fieldname: 'truck',
       fieldtype: 'Link',
       target: 'Truck',
-      readOnly: doc => doc.permit
+      readOnly: doc => !doc.isNew()
     },
     {
       fieldname: 'lrNumber',
@@ -57,7 +57,7 @@ module.exports = {
       fieldname: 'startDate',
       label: 'Start Date',
       fieldtype: 'Date',
-      readOnly: true
+      readOnly: doc => !doc.isNew()
     },
     {
       fieldname: 'endDate',
