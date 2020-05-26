@@ -4,6 +4,10 @@ const frappe = require('frappejs');
 
 module.exports = class TripDocument extends Document {
   async validate() {
+    if (!this.isNew()) {
+      return;
+    }
+
     if (!this.lrNumber) {
       throw new Error('LR Number is required');
     }
