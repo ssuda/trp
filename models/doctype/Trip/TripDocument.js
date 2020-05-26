@@ -1,7 +1,24 @@
 const naming = require('frappejs/model/naming');
-const Document = require('frappejs/model/document')
+const Document = require('frappejs/model/document');
+const frappe = require('frappejs');
 
 module.exports = class TripDocument extends Document {
+  async validate() {
+    if (!this.lrNumber) {
+      throw new Error('LR Number is required');
+    }
+
+    let values = await frappe.db.getAll({
+      doctype: 'Trip',
+      fields: ['lrNumber'],
+      filters: { lrNumber: this.lrNumber, permit: this.permit },
+      limit: 1
+    });
+
+    if (values && values.length) {
+      throw new Error('Duplicate LR Number');
+    }
+  }
   async beforeInsert() {
     const prefix = `${this.permit}/`;
     if (this.name.includes(prefix)) {
