@@ -65,17 +65,19 @@ export default {
     const { email, password } = user;
     let doc;
 
-    try {
-      doc = await firestore
-        .collection('customers')
-        .doc(user.gstin)
-        .get();
-    } catch (ex) {
-      console.log('Error getting document:', ex);
-    }
+    if (process.env.NODE_ENV !== 'development') {
+      try {
+        doc = await firestore
+          .collection('customers')
+          .doc(user.gstin)
+          .get();
+      } catch (ex) {
+        console.log('Error getting document:', ex);
+      }
 
-    if (doc && doc.exists) {
-      throw new Error('This company already registered, please login');
+      if (doc && doc.exists) {
+        throw new Error('This company already registered, please login');
+      }
     }
 
     try {
@@ -112,6 +114,7 @@ export default {
     );
 
     console.error('creating company', user);
+
     //store in firestore
     await firestore
       .collection('customers')
@@ -122,17 +125,15 @@ export default {
         gstin: user.gstin,
         phoneNumber: user.phoneNumber,
         trialExpiresOn: DateTime.local()
-          .plus(15, 'days')
+          .plus({ days: 15 })
           .toJSDate(),
         billingPeriodStart: DateTime.local()
-          .plus(15, 'days')
+          .plus({ days: 15 })
           .toJSDate(),
         billingPeriodEnd: DateTime.local()
-          .plus(45, 'days')
+          .plus({ days: 45 })
           .toJSDate(),
-        billingGracePeriod: DateTime.local()
-          .plus(7, 'days')
-          .toJSDate()
+        billingGracePeriod: 7
       });
 
     console.log('Before reauth');
