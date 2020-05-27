@@ -41,6 +41,8 @@ import WindowsTitleBar from '@/components/WindowsTitleBar';
 import LoginRegister from './pages/SetupWizard/LoginRegister';
 import Vue from 'vue';
 import { remote } from 'electron';
+import path from 'path';
+
 import {
   connectToLocalDatabase,
   onlyConnectToRemoteDatabase,
@@ -112,7 +114,9 @@ export default {
         console.error(ex);
         console.log('failed to connect to db', user.displayName);
         if (/(password)/i.test(ex.message)) {
-          await connectToLocalDatabase('./spin-trp.db');
+          await connectToLocalDatabase(
+            path.join(remote.getGlobal('userData'), 'spin-trp.db')
+          );
           await user.updateProfile({ displayName: '' });
           this.activeScreen = 'SetupWizard';
         }
@@ -154,16 +158,18 @@ export default {
             }
 
             if (doc && doc.exists) {
+              doc = doc.data();
               const trailPeriod = DateTime.fromJSDate(
                 doc.trialExpiresOn.toDate()
               );
-              const trailDuration = trailPeriod.diffNow('days').days;
+              const trailDuration = parseInt(trailPeriod.diffNow('days').days);
+              console.log('trailDuration', trailDuration);
               if (trailDuration == 0) {
                 showMessageDialog({
                   description: 'Your billing started',
                   buttons: [{ label: 'Ok' }]
                 });
-              } else if (trailDuration > 2) {
+              } else if (trailDuration > 7) {
                 showMessageDialog({
                   description: `Your trail expires in ${trailDuration} day(s)`,
                   buttons: [{ label: 'Ok' }]
@@ -172,7 +178,9 @@ export default {
                 const billingEnd = DateTime.fromJSDate(
                   doc.billingPeriodEnd.toDate()
                 );
-                const duration = -billingEnd.diffNow('days').days;
+                const duration = parseInt(-billingEnd.diffNow('days').days);
+                console.log('billingEnd', duration);
+
                 if (duration > doc.billingGracePeriod) {
                   //disable services
                   return showMessageDialog({
@@ -181,14 +189,16 @@ export default {
                   });
                 } else if (duration >= 0) {
                   //warn users for payment
-                  return showMessageDialog({
+                  await showMessageDialog({
                     description: `Your payment is pending, your service will be disabled in ${doc.billingGracePeriod -
-                      duration} days, please pay now to avoid disprution to your serivce`
+                      duration} days, please pay before to avoid disruption to your serivce`,
+                    buttons: [{ label: 'Ok' }]
                   });
                 } else if (duration >= -2) {
                   //give info to the user
-                  return showMessageDialog({
-                    description: `Your billing period ends in ${-duration} day(s)`
+                  await showMessageDialog({
+                    description: `Your billing period ends in ${-duration} day(s)`,
+                    buttons: [{ label: 'Ok' }]
                   });
                 }
               }
