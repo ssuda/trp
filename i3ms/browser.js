@@ -244,6 +244,13 @@ export async function tagInit(href) {
   return r;
 }
 
+async function navigationClickHelper(selector) {
+  return Promise.all([
+    page.waitForNavigation({ timeout: 5000 }), // The promise resolves after navigation has finished
+    page.click(selector) // Clicking the link will indirectly cause a navigation
+  ]);
+}
+
 export async function tagVehicle(href, truckNo) {
   console.log('Trying to tag vehicle', truckNo);
   let reason = '';
@@ -255,10 +262,8 @@ export async function tagVehicle(href, truckNo) {
     await typeInTextBox('#txtVehicleNo', truckNo);
     //await page.click('#btnsearch');
     console.log('clicking btnsearch', truckNo);
-    const [response] = await Promise.all([
-      page.waitForNavigation({ timeout: 5000 }), // The promise resolves after navigation has finished
-      page.click('#btnsearch') // Clicking the link will indirectly cause a navigation
-    ]);
+
+    await navigationClickHelper('#btnsearch'); // Clicking the link will indirectly cause a navigation
 
     // await page.waitForNavigation();
     console.log('waiting for radio or error message', truckNo);
@@ -271,15 +276,12 @@ export async function tagVehicle(href, truckNo) {
     console.log('return from selectors', r);
 
     if (r == 1) {
-      await page.click('#rdo_GPS_0');
-      await page.click('#Rdo_VTS_0');
-      await page.click('#Rdo_SIM_0');
+      await navigationClickHelper('#rdo_GPS_0');
+      await navigationClickHelper('#Rdo_VTS_0');
+      await navigationClickHelper('#Rdo_SIM_0');
       await page.click('#chkClick');
       //await page.click('#btnSubmit');
-      const [response] = await Promise.all([
-        page.waitForNavigation({ timeout: 5000 }), // The promise resolves after navigation has finished
-        page.click('#btnSubmit') // Clicking the link will indirectly cause a navigation
-      ]);
+      await navigationClickHelper('#btnSubmit'); // Clicking the link will indirectly cause a navigation
     } else {
       reason = page.$eval('#lblMsg', el => el.innerText);
       console.log('failed vehicle retrying...', truckNo);
