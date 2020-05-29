@@ -15,12 +15,21 @@ module.exports = class BaseDocument extends Observable {
       await this[event](params);
     }
     await super.trigger(event, params);
-    const accountingSettings = frappe.AccountingSettings;
 
-    if (
-      event === 'afterUpdate' ||
-      (this.doctype != 'Trip' && event === 'afterInsert')
-    ) {
+    const accountingSettings = frappe.AccountingSettings;
+    if (!accountingSettings) {
+      return;
+    }
+
+    if (event === 'afterUpdate' || event === 'afterInsert') {
+      if (
+        event !== 'afterUpdate' &&
+        this.doctype === 'Trip' &&
+        this.type === 'I3MS'
+      ) {
+        return;
+      }
+
       let obj = {
         gstin: accountingSettings.gstin,
         deviceId
@@ -42,7 +51,7 @@ module.exports = class BaseDocument extends Observable {
 
       firestore
         .collection(this.doctype)
-        .doc(`${accountingSettings.gstin}_${this.name}`)
+        .doc(`${accountingSettings.gstin}_${this.name.replace(/[ \/]/g, '_')}`)
         .set(obj);
     }
   }

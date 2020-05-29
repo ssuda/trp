@@ -36,6 +36,9 @@ async function processRecord(query, cb, start, end) {
 module.exports = async function() {
   // check with firestore about updates and subscribe to the changes
   const accountingSettings = frappe.AccountingSettings;
+  if (!accountingSettings) {
+    return;
+  }
   for (let model in frappe.models) {
     // check latest modified time for each doctype and register for changes
 
@@ -47,7 +50,8 @@ module.exports = async function() {
     let query = firestore
       .collection(model)
       .where('gstin', '==', accountingSettings.gstin)
-      .where('deviceId', '!=', deviceId);
+      .where('deviceId', '<', deviceId)
+      .where('deviceId', '>', deviceId);
 
     try {
       const row = await frappe.db.knex.raw(

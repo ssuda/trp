@@ -85,6 +85,7 @@ import Button from '@/components/Button';
 import setupCompany from './setupCompany';
 import Popover from '@/components/Popover';
 import Users from '@/users';
+import SetupSync from '@/sync';
 
 import {
   getErrorMessage,
@@ -149,7 +150,6 @@ export default {
       try {
         this.loading = true;
         const fbuser = await Users.signup(this.doc);
-        //await connectToRemoteDatabase();
         try {
           const doc = frappe.newDoc({
             doctype: 'SpinBiUser',
@@ -165,6 +165,7 @@ export default {
         }
         await setupCompany(this.doc);
         this.$emit('setup-complete');
+        SetupSync();
       } catch (e) {
         this.loading = false;
         handleErrorWithDialog(e, this.doc);
