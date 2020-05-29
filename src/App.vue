@@ -96,6 +96,7 @@ export default {
 
     console.log(user);
     const dbpath = path.join(remote.getGlobal('userData'), 'spin-trp.db');
+    //fs.unlinkSync(dbpath);
     await connectToLocalDatabase(dbpath);
     this.showSetupWizardOrDesk(false);
   },
