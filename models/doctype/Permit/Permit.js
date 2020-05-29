@@ -6,7 +6,7 @@ const { exportData } = require('@/utils');
 module.exports = {
   name: 'Permit',
   doctype: 'DocType',
-  label: 'Permit',
+  label: _('Permit'),
   documentClass: require('./PermitDocument'),
   isSingle: 0,
   isChild: 0,

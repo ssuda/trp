@@ -1,5 +1,5 @@
 const frappe = require('frappejs');
-const BaseDocument = require('@/basedocument');
+const BaseDocument = require('frappejs/model/document');
 const { refreshPermit } = require('@/permit');
 
 module.exports = class Permit extends BaseDocument {

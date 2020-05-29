@@ -1,5 +1,5 @@
 const frappe = require('frappejs');
-const BaseDocument = require('@/basedocument');
+const BaseDocument = require('frappejs/model/document');
 
 module.exports = class Account extends BaseDocument {
   async validate() {

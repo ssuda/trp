@@ -9,7 +9,7 @@ class Cashflow {
       .select('name')
       .where('accountType', 'in', ['Cash', 'Bank'])
       .andWhere('isGroup', 0);
-    let dateAsMonthYear = frappe.db.knex.raw("to_char(??, 'MM-YYYY')", 'date');
+    let dateAsMonthYear = frappe.db.knex.raw("strftime('MM-YYYY', ??)", 'date');
     let res = await frappe.db
       .knex('AccountingLedgerEntry')
       .sum({

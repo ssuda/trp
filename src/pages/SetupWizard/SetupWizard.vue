@@ -149,7 +149,7 @@ export default {
       try {
         this.loading = true;
         const fbuser = await Users.signup(this.doc);
-        await connectToRemoteDatabase();
+        //await connectToRemoteDatabase();
         try {
           const doc = frappe.newDoc({
             doctype: 'SpinBiUser',

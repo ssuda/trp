@@ -1,4 +1,4 @@
-const BaseDocument = require('@/basedocument');
+const BaseDocument = require('frappejs/model/document');
 const frappe = require('frappejs');
 const LedgerPosting = require('../../../accounting/ledgerPosting');
 
