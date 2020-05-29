@@ -16,6 +16,7 @@ import Vue from 'vue';
 import FileSaver from 'file-saver';
 
 import { firebaseAuth } from '@/firebase';
+import SetupSync from '@/sync';
 
 export function createNewDatabase() {
   return new Promise(resolve => {
@@ -101,29 +102,32 @@ export async function connectToRemoteDatabase() {
 }
 
 export async function connectToLocalDatabase(filepath) {
+  console.log('called local db connect');
   frappe.login('Administrator');
   frappe.db = new SQLite({
     dbPath: filepath
   });
+
   await frappe.db.connect();
-  // await migrate();
-  // await postStart();
+  await migrate();
+  await postStart();
 
-  // // set file info in configp
-  // let files = config.get('files') || [];
-  // if (!files.find(file => file.filePath === filepath)) {
-  //   files = [
-  //     {
-  //       companyName: frappe.AccountingSettings.companyName,
-  //       filePath: filepath
-  //     },
-  //     ...files
-  //   ];
-  //   config.set('files', files);
-  // }
+  SetupSync();
+  // set file info in configp
+  let files = config.get('files') || [];
+  if (!files.find(file => file.filePath === filepath)) {
+    files = [
+      {
+        companyName: frappe.AccountingSettings.companyName,
+        filePath: filepath
+      },
+      ...files
+    ];
+    config.set('files', files);
+  }
 
-  // // set last selected file
-  // config.set('lastSelectedFilePath', filepath);
+  // set last selected file
+  config.set('lastSelectedFilePath', filepath);
 }
 
 export function showMessageDialog({ message, description, buttons = [] }) {

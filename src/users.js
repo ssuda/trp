@@ -16,8 +16,10 @@ function waitForUser() {
       async user => {
         unsubscribe();
         try {
-          user.token = await user.getIdToken();
-          user.local = await frappe.getDoc('SpinBiUser', user.email);
+          user.token = await user.getIdToken(true);
+          if (frappe.db) {
+            user.local = await frappe.getDoc('SpinBiUser', user.email);
+          }
         } catch (ex) {}
         resolve(user);
       },
@@ -66,6 +68,7 @@ export default {
     let doc;
 
     if (process.env.NODE_ENV !== 'development') {
+      console.log('fetching firebase user');
       try {
         doc = await firestore
           .collection('customers')
@@ -89,31 +92,7 @@ export default {
 
     let fbuser = await this.getCurrentUser();
 
-    if (fbuser.displayName) {
-      try {
-        await onlyConnectToRemoteDatabase();
-        return fbuser;
-      } catch (ex) {
-        if (!/(password)/i.test(ex.message)) {
-          return fbuser;
-        }
-      }
-    }
-
-    await axios.post(
-      `${cloudfunctionsBaseUrl}/setupCompany`,
-      {
-        email: user.email,
-        companyName: user.companyName
-      },
-      {
-        headers: {
-          Authorization: 'Bearer ' + fbuser.token
-        }
-      }
-    );
-
-    console.error('creating company', user);
+    console.log('creating company', user);
 
     //store in firestore
     await firestore

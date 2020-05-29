@@ -1,4 +1,4 @@
-const BaseDocument = require('@/basedocument');
+const BaseDocument = require('frappejs/model/document');
 const Users = require('@/users').default;
 
 module.exports = class SpinBiUser extends BaseDocument {

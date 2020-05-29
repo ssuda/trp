@@ -244,9 +244,9 @@ export async function tagInit(href) {
   return r;
 }
 
-async function navigationClickHelper(selector) {
+async function navigationClickHelper(selector, timeout = 5000) {
   return Promise.all([
-    page.waitForNavigation({ timeout: 5000 }), // The promise resolves after navigation has finished
+    page.waitForNavigation({ timeout }), // The promise resolves after navigation has finished
     page.click(selector) // Clicking the link will indirectly cause a navigation
   ]);
 }
@@ -638,7 +638,7 @@ export async function permitVehicles(href, permitNo, fromdate, todate) {
       await typeInTextBox('#to_txt_date', todate);
 
       console.log('Retrying in loop');
-      const [response] = await Promise.all([
+      await Promise.all([
         page.waitForNavigation({ timeout: 120000 }), // The promise resolves after navigation has finished
         page.click('#btnsearch') // Clicking the link will indirectly cause a navigation
       ]);

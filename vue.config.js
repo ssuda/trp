@@ -30,7 +30,9 @@ module.exports = {
     // );
 
     config.externals = {
-      knex: 'commonjs knex'
+      knex: 'commonjs knex',
+      websql: 'commonjs websql',
+      'pouchdb-adapter-node-websql': 'commonjs pouchdb-adapter-node-websql'
     };
 
     config.module.rules.push({

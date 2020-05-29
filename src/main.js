@@ -23,9 +23,7 @@ import Document from 'frappejs/model/document';
 (async () => {
   frappe.isServer = true;
   frappe.isElectron = true;
-  Document.prototype.compareWithCurrentDoc =
-    BaseDocument.prototype.compareWithCurrentDoc;
-
+  Document.prototype.trigger = BaseDocument.prototype.trigger;
   frappe.init();
   frappe.registerLibs(common);
   frappe.registerModels(coreModels);

@@ -84,6 +84,8 @@ async function setupChartOfAccounts(bankName) {
     method: 'import-coa'
   });
 
+  if (!bankName) return;
+
   const accountDoc = await frappe.newDoc({
     doctype: 'Account'
   });

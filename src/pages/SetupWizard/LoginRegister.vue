@@ -108,7 +108,7 @@ export default {
       try {
         this.loading = true;
         await Users.login(this.doc.email, this.doc.password);
-        await onlyConnectToRemoteDatabase();
+        //await onlyConnectToRemoteDatabase();
         this.$emit('login-complete');
       } catch (e) {
         this.loading = false;

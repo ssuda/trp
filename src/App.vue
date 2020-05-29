@@ -42,13 +42,9 @@ import LoginRegister from './pages/SetupWizard/LoginRegister';
 import Vue from 'vue';
 import { remote } from 'electron';
 import path from 'path';
+import fs from 'fs';
 
-import {
-  connectToLocalDatabase,
-  onlyConnectToRemoteDatabase,
-  connectToRemoteDatabase,
-  showMessageDialog
-} from '@/utils';
+import { connectToLocalDatabase, showMessageDialog } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
 import config from '@/config';
 import { DateTime } from 'luxon';
@@ -68,7 +64,7 @@ export default {
       let size = {
         Desk: [width, height],
         DatabaseSelector: [600, 600],
-        SetupWizard: [600, 750],
+        SetupWizard: [600, 550],
         Settings: [460, 577],
         LoginRegister: [600, 600]
       }[value];
@@ -99,33 +95,9 @@ export default {
     }
 
     console.log(user);
-
-    if (user && user.displayName) {
-      console.log('connecting db', user.displayName);
-      try {
-        if (process.env.NODE_ENV === 'development') {
-          await connectToRemoteDatabase();
-        } else {
-          await onlyConnectToRemoteDatabase();
-        }
-        console.log('connected db', user.displayName);
-        this.showSetupWizardOrDesk();
-      } catch (ex) {
-        console.error(ex);
-        console.log('failed to connect to db', user.displayName);
-        if (/(password)/i.test(ex.message)) {
-          await connectToLocalDatabase(
-            path.join(remote.getGlobal('userData'), 'spin-trp.db')
-          );
-          await user.updateProfile({ displayName: '' });
-          this.activeScreen = 'SetupWizard';
-        }
-      }
-    } else {
-      const setupComplete = config.get('setupComplete', false);
-      await connectToLocalDatabase('./spin-trp.db');
-      this.showSetupWizardOrDesk(false, false);
-    }
+    const dbpath = path.join(remote.getGlobal('userData'), 'spin-trp.db');
+    await connectToLocalDatabase(dbpath);
+    this.showSetupWizardOrDesk(false);
   },
   methods: {
     async showSetupWizardOrDesk(resetRoute = false, isLogin) {

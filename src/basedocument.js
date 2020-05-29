@@ -1,7 +1,52 @@
-const FrappeBaseDocument = require('frappejs/model/document')
-const frappe = require('frappejs')
+const Observable = require('frappejs/utils/observable');
+const frappe = require('frappejs');
 
-module.exports = class BaseDocument extends FrappeBaseDocument {
+const { firestore } = require('@/firebase');
+
+const { machineIdSync } = require('node-machine-id');
+
+let deviceId = machineIdSync({ original: true });
+
+module.exports = class BaseDocument extends Observable {
+  // trigger methods on the class if they match
+  // with the trigger name
+  async trigger(event, params) {
+    if (this[event]) {
+      await this[event](params);
+    }
+    await super.trigger(event, params);
+    const accountingSettings = frappe.AccountingSettings;
+
+    if (
+      event === 'afterUpdate' ||
+      (this.doctype != 'Trip' && event === 'afterInsert')
+    ) {
+      let obj = {
+        gstin: accountingSettings.gstin,
+        deviceId
+      };
+
+      for (let param in this) {
+        if (
+          typeof this[param] !== 'object' &&
+          !param.startsWith('_') &&
+          !['flags', 'fetchValuesCache'].includes(param)
+        ) {
+          if (param === 'modified') {
+            obj[param] = new Date(this[param]);
+          } else {
+            obj[param] = this[param];
+          }
+        }
+      }
+
+      firestore
+        .collection(this.doctype)
+        .doc(`${accountingSettings.gstin}_${this.name}`)
+        .set(obj);
+    }
+  }
+
   async compareWithCurrentDoc() {
     if (frappe.isServer && !this.isNew()) {
       let currentDoc = await frappe.db.get(this.doctype, this.name);
@@ -51,4 +96,4 @@ module.exports = class BaseDocument extends FrappeBaseDocument {
       }
     }
   }
-}
+};

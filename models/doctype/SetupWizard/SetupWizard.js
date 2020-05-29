@@ -78,9 +78,11 @@ module.exports = {
             b = 55,
             c = 36;
           isValid = Array.from(value).reduce((i, j, k) => {
-            let p = (j.charCodeAt(0) < a ? parseInt(j) : j.charCodeAt(0) - b) * ((k % 2) + 1);
+            let p =
+              (j.charCodeAt(0) < a ? parseInt(j) : j.charCodeAt(0) - b) *
+              ((k % 2) + 1);
             if (p > c) {
-              p = 1 + (p - c)
+              p = 1 + (p - c);
             }
 
             return k < 14
@@ -168,11 +170,11 @@ module.exports = {
     'fullname',
     'password',
     'gstin',
-    'phoneNumber',
-    'bankName',
-    'country',
-    'currency',
-    'fiscalYearStart',
-    'fiscalYearEnd'
+    'phoneNumber'
+    // 'bankName',
+    // 'country',
+    // 'currency',
+    // 'fiscalYearStart',
+    // 'fiscalYearEnd'
   ]
 };
