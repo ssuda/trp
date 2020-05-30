@@ -16,7 +16,6 @@ import Vue from 'vue';
 import FileSaver from 'file-saver';
 
 import { firebaseAuth } from '@/firebase';
-import SetupSync from '@/sync';
 
 export function createNewDatabase() {
   return new Promise(resolve => {
@@ -112,7 +111,6 @@ export async function connectToLocalDatabase(filepath) {
   await migrate();
   await postStart();
 
-  SetupSync();
   // set file info in configp
   let files = config.get('files') || [];
   if (!files.find(file => file.filePath === filepath)) {

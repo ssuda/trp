@@ -31,7 +31,6 @@
 import './styles/index.css';
 import 'frappe-charts/dist/frappe-charts.min.css';
 import frappe from 'frappejs';
-import { firebaseAuth } from '@/firebase';
 import Users from '@/users';
 import Desk from './pages/Desk';
 import SetupWizard from './pages/SetupWizard/SetupWizard';
@@ -46,9 +45,10 @@ import fs from 'fs';
 
 import { connectToLocalDatabase, showMessageDialog } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
-import config from '@/config';
+//import config from '@/config';
 import { DateTime } from 'luxon';
 import { firestore } from '@/firebase';
+import SetupSync from '@/sync';
 
 export default {
   name: 'App',
@@ -96,7 +96,10 @@ export default {
 
     console.log(user);
     const dbpath = path.join(remote.getGlobal('userData'), 'spin-trp.db');
-    //fs.unlinkSync(dbpath);
+
+    if (process.env.NODE_ENV === 'development' && process.env.DELETE_DB) {
+      fs.unlinkSync(dbpath);
+    }
     await connectToLocalDatabase(dbpath);
     this.showSetupWizardOrDesk(false);
   },
@@ -122,6 +125,7 @@ export default {
             let doc;
 
             try {
+              console.log('Fetching User from firestore');
               doc = await firestore
                 .collection('customers')
                 .doc(accountingSettings.gstin)
@@ -179,6 +183,8 @@ export default {
           } catch (ex) {
             console.error(ex);
           }
+
+          SetupSync();
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';

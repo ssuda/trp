@@ -6,6 +6,7 @@
 </template>
 <script>
 import frappe from 'frappejs';
+import numberFormat from 'frappejs/utils/numberFormat.js';
 
 export default {
   name: 'ListCell',
@@ -15,6 +16,11 @@ export default {
       let { column, doc } = this;
       let value = doc[column.fieldname];
       if (value) {
+        if (column.fieldtype == 'Float') {
+          return numberFormat.formatNumber(value);
+        } else if (column.fieldtype == 'Int') {
+          return numberFormat.formatNumber(value, '#,###');
+        }
         return frappe.format(value, column, doc);
       }
       return value;
