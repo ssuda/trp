@@ -123,6 +123,21 @@ export default {
         billingGracePeriod: 7
       });
 
+    try {
+      const doc = frappe.newDoc({
+        doctype: 'SpinBiUser',
+        name: this.doc.email,
+        password: this.doc.password,
+        userId: fbuser.uid,
+        fullName: this.doc.fullname,
+        phoneNumber: this.doc.phoneNumber,
+        role: 'Administrator'
+      });
+      await doc.insert();
+    } catch (ex) {
+      console.error(ex);
+    }
+
     console.log('Before reauth');
     const credential = firebase.auth.EmailAuthProvider.credential(
       email,

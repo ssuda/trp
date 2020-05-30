@@ -3,7 +3,7 @@
     <div class="h-full">
       <slot name="target" :togglePopover="togglePopover"></slot>
     </div>
-    <portal to="popovers">
+    <portal :disabled="true" to="popovers">
       <div
         ref="popover"
         :class="popoverClass"
@@ -53,6 +53,7 @@ export default {
     };
   },
   mounted() {
+    //console.log('popover mounted called');
     let listener = e => {
       let $els = [this.$refs.reference, this.$refs.popover];
       let insideClick = $els.some(
@@ -71,10 +72,12 @@ export default {
     }
   },
   beforeDestroy() {
+    //console.log('before destroy called', this.popover);
     this.popper && this.popper.destroy();
   },
   methods: {
     setupPopper() {
+      //console.log('popover setup called', this.popper, this.$refs);
       if (!this.popper) {
         this.popper = createPopper(this.$refs.reference, this.$refs.popover, {
           placement: this.placement,

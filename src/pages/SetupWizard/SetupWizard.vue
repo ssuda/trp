@@ -148,19 +148,6 @@ export default {
       try {
         this.loading = true;
         const fbuser = await Users.signup(this.doc);
-        try {
-          const doc = frappe.newDoc({
-            doctype: 'SpinBiUser',
-            name: this.doc.email,
-            password: this.doc.password,
-            userId: fbuser.uid,
-            fullName: this.doc.fullname,
-            role: 'Administrator'
-          });
-          await doc.insert();
-        } catch (ex) {
-          console.error(ex);
-        }
         await setupCompany(this.doc);
         this.$emit('setup-complete');
       } catch (e) {
