@@ -96,17 +96,19 @@ export default {
 
     console.log(user);
     const dbpath = path.join(remote.getGlobal('userData'), 'spin-trp.db');
-    const toBool =  v => {
+    const toBool = v => {
       v = v.toLowerCase();
       return v === 'true' || v === '1' || v === 'on';
-    }
+    };
 
     if (
       process.env.NODE_ENV === 'development' &&
       toBool(process.env.VUE_APP_DELETE_DB)
     ) {
-      console.log('deleting db');
-      fs.unlinkSync(dbpath);
+      try {
+        console.log('deleting db');
+        fs.unlinkSync(dbpath);
+      } catch (ex) {}
     }
     await connectToLocalDatabase(dbpath);
     this.showSetupWizardOrDesk(false);
