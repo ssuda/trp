@@ -39,7 +39,8 @@ module.exports = {
       label: 'State',
       placeholder: 'State',
       fieldtype: 'AutoComplete',
-      getList: () => Object.values(stateList).sort()
+      getList: () => Object.values(stateList).sort(),
+      default: 'Odisha'
     },
     {
       fieldname: 'country',

@@ -19,7 +19,8 @@ module.exports = {
       fieldname: 'name',
       label: 'Email',
       fieldtype: 'Data',
-      required: 1
+      required: 1,
+      placeholder: 'Email'
     },
     {
       fieldname: 'phoneNumber',
@@ -56,5 +57,12 @@ module.exports = {
       fieldtype: 'Data',
       hidden: 1
     }
-  ]
+  ],
+  quickEditFields: [
+    'name',
+    'fullName',
+    'phoneNumber',
+    'role',
+    'status'
+  ],
 };
