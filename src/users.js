@@ -103,7 +103,7 @@ export default {
     console.log('creating company', user);
 
     //store in firestore
-    await firestore
+    firestore
       .collection('customers')
       .doc(user.gstin)
       .set({

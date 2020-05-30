@@ -9,7 +9,6 @@ import {
 import theme from '@/theme';
 import { getMainWindowSize } from './screenSize';
 
-//import tpno from './i3ms/tpno';
 import {
   tagVehicles,
   permitDetails,
@@ -35,6 +34,79 @@ let checkedForUpdate = false;
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { secure: true, standard: true } }
 ]);
+
+import fastq from 'fastq';
+const messageQueue = fastq(processMessage, 1);
+
+async function processMessage(message, cb) {
+  const { event, args, type } = message;
+
+  switch (type) {
+    case 'permit-report':
+      {
+        console.log('permit-report', args.startDate, args.endDate);
+        await browserInit(args.credentials);
+        const r = await permitReport(args);
+        console.log('sending permit-report results to browser', r);
+        event.sender.send('permit-report-results', r);
+      }
+      break;
+
+    case 'tag-vehicles':
+      {
+        console.log('tag-vehicles', args);
+        const r = await tagVehicles(args, event.sender);
+        console.log('sending tag-vehicles results to browser', r);
+        event.sender.send('tag-results', r);
+      }
+      break;
+
+    case 'release-vehicles':
+      {
+        console.log('release-vehicles', args);
+        const r = await releaseVehicles(args, event.sender);
+        console.log('sending release-vehicles results to browser', r);
+        event.sender.send('release-vehicles-results', r);
+      }
+      break;
+
+    case 'permit-details':
+      {
+        console.log('permit-details', args);
+        await browserInit(args.credentials, false);
+        const r = await permitDetails(args);
+        console.log('sending permit-details results to browser', r);
+        event.sender.send('permit-details-results', r);
+      }
+      break;
+
+    case 'permits-details':
+      {
+        console.log('permits details', args);
+
+        if (args.refresh) {
+          for (let permit of args.permits) {
+            await browserInit(permit.credentials, false);
+            await permitDetails({
+              ...permit,
+              sender: event.sender
+            });
+          }
+          return event.sender.send('permits-details-results');
+        }
+
+        await browserInit(args.credentials, false);
+        args.sender = event.sender;
+        console.log('calling permits details');
+        const r = await permitsDetails(args);
+        console.log('sending permits-details results to browser', r);
+        event.sender.send('permits-details-results', r);
+      }
+      break;
+  }
+
+  cb(null);
+}
 
 function createWindow() {
   // Create the browser window.
@@ -104,12 +176,17 @@ ipcMain.on('reload-main-window', () => {
 
 openBrowser(false);
 
+function messageQueueCallback(err, result) {}
+
 ipcMain.on('permit-report', async (event, args) => {
-  console.log('permit-report', args.startDate, args.endDate);
-  await browserInit(args.credentials);
-  const r = await permitReport(args);
-  console.log('sending permit-report results to browser', r);
-  event.sender.send('permit-report-results', r);
+  messageQueue.push(
+    {
+      type: 'permit-report',
+      event,
+      args
+    },
+    messageQueueCallback
+  );
 });
 
 // ipcMain.on('truck-passes', async (event, args) => {
@@ -119,47 +196,47 @@ ipcMain.on('permit-report', async (event, args) => {
 // });
 
 ipcMain.on('tag-vehicles', async (event, args) => {
-  console.log('tag-vehicles', args);
-  const r = await tagVehicles(args, event.sender);
-  console.log('sending tag-vehicles results to browser', r);
-  event.sender.send('tag-results', r);
+  messageQueue.push(
+    {
+      type: 'tag-vehicles',
+      event,
+      args
+    },
+    messageQueueCallback
+  );
 });
 
 ipcMain.on('release-vehicles', async (event, args) => {
-  console.log('release-vehicles', args);
-  const r = await releaseVehicles(args, event.sender);
-  console.log('sending release-vehicles results to browser', r);
-  event.sender.send('release-vehicles-results', r);
+  messageQueue.push(
+    {
+      type: 'release-vehicles',
+      event,
+      args
+    },
+    messageQueueCallback
+  );
 });
 
 ipcMain.on('permit-details', async (event, args) => {
-  console.log('permit-details', args);
-  await browserInit(args.credentials, false);
-  const r = await permitDetails(args);
-  console.log('sending permit-details results to browser', r);
-  event.sender.send('permit-details-results', r);
+  messageQueue.push(
+    {
+      type: 'permit-details',
+      event,
+      args
+    },
+    messageQueueCallback
+  );
 });
 
 ipcMain.on('permits-details', async (event, args) => {
-  console.log('permits details', args);
-
-  if (args.refresh) {
-    for (let permit of args.permits) {
-      await browserInit(permit.credentials, false);
-      await permitDetails({
-        ...permit,
-        sender: event.sender
-      });
-    }
-    return event.sender.send('permits-details-results');
-  }
-
-  await browserInit(args.credentials, false);
-  args.sender = event.sender;
-  console.log('calling permits details');
-  const r = await permitsDetails(args);
-  console.log('sending permits-details results to browser', r);
-  event.sender.send('permits-details-results', r);
+  messageQueue.push(
+    {
+      type: 'permits-details',
+      event,
+      args
+    },
+    messageQueueCallback
+  );
 });
 
 // Quit when all windows are closed.
