@@ -97,7 +97,10 @@ export default {
     console.log(user);
     const dbpath = path.join(remote.getGlobal('userData'), 'spin-trp.db');
 
-    if (process.env.NODE_ENV === 'development' && process.env.DELETE_DB) {
+    if (
+      process.env.NODE_ENV === 'development' &&
+      process.env.VUE_APP_DELETE_DB
+    ) {
       fs.unlinkSync(dbpath);
     }
     await connectToLocalDatabase(dbpath);
