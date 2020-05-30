@@ -5,7 +5,6 @@ import {
   cloudfunctionsBaseUrl
 } from '@/firebase';
 
-import { onlyConnectToRemoteDatabase } from '@/utils';
 import axios from 'axios';
 import frappe from 'frappejs';
 import { DateTime } from 'luxon';
@@ -63,9 +62,28 @@ export default {
     return this.getCurrentUser();
   },
 
+  async logout() {
+    try {
+      await firebaseAuth.signOut();
+    } catch (ex) {
+      console.error(ex);
+    }
+  },
+
   async signup(user) {
     const { email, password } = user;
     let doc;
+
+    await this.logout();
+
+    try {
+      await firebaseAuth.createUserWithEmailAndPassword(email, password);
+    } catch (ex) {
+      console.error(ex);
+      await firebaseAuth.signInWithEmailAndPassword(email, password);
+    }
+
+    let fbuser = await this.getCurrentUser();
 
     if (process.env.NODE_ENV !== 'development') {
       console.log('fetching firebase user');
@@ -82,16 +100,6 @@ export default {
         throw new Error('This company already registered, please login');
       }
     }
-
-    try {
-      await firebaseAuth.createUserWithEmailAndPassword(email, password);
-    } catch (ex) {
-      console.error(ex);
-      await firebaseAuth.signInWithEmailAndPassword(email, password);
-    }
-
-    let fbuser = await this.getCurrentUser();
-
     console.log('creating company', user);
 
     //store in firestore

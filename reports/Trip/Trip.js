@@ -51,15 +51,21 @@ class Trip {
   async run(params) {
     console.log(params);
 
-    const period = frappe.db.knex.raw(
-      `date_trunc('${params.period}',"Trip"."startDate") as period`
-    );
-
     let trips = frappe.db.knex('Trip');
 
     let groupNumber = 0;
 
     if (params.period) {
+      let modifier = 'start of day';
+      if (params.period === 'week') {
+        modifier = 'weekday 0';
+      } else if (params.period === 'month') {
+        modifier = 'start of month';
+      }
+
+      const period = frappe.db.knex.raw(
+        `date("Trip"."startDate", '${modifier}') as period`
+      );
       trips = trips.select(period);
       groupNumber++;
     }

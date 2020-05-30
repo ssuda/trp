@@ -85,13 +85,11 @@ import Button from '@/components/Button';
 import setupCompany from './setupCompany';
 import Popover from '@/components/Popover';
 import Users from '@/users';
-import SetupSync from '@/sync';
 
 import {
   getErrorMessage,
   handleErrorWithDialog,
-  showMessageDialog,
-  connectToRemoteDatabase
+  showMessageDialog
 } from '@/utils';
 
 export default {
@@ -165,7 +163,6 @@ export default {
         }
         await setupCompany(this.doc);
         this.$emit('setup-complete');
-        SetupSync();
       } catch (e) {
         this.loading = false;
         handleErrorWithDialog(e, this.doc);
