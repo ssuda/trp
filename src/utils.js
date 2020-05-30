@@ -107,12 +107,6 @@ export async function connectToLocalDatabase(filepath) {
     dbPath: filepath
   });
 
-  frappe.db.connectionParams.pool = {
-    ...frappe.db.connectionParams.pool,
-    min: 0,
-    max: 7
-  },
-
   await frappe.db.connect();
   await migrate();
   await postStart();
