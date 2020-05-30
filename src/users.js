@@ -126,11 +126,11 @@ export default {
     try {
       const doc = frappe.newDoc({
         doctype: 'SpinBiUser',
-        name: this.doc.email,
-        password: this.doc.password,
+        name: user.email,
+        password: user.password,
         userId: fbuser.uid,
-        fullName: this.doc.fullname,
-        phoneNumber: this.doc.phoneNumber,
+        fullName: user.fullname,
+        phoneNumber: user.phoneNumber,
         role: 'Administrator'
       });
       await doc.insert();
