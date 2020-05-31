@@ -1,4 +1,5 @@
 const { _ } = require('frappejs/utils');
+const frappe = require('frappejs');
 const accountingSettings = frappe.AccountingSettings || {};
 
 module.exports = {
@@ -66,11 +67,5 @@ module.exports = {
       formula: doc => accountingSettings.gstin
     }
   ],
-  quickEditFields: [
-    'name',
-    'fullName',
-    'phoneNumber',
-    'role',
-    'status'
-  ],
+  quickEditFields: ['name', 'fullName', 'phoneNumber', 'role', 'status']
 };

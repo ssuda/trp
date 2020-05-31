@@ -29,9 +29,9 @@ module.exports = {
       )
     );
 
-    // config.externals = {
-    //   knex: 'commonjs knex',
-    // };
+    config.externals = {
+      knex: 'commonjs puppeteer'
+    };
 
     config.module.rules.push({
       test: /\.txt$/i,
