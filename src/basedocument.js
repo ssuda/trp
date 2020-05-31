@@ -16,6 +16,10 @@ module.exports = class BaseDocument extends Observable {
     }
     await super.trigger(event, params);
 
+    if (!frappe.currentUser || !frappe.currentUser.fbAccount || !frappe.currentUser.fbAccount.get('syncEnabled') ) {
+      return;
+    }
+
     const accountingSettings = frappe.AccountingSettings;
     if (!accountingSettings) {
       return;

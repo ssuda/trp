@@ -121,6 +121,7 @@ export default {
       } else if (this.$route.path.startsWith('/settings')) {
         this.activeScreen = 'Settings';
       } else {
+        let syncEnabled = false;
         //check whether he is logged in or not
         if (frappe.currentUser) {
           try {
@@ -133,8 +134,6 @@ export default {
             }
             const accountingSettings = frappe.AccountingSettings;
             let doc = user.fbAccount;
-           
-            let syncEnabled = false;
 
             if (doc && doc.exists) {
               doc = doc.data();
