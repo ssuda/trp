@@ -55,18 +55,18 @@ class Trip {
 
     let groupNumber = 0;
 
-    if (params.period) {
+    if (params.periodicity) {
       let modifier = 'start of day';
-      if (params.period === 'week') {
+      if (params.periodicity === 'week') {
         modifier = 'weekday 0';
-      } else if (params.period === 'month') {
+      } else if (params.periodicity === 'month') {
         modifier = 'start of month';
       }
 
-      const period = frappe.db.knex.raw(
-        `date("Trip"."startDate", '${modifier}') as period`
+      const periodicity = frappe.db.knex.raw(
+        `date("Trip"."startDate", '${modifier}') as periodicity`
       );
-      trips = trips.select(period);
+      trips = trips.select(periodicity);
       groupNumber++;
     }
 
@@ -99,7 +99,11 @@ class Trip {
         .map((v, i) => i + 1)
         .join(',');
       trips = trips.groupByRaw(s);
-      trips = trips.orderByRaw('1 desc');
+      if (params.dashboard) {
+        trips = trips.orderByRaw('1');
+      } else {
+        trips = trips.orderByRaw('1 desc');
+      }
     } else {
       //trips = trips.groupByRaw('1, 2');
     }
@@ -134,7 +138,7 @@ class Trip {
 
     let data = await trips;
     let total = await this.aggregate(params);
-    console.log('total', total);
+    console.log('data', data);
 
     return this.appendTotalEntry(data, total, params);
   }
@@ -151,40 +155,48 @@ class Trip {
       loaded += +entry.loadQty;
       entry.unloadQty = entry.unloadQty || 0;
       unloaded += entry.unloadQty;
-      //numPermits += +entry.numPermits;
 
-      entry.numPermits = numberFormat.formatNumber(entry.numPermits, '#,###');
-      entry.numTrips = numberFormat.formatNumber(entry.numTrips, '#,###');
-      entry.loadQty = numberFormat.formatNumber(entry.loadQty);
-      entry.unloadQty = numberFormat.formatNumber(entry.unloadQty);
+      if (!params.dashboard) {
+        entry.numPermits = numberFormat.formatNumber(entry.numPermits, '#,###');
+        entry.numTrips = numberFormat.formatNumber(entry.numTrips, '#,###');
+        entry.loadQty = numberFormat.formatNumber(entry.loadQty);
+        entry.unloadQty = numberFormat.formatNumber(entry.unloadQty);
+      }
 
-      if (entry.period) {
-        if (params.period === 'day') {
-          entry.period = frappe.format(entry.period, 'Date');
-        } else if (params.period === 'week') {
-          let startDate = DateTime.fromJSDate(entry.period).startOf('week');
-          let endDate = DateTime.fromJSDate(entry.period).endOf('week');
-          entry.period = `${startDate.toFormat('LLL dd')}-${endDate.toFormat(
+      if (entry.periodicity) {
+        if (params.periodicity === 'day') {
+          if (params.dashboard) {
+            let startDate = DateTime.fromISO(entry.periodicity);
+            entry.periodicity = `${startDate.toFormat('LLL dd')}`;
+          } else {
+            entry.periodicity = frappe.format(entry.periodicity, 'Date');
+          }
+        } else if (params.periodicity === 'week') {
+          let startDate = DateTime.fromISO(entry.periodicity).startOf('week');
+          let endDate = DateTime.fromISO(entry.periodicity).endOf('week');
+          entry.periodicity = `${startDate.toFormat(
             'LLL dd'
-          )}`;
-        } else if (params.period === 'month') {
-          let startDate = DateTime.fromJSDate(entry.period).startOf('month');
-          entry.period = `${startDate.toFormat('LLL yyyy')}`;
+          )}-${endDate.toFormat('LLL dd')}`;
+        } else if (params.periodicity === 'month') {
+          let startDate = DateTime.fromISO(entry.periodicity).startOf('month');
+          entry.periodicity = `${startDate.toFormat('LLL yyyy')}`;
         }
       }
-      console.log(entry.period);
+      console.log(entry.periodicity);
       glEntries.push(entry);
     }
 
-    glEntries.unshift({
-      customer: '',
-      truckOwner: '',
-      period: { template: '<b>Total</b>' },
-      numPermits: numberFormat.formatNumber(numPermits, '#,###'),
-      loadQty: numberFormat.formatNumber(loaded),
-      unloadQty: numberFormat.formatNumber(unloaded),
-      numTrips: numberFormat.formatNumber(numTrips, '#,###')
-    });
+    if (!params.dashboard) {
+      glEntries.unshift({
+        customer: '',
+        truckOwner: '',
+        periodicity: { template: '<b>Total</b>' },
+        numPermits: numberFormat.formatNumber(numPermits, '#,###'),
+        loadQty: numberFormat.formatNumber(loaded),
+        unloadQty: numberFormat.formatNumber(unloaded),
+        numTrips: numberFormat.formatNumber(numTrips, '#,###')
+      });
+    }
 
     return glEntries;
   }

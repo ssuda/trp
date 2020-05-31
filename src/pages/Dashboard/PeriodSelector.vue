@@ -1,5 +1,5 @@
 <template>
-  <Dropdown ref="dropdown" class="text-sm" :items="periodOptions" right>
+  <Dropdown ref="dropdown" class="text-sm z-50" :items="periodOptions" right>
     <template
       v-slot="{
         toggleDropdown,

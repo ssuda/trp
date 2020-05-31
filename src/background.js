@@ -97,7 +97,6 @@ async function processMessage(message, cb) {
 
         await browserInit(args.credentials, false);
         args.sender = event.sender;
-        console.log('calling permits details');
         const r = await permitsDetails(args);
         console.log('sending permits-details results to browser', r);
         event.sender.send('permits-details-results', r);

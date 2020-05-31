@@ -97,8 +97,8 @@ const viewConfig = {
       ],
       size: 'small',
       label: 'Period',
-      fieldname: 'period',
-      placeholder: 'Period'
+      fieldname: 'periodicity',
+      placeholder: 'Periodicity'
     },
     {
       fieldtype: 'Link',
@@ -162,9 +162,9 @@ const viewConfig = {
         fieldname: 'truckOwner'
       },
       {
-        label: 'Period',
+        label: 'Periodicity',
         fieldtype: 'Data',
-        fieldname: 'period'
+        fieldname: 'periodicity'
       },
       {
         label: 'Number of Orders',
