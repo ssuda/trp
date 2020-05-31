@@ -144,8 +144,20 @@ export default {
               console.log('Error getting document:', ex);
             }
 
+            let syncEnabled = false;
+
             if (doc && doc.exists) {
               doc = doc.data();
+
+              syncEnabled = !!doc.syncEnabled;
+
+              if (!doc.enabled) {
+                return showMessageDialog({
+                  description:
+                    'Your Account is Disabled, Please contact SpinBi at 8105245255'
+                });
+              }
+
               const trailPeriod = DateTime.fromJSDate(
                 doc.trialExpiresOn.toDate()
               );
@@ -194,7 +206,9 @@ export default {
             console.error(ex);
           }
 
-          SetupSync();
+          if (syncEnabled) {
+            SetupSync();
+          }
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';

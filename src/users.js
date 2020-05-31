@@ -107,6 +107,7 @@ export default {
       .collection('customers')
       .doc(user.gstin)
       .set({
+        enabled: true,
         name: user.companyName,
         email: user.email,
         gstin: user.gstin,
