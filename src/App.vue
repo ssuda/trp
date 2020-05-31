@@ -132,18 +132,8 @@ export default {
               });
             }
             const accountingSettings = frappe.AccountingSettings;
-            let doc;
-
-            try {
-              console.log('Fetching User from firestore');
-              doc = await firestore
-                .collection('customers')
-                .doc(accountingSettings.gstin)
-                .get();
-            } catch (ex) {
-              console.log('Error getting document:', ex);
-            }
-
+            let doc = user.fbAccount;
+           
             let syncEnabled = false;
 
             if (doc && doc.exists) {
