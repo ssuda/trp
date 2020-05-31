@@ -23,9 +23,9 @@ module.exports = class BaseDocument extends Observable {
 
     if (event === 'afterUpdate' || event === 'afterInsert') {
       if (
-        event !== 'afterUpdate' &&
+        event === 'afterInsert' &&
         this.doctype === 'Trip' &&
-        this.type === 'I3MS'
+        !this.endDate
       ) {
         return;
       }

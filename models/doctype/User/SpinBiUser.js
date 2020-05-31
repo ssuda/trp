@@ -1,4 +1,5 @@
 const { _ } = require('frappejs/utils');
+const accountingSettings = frappe.AccountingSettings || {};
 
 module.exports = {
   name: 'SpinBiUser',
@@ -56,6 +57,13 @@ module.exports = {
       label: 'User ID',
       fieldtype: 'Data',
       hidden: 1
+    },
+    {
+      fieldname: 'gstin',
+      label: 'GSTN',
+      fieldtype: 'Data',
+      hidden: 1,
+      formula: doc => accountingSettings.gstin
     }
   ],
   quickEditFields: [

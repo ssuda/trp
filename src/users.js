@@ -130,6 +130,7 @@ export default {
         name: user.email,
         password: user.password,
         userId: fbuser.uid,
+        gstin: user.gstin,
         fullName: user.fullname,
         phoneNumber: user.phoneNumber,
         role: 'Administrator'
