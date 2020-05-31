@@ -30,7 +30,7 @@ module.exports = {
     );
 
     // config.externals = {
-    //   puppeteer: 'commonjs puppeteer'
+    //   puppeteer: 'commonjs puppeteer',
     // };
 
     config.module.rules.push({
