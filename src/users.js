@@ -36,7 +36,13 @@ export default {
     return firebaseAuth.sendPasswordResetEmail(emailAddress);
   },
 
-  async getCurrentUser() {
+  async getCurrentUser(gstin) {
+
+    if (gstin) {
+      const accountingSettings = frappe.AccountingSettings || {};
+      gstin = accountingSettings.gstin;
+    }
+
     if (frappe.currentUser) {
       return frappe.currentUser;
     }
@@ -47,6 +53,13 @@ export default {
       user.token = await user.getIdToken(true);
       try {
         user.local = await frappe.getDoc('SpinBiUser', user.email);
+          console.log('Fetching User from firestore');
+          if (gstin) {
+            user.fbAccount = await firestore
+              .collection('customers')
+              .doc(gstin)
+              .get();
+          }
       } catch (ex) {}
 
       //frappe.session.user = user;
@@ -83,20 +96,10 @@ export default {
       await firebaseAuth.signInWithEmailAndPassword(email, password);
     }
 
-    let fbuser = await this.getCurrentUser();
+    let fbuser = await this.getCurrentUser(user.gstin);
 
     if (process.env.NODE_ENV !== 'development') {
-      console.log('fetching firebase user');
-      try {
-        doc = await firestore
-          .collection('customers')
-          .doc(user.gstin)
-          .get();
-      } catch (ex) {
-        console.log('Error getting document:', ex);
-      }
-
-      if (doc && doc.exists) {
+      if (fbuser.fbAccount && fbuser.fbAccount.exists) {
         throw new Error('This company already registered, please login');
       }
     }
