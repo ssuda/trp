@@ -7,6 +7,8 @@
       </template>
     </PageHeader>
     <div class="px-8">
+      <div class="my-10 border-t" />
+      <TripStats />
       <div class="border-t" />
       <Cashflow />
       <div class="my-10 border-t" />
@@ -31,6 +33,7 @@ import Cashflow from './Cashflow';
 import UnpaidInvoices from './UnpaidInvoices';
 import ProfitAndLoss from './ProfitAndLoss';
 import Expenses from './Expenses';
+import TripStats from './TripStats';
 
 export default {
   name: 'Dashboard',
@@ -40,7 +43,8 @@ export default {
     Cashflow,
     UnpaidInvoices,
     ProfitAndLoss,
-    Expenses
+    Expenses,
+    TripStats
   }
 };
 </script>

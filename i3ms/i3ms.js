@@ -159,7 +159,7 @@ export async function permitDetails(permit) {
     end_date
   } = permit;
 
-  console.log('Calling permit details', permit);
+  console.log('inside permit details', permit);
 
   if (!permit.quantity) {
     let quantity = 0;
@@ -171,7 +171,7 @@ export async function permitDetails(permit) {
         u.search;
     }
 
-    console.log('Calling get permit details');
+    console.log('before get permit details');
     const r = await i3ms.getPermitDetails(vehicle_details);
 
     if (!permit_number) {
