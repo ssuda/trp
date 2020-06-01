@@ -13,14 +13,14 @@ module.exports = class Permit extends BaseDocument {
   }
 
   async getNumberOfTrips() {
-    console.log('name', this.name);
+    console.log('getNumberOfTrips called');
 
     let { count, sum } = (
       await frappe.db
         .knex('Trip')
         .where('permit', this.name)
-        .count('name')
-        .sum('loadQty')
+        .count('name as count')
+        .sum('loadQty as sum')
     )[0];
 
     this.numTrips = count;
@@ -42,13 +42,16 @@ module.exports = class Permit extends BaseDocument {
   }
 
   async getQuantityDelivered() {
+    console.log('getQuantityDelivered called');
     let { count, sum } = (
       await frappe.db
         .knex('Trip')
         .where('permit', this.name)
-        .count('name')
-        .sum('loadQty')
+        .count('name as count')
+        .sum('loadQty as sum')
     )[0];
+
+    console.log('quantity', sum);
 
     this.numTrips = count;
     this.delivered = sum;

@@ -100,12 +100,14 @@ module.exports = {
       fieldname: 'numTrips',
       label: 'Trips',
       fieldtype: 'Int',
+      readOnly: true,
       formula: doc => doc.getNumberOfTrips()
     },
     {
       fieldname: 'delivered',
       label: 'Delivered',
       fieldtype: 'Float',
+      readOnly: true,
       formula: doc => doc.getQuantityDelivered()
     }
   ],
