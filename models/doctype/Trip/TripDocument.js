@@ -35,7 +35,11 @@ module.exports = class TripDocument extends Document {
   }
 
   async afterInsert() {
-    const permit = await frappe.getDoc('Permit', this.permit);
-    await permit.update();
+    await this.loadLink('permit');
+    const permit = await this.getLink('permit');
+    if (permit.type !== 'I3MS') {
+      console.log('before permit update');
+      await permit.update();
+    }
   }
 };

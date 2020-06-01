@@ -87,13 +87,13 @@ export default {
   async mounted() {
     Vue.modal = this.$modal;
     let user;
+
     try {
       user = await Users.getCurrentUser();
     } catch (ex) {
       console.error(ex);
     }
 
-    console.log(user);
     const dbpath = path.join(remote.getGlobal('userData'), 'spin-trp.db');
     const toBool = v => {
       v = v.toLowerCase();
@@ -107,13 +107,17 @@ export default {
       try {
         console.log('deleting db');
         fs.unlinkSync(dbpath);
-      } catch (ex) {}
+      } catch (ex) {
+        console.error(ex);
+      }
     }
+
     try {
       await connectToLocalDatabase(dbpath);
-    } catch(ex) {
+    } catch (ex) {
       console.error(ex);
     }
+
     this.showSetupWizardOrDesk(false);
   },
   methods: {
