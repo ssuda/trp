@@ -192,9 +192,9 @@ export default {
         console.log(credentials, truckList);
         let trucks = truckList.trucks.split('\n').filter(Boolean);
 
-        // let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
-        // tagged = Object.keys(tagged);
-        // trucks = _.difference(trucks, tagged);
+        let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
+        tagged = Object.keys(tagged);
+        trucks = _.difference(trucks, tagged);
 
         console.log('Trucks remaining', trucks);
 
