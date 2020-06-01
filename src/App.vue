@@ -47,7 +47,6 @@ import { connectToLocalDatabase, showMessageDialog } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
 //import config from '@/config';
 import { DateTime } from 'luxon';
-import { firestore } from '@/firebase';
 import SetupSync from '@/sync';
 
 export default {
@@ -110,12 +109,17 @@ export default {
         fs.unlinkSync(dbpath);
       } catch (ex) {}
     }
-    await connectToLocalDatabase(dbpath);
+    try {
+      await connectToLocalDatabase(dbpath);
+    } catch(ex) {
+      console.error(ex);
+    }
     this.showSetupWizardOrDesk(false);
   },
   methods: {
     async showSetupWizardOrDesk(resetRoute = false, isLogin) {
       const { setupComplete } = frappe.AccountingSettings || {};
+      console.log('setupcomplete', setupComplete);
       if (!setupComplete && !isLogin) {
         this.activeScreen = 'SetupWizard';
       } else if (this.$route.path.startsWith('/settings')) {
@@ -132,7 +136,6 @@ export default {
                   'Your account is disabled, please contact your administrator'
               });
             }
-            const accountingSettings = frappe.AccountingSettings;
             let doc = user.fbAccount;
 
             if (doc && doc.exists) {
