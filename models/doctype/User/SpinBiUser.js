@@ -9,7 +9,7 @@ module.exports = {
   isSingle: 0,
   isChild: 0,
   documentClass: require('./SpinBiUserDocument'),
-  keywordFields: ['name', 'fullName', 'phoneNumber'],
+  keywordFields: ['name', 'fullName', 'phoneNumber', 'role'],
   fields: [
     {
       fieldname: 'fullName',
@@ -67,5 +67,5 @@ module.exports = {
       formula: doc => accountingSettings.gstin
     }
   ],
-  quickEditFields: ['name', 'fullName', 'phoneNumber', 'role', 'status']
+  quickEditFields: ['name', 'fullName', 'phoneNumber', 'password', 'role', 'status']
 };
