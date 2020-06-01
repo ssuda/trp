@@ -2,6 +2,7 @@
   <Popover
     :show-popup="isShown"
     :hide-arrow="true"
+    class="z-50"
     :placement="right ? 'bottom-end' : 'bottom-start'"
   >
     <div
@@ -16,7 +17,7 @@
         :selectHighlightedItem="selectHighlightedItem"
       ></slot>
     </div>
-    <div slot="content" class="z-10 bg-white rounded w-full min-w-40">
+    <div slot="content" class="bg-white rounded w-full min-w-40">
       <div class="p-1 max-h-64 overflow-auto text-sm">
         <div v-if="isLoading" class="p-2 text-gray-600">
           {{ _('Loading...') }}
