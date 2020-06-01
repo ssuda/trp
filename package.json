@@ -1,7 +1,7 @@
 {
   "name": "spinbi-trp",
-  "description": "Transporter ERP app",
-  "version": "0.0.1",
+  "description": "SpinBi ERP",
+  "version": "1.0.0",
   "author": {
     "name": "SpinBi Technologies",
     "email": "samba@spinbi.com"
@@ -50,7 +50,7 @@
     "@vue/cli-service": "^4.1.0",
     "@vue/eslint-config-prettier": "^5.0.0",
     "babel-eslint": "^10.0.3",
-    "electron": "^7.0.0",
+    "electron": "^8.0.0",
     "electron-notarize": "^0.2.1",
     "electron-updater": "^4.2.0",
     "eslint": "^5.16.0",
