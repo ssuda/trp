@@ -34,12 +34,17 @@ module.exports = class TripDocument extends Document {
     console.log('after naming', this.name);
   }
 
-  async afterInsert() {
+  async afterUpdate() {
     await this.loadLink('permit');
-    const permit = await this.getLink('permit');
+    const permit = this.getLink('permit');
     if (permit.type !== 'I3MS') {
-      console.log('before permit update');
+      const changed = await permit.applyFormula();
+      console.log('before permit update', permit, changed);
       await permit.update();
     }
+  }
+
+  async afterInsert() {
+    return this.afterUpdate();
   }
 };
