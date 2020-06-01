@@ -67,5 +67,12 @@ module.exports = {
       formula: doc => accountingSettings.gstin
     }
   ],
-  quickEditFields: ['name', 'fullName', 'phoneNumber', 'password', 'role', 'status']
+  quickEditFields: [
+    'name',
+    'fullName',
+    'phoneNumber',
+    'password',
+    'role',
+    'status'
+  ]
 };
