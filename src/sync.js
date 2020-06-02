@@ -3,7 +3,6 @@ const { firestore } = require('@/firebase');
 const { DateTime } = require('luxon');
 const { machineIdSync } = require('node-machine-id');
 
-let singleRegistered = false;
 let deviceId = machineIdSync({ original: true });
 
 async function processRecord(query, cb, model) {
