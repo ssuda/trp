@@ -59,7 +59,7 @@ module.exports = {
       hidden: 1
     },
     {
-      fieldname: 'gstn',
+      fieldname: 'gstin',
       label: 'GSTN',
       fieldtype: 'Data',
       hidden: 1,
