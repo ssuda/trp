@@ -99,7 +99,7 @@ export default {
     console.log('creating company', user);
     let referalCode = voucherCodes.generate({
       length: 8
-    });
+    })[0];
 
     //store in firestore
     firestore
@@ -114,14 +114,11 @@ export default {
         billingAmount: 10000,
         referalBonus: 0,
         referalCode,
-        trialExpiresOn: DateTime.local()
-          .plus({ days: 15 })
-          .toJSDate(),
         billingPeriodStart: DateTime.local()
-          .plus({ days: 15 })
+          .plus({ days: 7 })
           .toJSDate(),
         billingPeriodEnd: DateTime.local()
-          .plus({ days: 45 })
+          .plus({ days: 7, months: 1 })
           .toJSDate(),
         billingGracePeriod: 7
       });
@@ -178,8 +175,8 @@ export default {
     console.log('user', frappe.currentUser);
     console.log('updating billing details', paymentReference);
 
-    const billingStart = DateTime.fromJSDate(user.billingPeriodStart.toDate());
-    const billingEnd = DateTime.fromJSDate(user.billingPeriodEnd.toDate());
+    const billingStart = DateTime.fromJSDate(user.billingPeriodStart.toDate()).plus({ months: 1 });
+    const billingEnd = DateTime.fromJSDate(user.billingPeriodEnd.toDate()).plus({ months: 1 });
 
     try {
       //store in firestore
@@ -190,8 +187,8 @@ export default {
           referalBonus: 0,
           paymentReference,
           enabled: true,
-          billingPeriodStart: billingStart.plus({ months: 1 }).toJSDate(),
-          billingPeriodEnd: billingEnd.plus({ months: 1 }).toJSDate()
+          billingPeriodStart: billingStart.toJSDate(),
+          billingPeriodEnd: billingEnd.toJSDate()
         });
 
       firestore.collection('payments').add({
