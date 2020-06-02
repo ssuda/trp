@@ -37,8 +37,7 @@ export default {
   },
 
   async getCurrentUser(gstin) {
-
-    if (gstin) {
+    if (!gstin) {
       const accountingSettings = frappe.AccountingSettings || {};
       gstin = accountingSettings.gstin;
     }
@@ -48,25 +47,18 @@ export default {
     }
 
     let user = (frappe.currentUser = firebaseAuth.currentUser);
-
-    if (user && !user.token) {
-      user.token = await user.getIdToken(true);
-      try {
-        user.local = await frappe.getDoc('SpinBiUser', user.email);
-          console.log('Fetching User from firestore');
-          if (gstin) {
-            user.fbAccount = await firestore
-              .collection('customers')
-              .doc(gstin)
-              .get();
-          }
-      } catch (ex) {}
-
-      //frappe.session.user = user;
-      return frappe.currentUser;
+    if (!user) {
+      user = frappe.currentUser = await waitForUser();
     }
 
-    frappe.currentUser = await waitForUser();
+    console.log('user', user, gstin);
+    if (gstin && !user.fbAccount) {
+      user.fbAccount = await firestore
+        .collection('customers')
+        .doc(gstin)
+        .get();
+    }
+
     return frappe.currentUser;
   },
 
@@ -85,7 +77,6 @@ export default {
 
   async signup(user) {
     const { email, password } = user;
-    let doc;
 
     await this.logout();
 
@@ -153,6 +144,33 @@ export default {
 
     console.log(firebaseAuth.currentUser);
     return fbuser;
+  },
+
+  async updatePayment(reference) {
+    let user = frappe.currentUser.fbAccount;
+
+    console.log('user', frappe.currentUser);
+    console.log('updating billing details', reference);
+
+    try {
+      //store in firestore
+      await firestore
+        .collection('customers')
+        .doc(user.gstin)
+        .set({
+          enabled: true,
+          billingPeriodStart: DateTime.fromJSDate(
+            user.billingPeriodStart.toDate()
+          )
+            .plus({ months: 1 })
+            .toJSDate(),
+          billingPeriodEnd: DateTime.fromJSDate(user.billingPeriodEnd.toDate())
+            .plus({ months: 1 })
+            .toJSDate()
+        });
+    } catch (ex) {
+      console.error(ex);
+    }
   },
 
   async createUser(user) {

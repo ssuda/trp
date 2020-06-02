@@ -49,6 +49,8 @@ import { getMainWindowSize } from '@/screenSize';
 import { DateTime } from 'luxon';
 import SetupSync from '@/sync';
 
+import PaymentForm from './components/Payment.vue';
+
 export default {
   name: 'App',
   data() {
@@ -86,13 +88,6 @@ export default {
   },
   async mounted() {
     Vue.modal = this.$modal;
-    let user;
-
-    try {
-      user = await Users.getCurrentUser();
-    } catch (ex) {
-      console.error(ex);
-    }
 
     const dbpath = path.join(remote.getGlobal('userData'), 'spin-trp.db');
     const toBool = v => {
@@ -130,10 +125,17 @@ export default {
         this.activeScreen = 'Settings';
       } else {
         let syncEnabled = false;
+        let user;
+        try {
+          user = await Users.getCurrentUser();
+        } catch (ex) {
+          console.error(ex);
+        }
+
+        console.log('current user', user);
         //check whether he is logged in or not
-        if (frappe.currentUser) {
+        if (user) {
           try {
-            let user = frappe.currentUser;
             if (user.local && user.local.status != 'Active') {
               return showMessageDialog({
                 description:
@@ -142,11 +144,13 @@ export default {
             }
             let doc = user.fbAccount;
 
+            console.log(doc, doc.exists);
             if (doc && doc.exists) {
               doc = doc.data();
 
               syncEnabled = !!doc.syncEnabled;
 
+              console.log('enabled', doc.enabled);
               if (!doc.enabled) {
                 return showMessageDialog({
                   description:
@@ -178,9 +182,19 @@ export default {
 
                 if (duration > doc.billingGracePeriod) {
                   //disable services
-                  return showMessageDialog({
-                    description:
-                      'Your payment is pending, please pay immediately to enable the service'
+                  await new Promise((resolve, reject) => {
+                    this.$modal.show(
+                      PaymentForm,
+                      {},
+                      {
+                        height: 'auto'
+                      },
+                      {
+                        'before-close': event => {
+                          resolve();
+                        }
+                      }
+                    );
                   });
                 } else if (duration >= 0) {
                   //warn users for payment

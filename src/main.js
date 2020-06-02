@@ -170,7 +170,13 @@ import Document from 'frappejs/model/document';
   Vue.directive('on-outside-click', outsideClickDirective);
   Vue.use(PortalVue);
   Vue.use(Notifications);
-  Vue.use(VModal, { dialog: true, clickToClose: false });
+  Vue.use(VModal, {
+    dynamic: true,
+    injectModalsContainer: true,
+    dynamicDefaults: { clickToClose: false },
+    dialog: true,
+    clickToClose: false
+  });
   Vue.mixin({
     computed: {
       frappe() {
