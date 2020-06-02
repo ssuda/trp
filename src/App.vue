@@ -131,7 +131,7 @@ export default {
         let syncEnabled = false;
         let user;
         try {
-          user = await Users.getCurrentUser();
+          user = await Users.getCurrentUser(null, true);
         } catch (ex) {
           console.error(ex);
         }
@@ -146,7 +146,7 @@ export default {
                   'Your account is disabled, please contact your administrator'
               });
             }
-            let doc = user.fbAccount;
+            let doc = user.remote;
 
             console.log(doc, doc.exists);
             if (doc && doc.exists) {
@@ -202,7 +202,7 @@ export default {
           //}
 
           if (comingFromSetupWizard && !isLogin) {
-            await showMessageDialog({
+            showMessageDialog({
               description: `Your billing will start in 7days.`,
               buttons: [{ label: 'Ok' }]
             });

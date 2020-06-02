@@ -64,7 +64,7 @@
         @click="gotoLoginRegister"
         class="cursor-pointer text-sm text-blue-700"
       >
-        Already Orgnanization Setup? Login
+        Already Organization Setup? Login
       </button>
       <Button
         @click="submit"

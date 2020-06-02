@@ -6,29 +6,30 @@ const { machineIdSync } = require('node-machine-id');
 let singleRegistered = false;
 let deviceId = machineIdSync({ original: true });
 
-async function processRecord(query, cb, start, end) {
-  let offset = start || 0;
+async function processRecord(query, cb, model) {
+  let startAfter;
 
   while (true) {
-    console.log('Starting to fetch', offset);
+    try {
+      query = query.limit(200);
 
-    const limit = end - offset < 200 ? end - offset : 200;
-    const snapshot = await query
-      .limit(limit)
-      .offset(offset)
-      .get();
-    if (snapshot.size == 0) {
-      console.log('No documents ending');
-      break;
-    }
+      if (startAfter) {
+        query = query.startAfter(startAfter);
+      }
 
-    offset += snapshot.size;
+      const snapshot = await query.get();
+      console.log('Fetched', snapshot.size, model);
 
-    await Promise.all(snapshot.docs.map(doc => cb(doc, offset)));
+      if (snapshot.size == 0) {
+        console.log('No documents ending', model);
+        break;
+      }
 
-    if (end && offset >= end) {
-      console.log('No documents ending');
-      break;
+      startAfter = snapshot.docs[snapshot.docs.length - 1];
+
+      await Promise.all(snapshot.docs.map(doc => cb(doc)));
+    } catch (ex) {
+      console.error(ex);
     }
   }
 }
@@ -39,7 +40,14 @@ module.exports = async function() {
   if (!accountingSettings) {
     return;
   }
+
+  const gstin = accountingSettings.gstin || frappe.currentUser.remote.gstin;
+
   for (let model in frappe.models) {
+    if (['Tax', 'Currency', 'GetStarted'].includes(model)) {
+      continue;
+    }
+
     // check latest modified time for each doctype and register for changes
 
     const modelDef = frappe.models[model];
@@ -47,11 +55,12 @@ module.exports = async function() {
     const table = modelDef.isSingle
       ? 'SingleValue'
       : modelDef.basedOn || modelDef.name;
-    let query = firestore
-      .collection(model)
-      .where('gstin', '==', accountingSettings.gstin)
-      .where('deviceId', '<', deviceId)
-      .where('deviceId', '>', deviceId);
+
+    console.log(model, gstin);
+
+    let query = firestore.collection(model).where('gstin', '==', gstin);
+    // .where('deviceId', '<', deviceId)
+    // .where('deviceId', '>', deviceId);
 
     try {
       const row = await frappe.db.knex.raw(
@@ -63,25 +72,25 @@ module.exports = async function() {
         query = query.where('modified', '>=', row[0].modified);
       }
 
+      console.log(query);
       await processRecord(query, async doc => {
-        console.log('syncing ', doc.id);
-        await frappe.syncDoc({
-          doctype: model,
-          ...doc
-        });
+        console.log('syncing ', doc.id, model);
+        await frappe.syncDoc(
+          {
+            doctype: model,
+            ...doc
+          },
+          model
+        );
       });
-    } catch (ex) {}
-
-    if (modelDef.isSingle && singleRegistered) {
-      continue;
+    } catch (ex) {
+      console.error(ex);
     }
 
-    singleRegistered = true;
-
-    console.log('registering', table);
+    console.log('registering', model);
 
     query.onSnapshot(function(querySnapshot) {
-      console.log('received from firestore', querySnapshot.size);
+      console.log('received from firestore', querySnapshot.size, model);
       querySnapshot.forEach(async function(doc) {
         doc = doc.data();
         await frappe.syncDoc({
