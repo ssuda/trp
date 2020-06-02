@@ -18,9 +18,9 @@
           <span class="text-xs text-gray-600">{{ companyId }}</span>
         </div>
       </div>
-      <Button class="text-sm" v-if="dbPath" @click="changeFile">
+      <!-- <Button class="text-sm" v-if="dbPath" @click="changeFile">
         {{ _('Change File') }}
-      </Button>
+      </Button> -->
     </div>
 
     <TwoColumnForm
@@ -30,7 +30,7 @@
       :fields="fields"
       :autosave="true"
     />
-    <div class="mt-6">
+    <!-- <div class="mt-6">
       <FormControl
         :show-label="true"
         :df="AccountingSettings.meta.getField('autoUpdate')"
@@ -38,10 +38,9 @@
         :value="AccountingSettings.autoUpdate"
       />
       <p class="pl-6 mt-1 text-sm text-gray-600">
-        <!-- prettier-ignore -->
         {{ _('Automatically check for updates and download them if available. The update will be applied after you restart the app.') }}
       </p>
-    </div>
+    </div> -->
   </div>
 </template>
 
