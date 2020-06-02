@@ -211,7 +211,7 @@ export default {
 
   async createUser(user) {
     const fbuser = await this.getCurrentUser();
-    const { uid } = await axios.post(
+    const response = await axios.post(
       `${cloudfunctionsBaseUrl}/createUser`,
       {
         email: user.email,
@@ -225,8 +225,8 @@ export default {
       }
     );
 
-    user.set('userId', uid);
-    await user.update();
+    console.log('response for createUser', response);
+    return response.data.uid;
   },
 
   async updateUser(user) {
