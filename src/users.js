@@ -162,19 +162,21 @@ export default {
     let users = await firestore
       .collection('customers')
       .where('referalCode', '==', referalCode);
+
     let user = users.docs[0];
+
     try {
       //store in firestore
-      await user.update({ referalBonus: firestore.FieldValue.increment(1000) });
+      await user.update({ referalBonus: firebase.firestore.FieldValue.increment(1000) });
     } catch (ex) {
       console.error(ex);
     }
   },
 
   async updatePayment(paymentReference) {
-    let user = frappe.currentUser.fbAccount;
+    let user = frappe.currentUser.fbAccount.data();
 
-    console.log('user', frappe.currentUser);
+    console.log('user', user);
     console.log('updating billing details', paymentReference);
 
     const billingStart = DateTime.fromJSDate(user.billingPeriodStart.toDate()).plus({ months: 1 });
