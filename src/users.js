@@ -161,7 +161,7 @@ export default {
   async updateReferalBonus(referalCode) {
     let users = await firestore
       .collection('customers')
-      .where('referalCode', '==', referalCode);
+      .where('referalCode', '==', referalCode).get();
 
     let user = users.docs[0];
 
