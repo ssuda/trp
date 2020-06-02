@@ -33,6 +33,7 @@ export default {
 
   mounted() {
     const user = frappe.currentUser;
+    console.log(user);
     this.referalCode = user.fbAccount.referalCode;
   }
 };

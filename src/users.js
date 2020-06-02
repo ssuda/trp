@@ -149,10 +149,12 @@ export default {
       email,
       password
     );
-    await fbuser.reauthenticateWithCredential(credential);
-    fbuser = await waitForUser();
 
-    console.log(firebaseAuth.currentUser);
+    await fbuser.reauthenticateWithCredential(credential);
+    frappe.currentUser = null;
+    fbuser = await this.getCurrentUser(user.gstin);
+
+    console.log(frappe.currentUser);
     return fbuser;
   },
 
