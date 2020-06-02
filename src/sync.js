@@ -34,14 +34,9 @@ async function processRecord(query, cb, model) {
   }
 }
 
-module.exports = async function() {
-  // check with firestore about updates and subscribe to the changes
-  const accountingSettings = frappe.AccountingSettings;
-  if (!accountingSettings) {
-    return;
-  }
 
-  const gstin = accountingSettings.gstin || frappe.currentUser.remote.gstin;
+async function initialSync(accountingSettings, gstin) {
+  await frappe.db.knex.raw('PRAGMA foreign_keys = OFF');
 
   for (let model in frappe.models) {
     if (['Tax', 'Currency', 'GetStarted'].includes(model)) {
@@ -58,21 +53,27 @@ module.exports = async function() {
 
     console.log(model, gstin);
 
-    let query = firestore.collection(model).where('gstin', '==', gstin);
+    let query = firestore.collection(model)
+      .orderBy('modified')
+      .where('gstin', '==', gstin);
     // .where('deviceId', '<', deviceId)
     // .where('deviceId', '>', deviceId);
 
     try {
-      const row = await frappe.db.knex.raw(
-        `select modified from ${table} order by modified limit 1`
-      );
 
-      if (row.length) {
-        console.log(model, 'last modified', model, row[0]);
-        query = query.where('modified', '>=', row[0].modified);
+      if (accountingSettings.setupComplete) {
+        const row = await frappe.db.knex.raw(
+          `select modified from ${table} order by modified limit 1`
+        );
+
+        if (row.length) {
+          console.log(model, 'last modified', model, row[0]);
+          query = query.where('modified', '>=', row[0].modified);
+        }
       }
 
       console.log(query);
+
       await processRecord(query, async doc => {
         console.log('syncing ', doc.id, model);
         await frappe.syncDoc(
@@ -86,6 +87,35 @@ module.exports = async function() {
     } catch (ex) {
       console.error(ex);
     }
+  }
+  await frappe.db.knex.raw('PRAGMA foreign_keys = ON');
+}
+
+module.exports = async function() {
+  // check with firestore about updates and subscribe to the changes
+  const accountingSettings = frappe.AccountingSettings;
+  if (!accountingSettings) {
+    return;
+  }
+
+  const gstin = accountingSettings.gstin || frappe.currentUser.local.gstin;
+
+  console.log('before initial sync');
+  await initialSync(accountingSettings, gstin);
+  console.log('after initial sync');
+
+  for (let model in frappe.models) {
+    if (['Tax', 'Currency', 'GetStarted'].includes(model)) {
+      continue;
+    }
+
+    console.log(model, gstin);
+
+    let query = firestore.collection(model)
+      .orderBy('modified')
+      .where('gstin', '==', gstin);
+    // .where('deviceId', '<', deviceId)
+    // .where('deviceId', '>', deviceId);
 
     console.log('registering', model);
 

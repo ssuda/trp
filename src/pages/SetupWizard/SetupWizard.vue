@@ -64,7 +64,7 @@
         @click="gotoLoginRegister"
         class="cursor-pointer text-sm text-blue-700"
       >
-        Already Organization Setup? Login
+        {{ loginText }}
       </button>
       <Button
         @click="submit"
@@ -99,7 +99,8 @@ export default {
       doc: null,
       loading: false,
       valuesFilled: false,
-      emailError: null
+      emailError: null,
+      loginText: 'Already Organization Setup? Login',
     };
   },
   provide() {
@@ -122,6 +123,7 @@ export default {
   },
   methods: {
     gotoLoginRegister() {
+      this.loginText = 'Logging...';
       this.$emit('setup-complete', true);
     },
 
