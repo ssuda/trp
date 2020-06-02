@@ -151,6 +151,7 @@ export default {
     );
 
     await fbuser.reauthenticateWithCredential(credential);
+    frappe.currentUser && (frappe.currentUser.fbAccount = null);
     frappe.currentUser = null;
     fbuser = await this.getCurrentUser(user.gstin);
 
