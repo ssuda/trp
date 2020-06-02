@@ -165,7 +165,7 @@ export default {
               console.log('billingEnd', duration);
 
               if (duration > doc.billingGracePeriod) {
-                //disable services
+                //make payment
                 await new Promise((resolve, reject) => {
                   this.$modal.show(
                     PaymentForm,
