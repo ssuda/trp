@@ -168,7 +168,7 @@ export default {
 
     try {
       //store in firestore
-      await user.update({ referalBonus: firebase.firestore.FieldValue.increment(1000) });
+      await user.ref.update({ referalBonus: firebase.firestore.FieldValue.increment(1000) });
     } catch (ex) {
       console.error(ex);
     }
