@@ -7,6 +7,7 @@
       <p>Email: <span class="font-bold">support@spinbi.com</span></p>
       <p>Phone: <span class="font-bold">8105245255</span></p>
       <p>
+        <label class="mr-2">Please refer and get bonus of 1000/-</label>
         Referal Code: <span class="font-bold">{{ referalCode }}</span>
       </p>
     </div>
