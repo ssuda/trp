@@ -15,6 +15,7 @@ import InvoiceForm from '@/pages/InvoiceForm';
 import JournalEntryForm from '@/pages/JournalEntryForm';
 import PermitActionForm from '@/pages/PermitActionForm';
 import DataImport from '@/pages/Import';
+import CustomerCare from '@/pages/CustomerCare';
 
 Vue.use(Router);
 
@@ -117,6 +118,18 @@ const routes = [
     name: 'Chart Of Accounts',
     components: {
       default: ChartOfAccounts,
+      edit: QuickEditForm
+    },
+    props: {
+      default: true,
+      edit: route => route.query
+    }
+  },
+  {
+    path: '/customer-care',
+    name: 'Customer Care',
+    components: {
+      default: CustomerCare,
       edit: QuickEditForm
     },
     props: {
