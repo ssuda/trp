@@ -53,7 +53,7 @@ export default {
     }
 
     console.log('user', user, gstin);
-    if (gstin && !user.fbAccount) {
+    if (user && gstin && !user.fbAccount) {
       user.fbAccount = await firestore
         .collection('customers')
         .doc(gstin)
@@ -70,7 +70,9 @@ export default {
 
   async logout() {
     try {
+      console.log('signout called');
       await firebaseAuth.signOut();
+      frappe.currentUser = null;
     } catch (ex) {
       console.error(ex);
     }

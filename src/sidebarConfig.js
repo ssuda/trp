@@ -5,6 +5,7 @@ import Icon from './components/Icon';
 import router from './router';
 
 import { firebaseAuth } from '@/firebase';
+import users from './users';
 
 const config = {
   getTitle: async () => {
@@ -175,8 +176,8 @@ const config = {
         {
           label: _('Sign Out'),
           async action() {
-            await firebaseAuth.signOut();
-            router.go('/');
+            await users.logout();
+            frappe.events.trigger('reload-main-window');
           }
         }
       ]
