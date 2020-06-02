@@ -193,9 +193,9 @@ export default {
             console.error(ex);
           }
 
-          if (syncEnabled) {
+          //if (syncEnabled) {
             SetupSync();
-          }
+          //}
 
           if (comingFromSetupWizard && !isLogin) {
             await showMessageDialog({
