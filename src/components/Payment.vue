@@ -6,17 +6,21 @@
     </h1>
     <div class="px-8 my-8 text-sm">
       <p>
-        Sub Total: <span class="font-bold">{{ formatCurrency(actualBillingAmount) }}</span>
+        Sub Total:
+        <span class="font-bold">{{ formatCurrency(actualBillingAmount) }}</span>
       </p>
       <p>
-        Referal Bonus: <span class="font-bold">{{ formatCurrency(referalBonus) }}</span>
+        Referal Bonus:
+        <span class="font-bold">{{ formatCurrency(referalBonus) }}</span>
       </p>
       <p>
-        GST (18%): <span class="font-bold">{{ formatCurrency(gstAmount) }}</span>
+        GST (18%):
+        <span class="font-bold">{{ formatCurrency(gstAmount) }}</span>
       </p>
 
       <p class="my-4 border-t py-2">
-        Grand Total:  <span class="font-bold">{{ formatCurrency(billingAmount) }}</span>
+        Grand Total:
+        <span class="font-bold">{{ formatCurrency(billingAmount) }}</span>
       </p>
     </div>
 
@@ -26,9 +30,9 @@
       placeholder="015221250995"
       v-model="paymentReference"
     />
-    <Button
-    :disabled="!paymentReference"
-    primary @click="updatePayment">Save</Button>
+    <Button :disabled="!paymentReference" primary @click="updatePayment"
+      >Save</Button
+    >
   </div>
 </template>
 <script>
@@ -54,7 +58,7 @@ export default {
   },
 
   mounted() {
-    const user = frappe.currentUser.fbAccount.data();
+    const user = frappe.currentUser.remote.data();
 
     this.referalBonus = -user.referalBonus || 0;
     this.actualBillingAmount = user.billingAmount;

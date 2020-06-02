@@ -15,12 +15,6 @@ function waitForUser() {
     const unsubscribe = firebaseAuth.onAuthStateChanged(
       async user => {
         unsubscribe();
-        try {
-          user.token = await user.getIdToken(true);
-          if (frappe.db) {
-            user.local = await frappe.getDoc('SpinBiUser', user.email);
-          }
-        } catch (ex) {}
         resolve(user);
       },
       ex => {
@@ -37,14 +31,10 @@ export default {
     return firebaseAuth.sendPasswordResetEmail(emailAddress);
   },
 
-  async getCurrentUser(gstin) {
+  async getCurrentUser(gstin, refresh = false) {
     if (!gstin) {
       const accountingSettings = frappe.AccountingSettings || {};
       gstin = accountingSettings.gstin;
-    }
-
-    if (frappe.currentUser) {
-      return frappe.currentUser;
     }
 
     let user = (frappe.currentUser = firebaseAuth.currentUser);
@@ -52,15 +42,51 @@ export default {
       user = frappe.currentUser = await waitForUser();
     }
 
-    console.log('user', user, gstin);
-    if (user && gstin && !user.fbAccount) {
-      user.fbAccount = await firestore
-        .collection('customers')
-        .doc(gstin)
-        .get();
+    if (user) {
+      try {
+        if (!user.token) {
+          user.token = await user.getIdToken(true);
+          console.log('user token', user.token);
+        }
+
+        if (frappe.db && !user.local) {
+          try {
+            user.local = await frappe.getDoc('SpinBiUser', user.email);
+          } catch (ex) {}
+
+          if (!user.local) {
+            const snapshot = await firestore
+              .collection('SpinBiUser')
+              .where('name', '==', user.email)
+              .get();
+            if (snapshot.size) {
+              user.local = snapshot.docs[0].data();
+            }
+          }
+
+          console.log('spinbiuser', user.local);
+
+          if (!gstin) {
+            gstin = user.local.gstin;
+          }
+        }
+
+        if (gstin && !user.remote) {
+          user.remote = await firestore
+            .collection('customers')
+            .doc(gstin)
+            .get();
+        }
+      } catch (ex) {
+        console.error(ex);
+      }
     }
 
-    return frappe.currentUser;
+    console.log('user', user, gstin);
+    if (user) {
+      user.gstin = gstin;
+    }
+    return user;
   },
 
   async login(email, password) {
@@ -70,7 +96,6 @@ export default {
 
   async logout() {
     try {
-      console.log('signout called');
       await firebaseAuth.signOut();
       frappe.currentUser = null;
     } catch (ex) {
@@ -93,7 +118,7 @@ export default {
     let fbuser = await this.getCurrentUser(user.gstin);
 
     if (process.env.NODE_ENV !== 'development') {
-      if (fbuser.fbAccount && fbuser.fbAccount.exists) {
+      if (fbuser.remote && fbuser.remote.exists) {
         throw new Error('This company already registered, please login');
       }
     }
@@ -153,8 +178,7 @@ export default {
     );
 
     await fbuser.reauthenticateWithCredential(credential);
-    frappe.currentUser && (frappe.currentUser.fbAccount = null);
-    frappe.currentUser = null;
+    frappe.currentUser && (frappe.currentUser.remote = null);
     fbuser = await this.getCurrentUser(user.gstin);
 
     console.log(frappe.currentUser);
@@ -164,26 +188,33 @@ export default {
   async updateReferalBonus(referalCode) {
     let users = await firestore
       .collection('customers')
-      .where('referalCode', '==', referalCode).get();
+      .where('referalCode', '==', referalCode)
+      .get();
 
     let user = users.docs[0];
 
     try {
       //store in firestore
-      await user.ref.update({ referalBonus: firebase.firestore.FieldValue.increment(1000) });
+      await user.ref.update({
+        referalBonus: firebase.firestore.FieldValue.increment(1000)
+      });
     } catch (ex) {
       console.error(ex);
     }
   },
 
   async updatePayment(paymentReference) {
-    let user = frappe.currentUser.fbAccount.data();
+    let user = frappe.currentUser.remote.data();
 
     console.log('user', user);
     console.log('updating billing details', paymentReference);
 
-    const billingStart = DateTime.fromJSDate(user.billingPeriodStart.toDate()).plus({ months: 1 });
-    const billingEnd = DateTime.fromJSDate(user.billingPeriodEnd.toDate()).plus({ months: 1 });
+    const billingStart = DateTime.fromJSDate(
+      user.billingPeriodStart.toDate()
+    ).plus({ months: 1 });
+    const billingEnd = DateTime.fromJSDate(
+      user.billingPeriodEnd.toDate()
+    ).plus({ months: 1 });
 
     try {
       //store in firestore

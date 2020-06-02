@@ -7,7 +7,9 @@
       <p>Email: <span class="font-bold">support@spinbi.com</span></p>
       <p>Phone: <span class="font-bold">8105245255</span></p>
       <div class="mt-4">
-        <div class="mr-2">Please refer and get bonus of <span class="font-bold">1000/-</span></div>
+        <div class="mr-2">
+          Please refer and get bonus of <span class="font-bold">1000/-</span>
+        </div>
         Referal Code: <span class="font-bold">{{ referalCode }}</span>
       </div>
     </div>
@@ -34,7 +36,7 @@ export default {
   mounted() {
     const user = frappe.currentUser;
     console.log(frappe.currentUser);
-    this.referalCode = user.fbAccount.get('referalCode');
+    this.referalCode = user.remote.get('referalCode');
   }
 };
 </script>

@@ -16,22 +16,32 @@ module.exports = class BaseDocument extends Observable {
     }
     await super.trigger(event, params);
 
-    // if (!frappe.currentUser || !frappe.currentUser.fbAccount || !frappe.currentUser.fbAccount.get('syncEnabled') ) {
-    //   return;
-    // }
-
-    const accountingSettings = frappe.AccountingSettings;
-    if (!accountingSettings) {
+    if (['Tax', 'Currency', 'GetStarted'].includes(this.doctype)) {
       return;
     }
 
-    if (event === 'afterUpdate' || event === 'afterInsert') {
+    const accountingSettings = frappe.AccountingSettings || {};
+    let gstin =
+      accountingSettings.gstin ||
+      this.gstin ||
+      (frappe.currentUser && frappe.currentUser.gstin);
+
+    if (!gstin) {
+      return;
+    }
+
+    if (event === 'afterDelete') {
+      await firestore
+        .collection(this.doctype)
+        .doc(`${accountingSettings.gstin}_${this.name.replace(/[ \/]/g, '_')}`)
+        .delete();
+    } else if (event === 'afterUpdate' || event === 'afterInsert') {
       if (event === 'afterInsert' && this.doctype === 'Trip' && !this.endDate) {
         return;
       }
 
       let obj = {
-        gstin: accountingSettings.gstin,
+        gstin,
         deviceId
       };
 
@@ -51,7 +61,7 @@ module.exports = class BaseDocument extends Observable {
 
       firestore
         .collection(this.doctype)
-        .doc(`${accountingSettings.gstin}_${this.name.replace(/[ \/]/g, '_')}`)
+        .doc(`${gstin}_${this.name.replace(/[ \/]/g, '_')}`)
         .set(obj);
     }
   }
