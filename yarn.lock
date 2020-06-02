@@ -12240,6 +12240,11 @@ vm-browserify@^1.0.1:
   resolved "https://registry.yarnpkg.com/vm-browserify/-/vm-browserify-1.1.2.tgz#78641c488b8e6ca91a75f511e7a3b32a86e5dda0"
   integrity sha512-2ham8XPWTONajOR0ohOKOHXkm3+gaBmGut3SRuu75xLd/RRaY6vqgh8NBYYk7+RW3u5AtzPQZG8F10LHkl0lAQ==
 
+voucher-code-generator@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/voucher-code-generator/-/voucher-code-generator-1.1.1.tgz#c1e79d7102506ce50c65b824a9f4de137dd2718b"
+  integrity sha1-weedcQJQbOUMZbgkqfTeE33ScYs=
+
 "vue-cli-plugin-electron-builder@https://github.com/netchampfaris/vue-cli-plugin-electron-builder":
   version "1.4.6"
   resolved "https://github.com/netchampfaris/vue-cli-plugin-electron-builder#af04cc8f5bc5d88479b1b8096339f1f54955fbce"

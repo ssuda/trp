@@ -114,6 +114,13 @@ module.exports = {
     },
 
     {
+      fieldname: 'referalCode',
+      label: 'Referal Code',
+      fieldtype: 'Data',
+      placeholder: 'Referal Code'
+    },
+
+    {
       fieldname: 'fiscalYearStart',
       label: 'Fiscal Year Start Date',
       placeholder: 'Fiscal Year Start Date',
@@ -170,7 +177,8 @@ module.exports = {
     'fullname',
     'password',
     'gstin',
-    'phoneNumber'
+    'phoneNumber',
+    'referalCode'
     // 'bankName',
     // 'country',
     // 'currency',
