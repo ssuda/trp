@@ -116,7 +116,11 @@ export default {
     this.showSetupWizardOrDesk(false);
   },
   methods: {
-    async showSetupWizardOrDesk(resetRoute = false, isLogin, comingFromSetupWizard) {
+    async showSetupWizardOrDesk(
+      resetRoute = false,
+      isLogin,
+      comingFromSetupWizard
+    ) {
       const { setupComplete } = frappe.AccountingSettings || {};
       console.log('setupcomplete', setupComplete);
       if (!setupComplete && !isLogin) {
@@ -194,7 +198,7 @@ export default {
           }
 
           //if (syncEnabled) {
-            SetupSync();
+          SetupSync();
           //}
 
           if (comingFromSetupWizard && !isLogin) {

@@ -108,6 +108,7 @@ export async function connectToLocalDatabase(filepath) {
   });
 
   frappe.db.typeMap.LongText = 'text';
+  frappe.db.typeMap.Password = 'text';
 
   await frappe.db.connect();
   await migrate();

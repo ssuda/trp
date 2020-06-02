@@ -34,7 +34,6 @@ module.exports = {
       label: 'Password',
       fieldtype: 'Password',
       required: 1,
-      hidden: 1
     },
     {
       fieldname: 'role',
@@ -60,18 +59,19 @@ module.exports = {
       hidden: 1
     },
     {
-      fieldname: 'gstin',
+      fieldname: 'gstn',
       label: 'GSTN',
       fieldtype: 'Data',
       hidden: 1,
       formula: doc => accountingSettings.gstin
     }
   ],
+
   quickEditFields: [
     'name',
     'fullName',
-    'phoneNumber',
     'password',
+    'phoneNumber',
     'role',
     'status'
   ]
