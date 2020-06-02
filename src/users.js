@@ -8,6 +8,7 @@ import {
 import axios from 'axios';
 import frappe from 'frappejs';
 import { DateTime } from 'luxon';
+import voucherCodes from 'voucher-code-generator';
 
 function waitForUser() {
   return new Promise((resolve, reject) => {
@@ -94,7 +95,11 @@ export default {
         throw new Error('This company already registered, please login');
       }
     }
+
     console.log('creating company', user);
+    let referalCode = voucherCodes.generate({
+      length: 8
+    });
 
     //store in firestore
     firestore
@@ -106,6 +111,9 @@ export default {
         email: user.email,
         gstin: user.gstin,
         phoneNumber: user.phoneNumber,
+        billingAmount: 10000,
+        referalBonus: 0,
+        referalCode,
         trialExpiresOn: DateTime.local()
           .plus({ days: 15 })
           .toJSDate(),
@@ -134,6 +142,11 @@ export default {
       console.error(ex);
     }
 
+    //update referal bonus
+    if (user.referalCode) {
+      this.updateReferalBonus(user.referalCode);
+    }
+
     console.log('Before reauth');
     const credential = firebase.auth.EmailAuthProvider.credential(
       email,
@@ -146,11 +159,27 @@ export default {
     return fbuser;
   },
 
-  async updatePayment(reference) {
+  async updateReferalBonus(referalCode) {
+    let users = await firestore
+      .collection('customers')
+      .where('referalCode', '==', referalCode);
+    let user = users.docs[0];
+    try {
+      //store in firestore
+      await user.update({ referalBonus: firestore.FieldValue.increment(1000) });
+    } catch (ex) {
+      console.error(ex);
+    }
+  },
+
+  async updatePayment(paymentReference) {
     let user = frappe.currentUser.fbAccount;
 
     console.log('user', frappe.currentUser);
-    console.log('updating billing details', reference);
+    console.log('updating billing details', paymentReference);
+
+    const billingStart = DateTime.fromJSDate(user.billingPeriodStart.toDate());
+    const billingEnd = DateTime.fromJSDate(user.billingPeriodEnd.toDate());
 
     try {
       //store in firestore
@@ -158,16 +187,20 @@ export default {
         .collection('customers')
         .doc(user.gstin)
         .set({
+          paymentReference,
           enabled: true,
-          billingPeriodStart: DateTime.fromJSDate(
-            user.billingPeriodStart.toDate()
-          )
-            .plus({ months: 1 })
-            .toJSDate(),
-          billingPeriodEnd: DateTime.fromJSDate(user.billingPeriodEnd.toDate())
-            .plus({ months: 1 })
-            .toJSDate()
+          billingPeriodStart: billingStart.plus({ months: 1 }).toJSDate(),
+          billingPeriodEnd: billingEnd.plus({ months: 1 }).toJSDate()
         });
+
+      firestore.collection('payments').add({
+        paymentReference,
+        gstin: user.gstin,
+        paymentDate: DateTime.local().toJSDate(),
+        billingPeriod: `${billingStart.toFormat(
+          'dd LLL yyyy'
+        )}-${billingEnd.toFormat('dd LLL yyyy')}}`
+      });
     } catch (ex) {
       console.error(ex);
     }

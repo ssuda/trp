@@ -6,17 +6,33 @@
     <div class="px-8 my-8">
       <p>Email: <span class="font-bold">support@spinbi.com</span></p>
       <p>Phone: <span class="font-bold">8105245255</span></p>
+      <p>
+        Referal Code: <span class="font-bold">{{ referalCode }}</span>
+      </p>
     </div>
   </div>
 </template>
 
 <script>
 import PageHeader from '@/components/PageHeader';
+import frappe from 'frappejs';
 
 export default {
   name: 'CustomerCare',
+
   components: {
     PageHeader
+  },
+
+  data() {
+    return {
+      referalCode: ''
+    };
+  },
+
+  mounted() {
+    const user = frappe.currentUser;
+    this.referalCode = user.fbAccount.referalCode;
   }
 };
 </script>
