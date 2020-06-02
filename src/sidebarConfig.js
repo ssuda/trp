@@ -169,7 +169,7 @@ const config = {
           }
         },
         {
-          label: _('Customer Care & Referal Code'),
+          label: _('Support & Referal Code'),
           route: '/customer-care'
         },
         {

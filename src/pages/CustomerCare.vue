@@ -6,10 +6,10 @@
     <div class="px-8 my-8">
       <p>Email: <span class="font-bold">support@spinbi.com</span></p>
       <p>Phone: <span class="font-bold">8105245255</span></p>
-      <p>
-        <label class="mr-2">Please refer and get bonus of 1000/-</label>
+      <div class="mt-4">
+        <div class="mr-2">Please refer and get bonus of <span class="font-bold">1000/-</span></div>
         Referal Code: <span class="font-bold">{{ referalCode }}</span>
-      </p>
+      </div>
     </div>
   </div>
 </template>
