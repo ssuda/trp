@@ -14,7 +14,7 @@
     />
     <SetupWizard
       v-if="activeScreen === 'SetupWizard'"
-      @setup-complete="isLogin => showSetupWizardOrDesk(true, isLogin)"
+      @setup-complete="isLogin => showSetupWizardOrDesk(true, isLogin, true)"
     />
     <LoginRegister
       v-if="activeScreen === 'LoginRegister'"
@@ -116,7 +116,7 @@ export default {
     this.showSetupWizardOrDesk(false);
   },
   methods: {
-    async showSetupWizardOrDesk(resetRoute = false, isLogin) {
+    async showSetupWizardOrDesk(resetRoute = false, isLogin, comingFromSetupWizard) {
       const { setupComplete } = frappe.AccountingSettings || {};
       console.log('setupcomplete', setupComplete);
       if (!setupComplete && !isLogin) {
@@ -158,58 +158,35 @@ export default {
                 });
               }
 
-              const trailPeriod = DateTime.fromJSDate(
-                doc.trialExpiresOn.toDate()
+              const billingStart = DateTime.fromJSDate(
+                doc.billingPeriodStart.toDate()
               );
-              const trailDuration = parseInt(trailPeriod.diffNow('days').days);
-              console.log('trailDuration', trailDuration);
-              if (trailDuration == 0) {
-                showMessageDialog({
-                  description: 'Your billing started',
-                  buttons: [{ label: 'Ok' }]
-                });
-              } else if (trailDuration > 7) {
-                showMessageDialog({
-                  description: `Your trail expires in ${trailDuration} day(s)`,
-                  buttons: [{ label: 'Ok' }]
-                });
-              } else if (trailDuration < 0) {
-                const billingEnd = DateTime.fromJSDate(
-                  doc.billingPeriodEnd.toDate()
-                );
-                const duration = parseInt(-billingEnd.diffNow('days').days);
-                console.log('billingEnd', duration);
+              const duration = parseInt(-billingStart.diffNow('days').days);
+              console.log('billingEnd', duration);
 
-                if (duration > doc.billingGracePeriod) {
-                  //disable services
-                  await new Promise((resolve, reject) => {
-                    this.$modal.show(
-                      PaymentForm,
-                      {},
-                      {
-                        height: 'auto'
-                      },
-                      {
-                        'before-close': event => {
-                          resolve();
-                        }
+              if (duration > doc.billingGracePeriod) {
+                //disable services
+                await new Promise((resolve, reject) => {
+                  this.$modal.show(
+                    PaymentForm,
+                    {},
+                    {
+                      height: 'auto'
+                    },
+                    {
+                      'before-close': event => {
+                        resolve();
                       }
-                    );
-                  });
-                } else if (duration >= 0) {
-                  //warn users for payment
-                  await showMessageDialog({
-                    description: `Your payment is pending, your service will be disabled in ${doc.billingGracePeriod -
-                      duration} days, please pay before to avoid disruption to your serivce`,
-                    buttons: [{ label: 'Ok' }]
-                  });
-                } else if (duration >= -2) {
-                  //give info to the user
-                  await showMessageDialog({
-                    description: `Your billing period ends in ${-duration} day(s)`,
-                    buttons: [{ label: 'Ok' }]
-                  });
-                }
+                    }
+                  );
+                });
+              } else if (duration >= 0) {
+                //warn users for payment
+                await showMessageDialog({
+                  description: `Your recharge is pending, your service will be disabled in ${doc.billingGracePeriod -
+                    duration} days, please pay before to avoid disruption to your service`,
+                  buttons: [{ label: 'Ok' }]
+                });
               }
             }
           } catch (ex) {
@@ -218,6 +195,13 @@ export default {
 
           if (syncEnabled) {
             SetupSync();
+          }
+
+          if (comingFromSetupWizard && !isLogin) {
+            await showMessageDialog({
+              description: `Your billing will start in 7days.`,
+              buttons: [{ label: 'Ok' }]
+            });
           }
           this.activeScreen = 'Desk';
         } else {
