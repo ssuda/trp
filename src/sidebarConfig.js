@@ -169,6 +169,10 @@ const config = {
           }
         },
         {
+          label: _('Customer Care'),
+          route: '/customer-care'
+        },
+        {
           label: _('Sign Out'),
           async action() {
             await firebaseAuth.signOut();
