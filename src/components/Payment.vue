@@ -28,6 +28,7 @@
 <script>
 import Button from '@/components/Button';
 import Users from '@/users';
+import frappe from 'frappejs';
 
 export default {
   name: 'PaymentForm',
