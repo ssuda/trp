@@ -9,10 +9,14 @@ module.exports = class SpinBiUser extends BaseDocument {
   }
 
   async afterUpdate() {
-    await Users.updateUser(this);
+    if (this.userId) {
+      await Users.updateUser(this);
+    }
   }
 
   async afterDelete() {
-    await Users.deleteUser(this);
+    if (this.userId) {
+      await Users.deleteUser(this);
+    }
   }
 };
