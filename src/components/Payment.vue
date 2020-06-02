@@ -1,7 +1,7 @@
 <template>
   <div class="m-4">
     <h1>
-      Please Pay Immediately via Rs/- {{ billingAmount }}. UPI VPA:
+      Please Pay Immediately Rs/- {{ billingAmount }}. Via UPI VPA:
       <span class="font-bold">ssuda777@oksbi</span>
     </h1>
     <div class="px-8 my-8">
