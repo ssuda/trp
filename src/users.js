@@ -187,6 +187,7 @@ export default {
         .collection('customers')
         .doc(user.gstin)
         .set({
+          referalBonus: 0,
           paymentReference,
           enabled: true,
           billingPeriodStart: billingStart.plus({ months: 1 }).toJSDate(),
