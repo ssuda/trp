@@ -135,8 +135,11 @@ export default {
       });
     },
     allValuesFilled() {
+      const requiredFields = this.meta.fields
+        .map(field => field.required && field.fieldname)
+        .filter(Boolean);
       let values = this.meta.quickEditFields.map(
-        fieldname => this.doc[fieldname]
+        fieldname => !requiredFields.includes(fieldname) || this.doc[fieldname]
       );
       return values.every(Boolean);
     },
