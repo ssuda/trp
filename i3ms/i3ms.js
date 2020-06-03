@@ -89,40 +89,48 @@ export async function permitReport(args) {
   let fromDate = moment(args.start_date).format('DD-MMM-YYYY');
   let toDate = moment(args.end_date).format('DD-MMM-YYYY');
 
-  let r = await i3ms.permitVehicles(
-    'https://i3ms.orissaminerals.gov.in/i3MS/ePassReports/PermitWiseTransportDetails.aspx?linkn=313&linkm=15&Openstate=0',
-    args.permit_number,
-    fromDate,
-    toDate
-  );
+  let retries = 0;
 
-  let trips = r.trucks.filter(t => t['Pass Number']);
+  while (retries < 3) {
+    try {
+      let r = await i3ms.permitVehicles(
+        'https://i3ms.orissaminerals.gov.in/i3MS/ePassReports/PermitWiseTransportDetails.aspx?linkn=313&linkm=15&Openstate=0',
+        args.permit_number,
+        fromDate,
+        toDate
+      );
 
-  trips = _.map(trips, tpDetails => {
-    let uom;
-    let wt;
-    _.each(tpDetails, (v, k) => {
-      if (/mineral quantity/i.test(k)) {
-        wt = v;
-        uom = k.substring(k.lastIndexOf('(') + 1, k.lastIndexOf(')'));
-        uom = uom.replace(/in /i, '');
-      }
-    });
+      let trips = r.trucks.filter(t => t['Pass Number']);
 
-    return {
-      tp_date: moment(tpDetails['Pass Date'], [
-        'MM/DD/YYYY hh:mm:ss A',
-        'DD MMM YYYY'
-      ]).toDate(),
-      tp_number: tpDetails['Pass Number Text'],
-      tp_url: tpDetails['Pass Number'],
-      truck_number: tpDetails['Truck Number'],
-      load_carrying: parseFloat(wt)
-    };
-  });
+      trips = _.map(trips, tpDetails => {
+        let uom;
+        let wt;
+        _.each(tpDetails, (v, k) => {
+          if (/mineral quantity/i.test(k)) {
+            wt = v;
+            uom = k.substring(k.lastIndexOf('(') + 1, k.lastIndexOf(')'));
+            uom = uom.replace(/in /i, '');
+          }
+        });
 
-  //console.log(trips);
-  return trips;
+        return {
+          tp_date: moment(tpDetails['Pass Date'], [
+            'MM/DD/YYYY hh:mm:ss A',
+            'DD MMM YYYY'
+          ]).toDate(),
+          tp_number: tpDetails['Pass Number Text'],
+          tp_url: tpDetails['Pass Number'],
+          truck_number: tpDetails['Truck Number'],
+          load_carrying: parseFloat(wt)
+        };
+      });
+
+      //console.log(trips);
+      return trips;
+    } catch (ex) {
+      retries++;
+    }
+  }
 }
 
 export async function successfullyTagged(permitNo, credentials) {
