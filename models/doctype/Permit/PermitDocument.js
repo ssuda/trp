@@ -3,13 +3,12 @@ const BaseDocument = require('frappejs/model/document');
 const { refreshPermit } = require('@/permit');
 
 module.exports = class Permit extends BaseDocument {
-  afterInsert() {
+  async afterInsert() {
+    const numTrips = await this.getNumberOfTrips();
+
     if (
       this.type == 'I3MS' &&
-      (!this.quantity ||
-        !this.startDate ||
-        !this.vehicleDetails ||
-        !this.numTrips)
+      (!this.quantity || !this.startDate || !this.vehicleDetails || !numTrips)
     ) {
       refreshPermit(this);
     }
