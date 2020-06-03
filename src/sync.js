@@ -13,6 +13,7 @@ async function processRecord(docs, model) {
   for (let doc of docs) {
     doc = doc.data();
 
+    if (doc.deviceId == deviceId) continue;
     console.log('Inside Syncing', model);
 
     try {
@@ -82,9 +83,7 @@ module.exports = async function() {
     let query = firestore
       .collection(model)
       .orderBy('modified')
-      .where('gstin', '==', gstin)
-      .where('deviceId', '<', deviceId)
-      .where('deviceId', '>', deviceId);
+      .where('gstin', '==', gstin);
 
     try {
       if (accountingSettings.setupComplete) {
