@@ -111,12 +111,17 @@ module.exports = {
       fieldtype: 'Check',
       default: 0
     },
-
     {
       fieldname: 'autoUpdate',
       label: 'Auto Update',
       fieldtype: 'Check',
       default: 1
+    },
+    {
+      fieldname: 'lastSnapshot',
+      label: 'Snapshot',
+      fieldtype: 'Date',
+      hidden: 1
     }
   ],
   quickEditFields: [
