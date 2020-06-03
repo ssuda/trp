@@ -2,92 +2,48 @@ const frappe = require('frappejs');
 const { firestore } = require('@/firebase');
 const { DateTime } = require('luxon');
 const { machineIdSync } = require('node-machine-id');
+const { syncDoc } = require('@/utils');
 
 let deviceId = machineIdSync({ original: true });
 
-async function processRecord(query, cb, model) {
-  let startAfter;
+async function processRecord(docs, model) {
+  console.log('Syncing', model);
 
-  while (true) {
-    try {
-      query = query.limit(200);
+  await frappe.db.sql('PRAGMA foreign_keys = OFF');
+  for (let doc of docs) {
+    doc = doc.data();
 
-      if (startAfter) {
-        query = query.startAfter(startAfter);
-      }
-
-      const snapshot = await query.get();
-      console.log('Fetched', snapshot.size, model);
-
-      if (snapshot.size == 0) {
-        console.log('No documents ending', model);
-        break;
-      }
-
-      startAfter = snapshot.docs[snapshot.docs.length - 1];
-
-      await Promise.all(snapshot.docs.map(doc => cb(doc)));
-    } catch (ex) {
-      console.error(ex);
-    }
-  }
-}
-
-
-async function initialSync(accountingSettings, gstin) {
-  await frappe.db.knex.raw('PRAGMA foreign_keys = OFF');
-
-  for (let model in frappe.models) {
-    if (['Tax', 'Currency', 'GetStarted'].includes(model)) {
-      continue;
-    }
-
-    // check latest modified time for each doctype and register for changes
-
-    const modelDef = frappe.models[model];
-
-    const table = modelDef.isSingle
-      ? 'SingleValue'
-      : modelDef.basedOn || modelDef.name;
-
-    console.log(model, gstin);
-
-    let query = firestore.collection(model)
-      .orderBy('modified')
-      .where('gstin', '==', gstin);
-    // .where('deviceId', '<', deviceId)
-    // .where('deviceId', '>', deviceId);
+    console.log('Inside Syncing', model);
 
     try {
-
-      if (accountingSettings.setupComplete) {
-        const row = await frappe.db.knex.raw(
-          `select modified from ${table} order by modified limit 1`
-        );
-
-        if (row.length) {
-          console.log(model, 'last modified', model, row[0]);
-          query = query.where('modified', '>=', row[0].modified);
+      for (let field in doc) {
+        if (doc[field] && doc[field].toDate) {
+          doc[field] = doc[field].toDate().toISOString();
         }
       }
 
-      console.log(query);
+      if (doc._deleted) {
+        const frappedoc = await frappe.getDoc(model, doc.name);
+        await frappedoc.delete();
+      } else {
+        if (model == 'AccountingSettings') {
+          console.log('syncing', model, doc);
+        }
+        const r = await syncDoc({
+          doctype: model,
+          ...doc
+        });
 
-      await processRecord(query, async doc => {
-        console.log('syncing ', doc.id, model);
-        await frappe.syncDoc(
-          {
-            doctype: model,
-            ...doc
-          },
-          model
-        );
-      });
+        if (model == 'AccountingSettings') {
+          console.log('synced', model, doc, r);
+        }
+      }
     } catch (ex) {
       console.error(ex);
     }
   }
-  await frappe.db.knex.raw('PRAGMA foreign_keys = ON');
+  await frappe.db.sql('PRAGMA foreign_keys = ON');
+  console.log('Syncing completed', model);
 }
 
 module.exports = async function() {
@@ -99,34 +55,57 @@ module.exports = async function() {
 
   const gstin = accountingSettings.gstin || frappe.currentUser.local.gstin;
 
-  console.log('before initial sync');
-  await initialSync(accountingSettings, gstin);
-  console.log('after initial sync');
-
   for (let model in frappe.models) {
-    if (['Tax', 'Currency', 'GetStarted'].includes(model)) {
+    if (
+      [
+        'Tax',
+        'Currency',
+        'GetStarted',
+        'SetupWizard',
+        'LoginRegister',
+        'PermitAction'
+      ].includes(model)
+    ) {
       continue;
     }
 
-    console.log(model, gstin);
+    // check latest modified time for each doctype and register for changes
 
-    let query = firestore.collection(model)
+    const modelDef = frappe.models[model];
+
+    const table = modelDef.isSingle
+      ? 'SingleValue'
+      : modelDef.basedOn || modelDef.name;
+
+    console.log(model, gstin, table);
+
+    let query = firestore
+      .collection(model)
       .orderBy('modified')
-      .where('gstin', '==', gstin);
-    // .where('deviceId', '<', deviceId)
-    // .where('deviceId', '>', deviceId);
+      .where('gstin', '==', gstin)
+      .where('deviceId', '<', deviceId)
+      .where('deviceId', '>', deviceId);
+
+    try {
+      if (accountingSettings.setupComplete) {
+        const row = await frappe.db.knex.raw(
+          `select modified from ${table} order by modified limit 1`
+        );
+
+        if (row.length) {
+          console.log(model, 'last modified', model, row[0]);
+          query = query.where('modified', '>=', row[0].modified);
+        }
+      }
+    } catch (ex) {
+      console.error(ex);
+    }
 
     console.log('registering', model);
 
-    query.onSnapshot(function(querySnapshot) {
+    query.onSnapshot(async function(querySnapshot) {
       console.log('received from firestore', querySnapshot.size, model);
-      querySnapshot.forEach(async function(doc) {
-        doc = doc.data();
-        await frappe.syncDoc({
-          doctype: model,
-          ...doc
-        });
-      });
+      processRecord(querySnapshot.docs, model);
     });
   }
 };

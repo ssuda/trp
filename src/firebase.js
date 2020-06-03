@@ -36,11 +36,11 @@ function getFirebaseProjectId() {
 }
 
 const cloudfunctionsBaseUrl =
-  process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000'
-    : 'https://us-central1-' +
-      getFirebaseProjectId() +
-      '.cloudfunctions.net/app';
+  /*process.env.NODE_ENV === 'development'
+    ? 'http://localhost:5001/spinbi-trp/us-central1/app'
+    :*/ 'https://us-central1-' +
+  getFirebaseProjectId() +
+  '.cloudfunctions.net/app';
 
 frappe.firebase = {
   firebaseAuth,

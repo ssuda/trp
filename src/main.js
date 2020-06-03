@@ -23,6 +23,7 @@ import Document from 'frappejs/model/document';
 (async () => {
   frappe.isServer = true;
   frappe.isElectron = true;
+  //Document.prototype.compareWithCurrentDoc = BaseDocument.prototype.compareWithCurrentDoc;
   Document.prototype.trigger = BaseDocument.prototype.trigger;
   frappe.init();
   frappe.registerLibs(common);
@@ -170,7 +171,13 @@ import Document from 'frappejs/model/document';
   Vue.directive('on-outside-click', outsideClickDirective);
   Vue.use(PortalVue);
   Vue.use(Notifications);
-  Vue.use(VModal, { dynamic: true, injectModalsContainer: true, dynamicDefaults: { clickToClose: false }, dialog: true, clickToClose: false });
+  Vue.use(VModal, {
+    dynamic: true,
+    injectModalsContainer: true,
+    dynamicDefaults: { clickToClose: false },
+    dialog: true,
+    clickToClose: false
+  });
   Vue.mixin({
     computed: {
       frappe() {
