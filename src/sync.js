@@ -96,7 +96,7 @@ async function syncFromFirebase() {
       continue;
     }
 
-    console.log(model, gstin, table);
+    console.log(model, gstin);
 
     let query = firestore
       .collection(model)
