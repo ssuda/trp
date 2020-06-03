@@ -121,20 +121,23 @@ async function syncFromFirebase() {
     } else {
       await processQuery(query, model);
     }
+
+    // //subscribe to new changes
+    // let query = firestore
+    //   .collection(model)
+    //   .orderBy('modified')
+    //   .where('gstin', '==', gstin)
+    //   .on
   }
 
   console.log('All models synced');
-
-  accountingSettings = frappe.AccountingSettings = await frappe.getSingle(
-    'AccountingSettings'
-  );
-  accountingSettings.lastSnapshot = timestamp;
-  await syncDoc({
-    doctype: 'AccountingSettings',
-    ...accountingSettings
+  accountingSettings = frappe.AccountingSettings;
+  await accountingSettings.update({
+    lastSnapshot: timestamp,
+    setupComplete: 1
   });
-
-  setTimeout(syncFromFirebase, 120000);
+  frappe.AccountingSettings = accountingSettings;
+  setTimeout(syncFromFirebase, 600000);
 }
 
 module.exports = syncFromFirebase;

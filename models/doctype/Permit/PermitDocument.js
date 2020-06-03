@@ -4,11 +4,12 @@ const { refreshPermit } = require('@/permit');
 
 module.exports = class Permit extends BaseDocument {
   async afterInsert() {
-    const numTrips = await this.getNumberOfTrips();
-
     if (
       this.type == 'I3MS' &&
-      (!this.quantity || !this.startDate || !this.vehicleDetails || !numTrips)
+      (!this.quantity ||
+        !this.startDate ||
+        !this.vehicleDetails ||
+        this._turnOffSync)
     ) {
       refreshPermit(this);
     }
