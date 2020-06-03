@@ -16,9 +16,12 @@ module.exports = class BaseDocument extends Observable {
     }
     await super.trigger(event, params);
 
-    //return;
+    if (this._turnOffSync) { 
+      console.log('Not syncing to firestore, as it is from firestore');
+      return
+    }
 
-    if (['Tax', 'Currency', 'GetStarted'].includes(this.doctype)) {
+    if (['Tax', 'Currency', 'GetStarted', 'SingleValue'].includes(this.doctype)) {
       return;
     }
 
@@ -67,6 +70,7 @@ module.exports = class BaseDocument extends Observable {
         }
       }
 
+      console.log('Syncing to firestore', this.doctype);
       firestore
         .collection(this.doctype)
         .doc(`${gstin}_${this.name.replace(/[ \/]/g, '_')}`)

@@ -376,15 +376,17 @@ export async function syncDoc(data) {
   const modelDef = frappe.models[data.doctype];
 
   if (modelDef.isSingle) {
-    let finalData = modelDef.fields.reduce((p, field) => {
-      if (data.hasOwnProperty(field.fieldname)) {
-        p[field.fieldname] = data[field.fieldname];
+    const finalData = {};
+    const fields = modelDef.fields.map(f => f.fieldname);
+
+    for(let field in data) {
+      if (fields.includes(field)) {
+        finalData[field] = data[field];
       }
-      return p;
-    }, {});
-    console.log('Updating single', data.doctype, finalData);
-    const doc = await frappe.getSingle(data.doctype);
-    return doc.update(finalData);
+    }
+
+    console.log('Updating single', data.doctype, data, finalData);
+    return frappe.db.updateSingle(data.doctype, finalData);
   }
 
   console.log('Updating', data.doctype);
