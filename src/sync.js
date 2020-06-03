@@ -13,7 +13,10 @@ async function processRecord(docs, model) {
   for (let doc of docs) {
     doc = doc.data();
 
-    if (doc.deviceId == deviceId) continue;
+    const { setupComplete } = frappe.AccountingSettings || {};
+
+    if (setupComplete && doc.deviceId == deviceId) continue;
+
     try {
       for (let field in doc) {
         if (doc[field] && doc[field].toDate) {
@@ -21,10 +24,13 @@ async function processRecord(docs, model) {
         }
       }
 
+      doc._turnOffSync = true;
+
       if (doc._deleted) {
         const frappedoc = await frappe.getDoc(model, doc.name);
         await frappedoc.delete();
       } else {
+        console.log('Syncing from firestore', doc);
         await syncDoc({
           doctype: model,
           ...doc
@@ -38,7 +44,7 @@ async function processRecord(docs, model) {
   console.log('Syncing completed', model);
 }
 
-async function processQuery(query) {
+async function processQuery(query, model) {
   let startAfter;
   let offset = 0;
 
@@ -52,6 +58,8 @@ async function processQuery(query) {
     }
 
     const snapshot = await query.get();
+
+    console.log('No of docs', query, model, snapshot.size);
 
     if (snapshot.size == 0) {
       console.log('No documents ending');
@@ -72,15 +80,16 @@ async function processQuery(query) {
 
 async function syncFromFirebase() {
   // check with firestore about updates and subscribe to the changes
-  const accountingSettings = frappe.AccountingSettings;
+  let accountingSettings = frappe.AccountingSettings;
   if (!accountingSettings) {
     return;
   }
 
   const gstin = accountingSettings.gstin || frappe.currentUser.local.gstin;
   const lastSnapshot = accountingSettings.lastSnapshot;
-
   const timestamp = new Date().toISOString();
+
+  console.log(gstin, lastSnapshot, timestamp);
 
   for (let model in frappe.models) {
     if (
@@ -101,24 +110,25 @@ async function syncFromFirebase() {
     let query = firestore
       .collection(model)
       .orderBy('modified')
-      .where('gstin', '==', gstin);
+      .where('gstin', '==', gstin)
+      .where('modified', '<', new Date(timestamp));
 
     if (lastSnapshot) {
       await processQuery(
-        query
-          .where('modified', '>=', lastSnapshot)
-          .where('modified', '<', timestamp)
+        query.where('modified', '>=', new Date(lastSnapshot)), model
       );
     } else {
-      await processQuery(query);
+      await processQuery(query, model);
     }
   }
 
   console.log('All models synced');
 
+  accountingSettings = await frappe.getSingle('AccountingSettings');
+  accountingSettings.lastSnapshot = timestamp
   await syncDoc({
     doctype: 'AccountingSettings',
-    lastSnapshot
+    ...accountingSettings
   });
 
   setTimeout(syncFromFirebase, 120000);
