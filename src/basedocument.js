@@ -40,7 +40,11 @@ module.exports = class BaseDocument extends Observable {
           _deleted: true
         });
     } else if (event === 'afterUpdate' || event === 'afterInsert') {
-      if (event === 'afterInsert' && this.doctype === 'Trip' && !this.endDate) {
+      if (this.doctype === 'Trip' && !this.endDate) {
+        return;
+      }
+
+      if (this.doctype === 'Truck' && !this.supplier) {
         return;
       }
 
