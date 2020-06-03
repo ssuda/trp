@@ -117,7 +117,7 @@ import Document from 'frappejs/model/document';
       frappe.syncDoc({
         doctype: 'Permit',
         name: permit.name,
-        tagged: permit.tagged
+        tagged: JSON.stringify(response)
       });
       frappe.events.trigger('tag-results', response);
     });

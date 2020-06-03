@@ -125,7 +125,7 @@ export async function permitReport(args) {
   return trips;
 }
 
-export async function successDownload(permitNo, credentials) {
+export async function successfullyTagged(permitNo, credentials) {
   if (credentials) {
     console.log(credentials);
     await i3ms.browserInit(credentials);
@@ -137,16 +137,16 @@ export async function successDownload(permitNo, credentials) {
     const t = await i3ms.tagInit(permitNo);
     permitNo = t['Permit No.'];
   }
-  const r = await i3ms.taggedVehicles(
+
+  const v = await i3ms.taggedVehicles(
     'https://i3ms.orissaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
     permitNo
   );
-  return _.map(r, function(doc) {
-    return {
-      permitNo: permitNo,
-      truck_number: doc
-    };
-  });
+
+  return v.reduce((p, t) => {
+    p[t] = '';
+    return p;
+  }, {});
 }
 
 export async function permitDetails(permit) {
@@ -216,11 +216,7 @@ export async function permitDetails(permit) {
     });
   }
 
-  const v = await successDownload(permit_number);
-  permit.tagged = _.map(v, t => t.truck_number).reduce((p, t) => {
-    p[t] = '';
-    return p;
-  }, {});
+  permit.tagged = await successfullyTagged(permit_number);
 
   console.log('tagged length', permit.tagged.length);
   permit.trips = await permitReport(permit);
@@ -237,7 +233,7 @@ export async function permitDetails(permit) {
   return permit;
 }
 
-export async function tag(vehicles, options, sse) {
+export async function tagVehicle(vehicles, options, sse) {
   const { taggingUrl } = options;
   let sno = 1;
   let retries = [];
@@ -284,28 +280,29 @@ export async function tag(vehicles, options, sse) {
 }
 
 export async function tagVehicles(options, sse) {
-  const { taggingUrl, credentials, trucks } = options;
+  const { taggingUrl, credentials, name: permitNumber, trucks } = options;
   try {
     if (trucks.length) {
       await i3ms.browserInit(credentials);
       await i3ms.tagInit(taggingUrl);
 
-      let retries = await tag(trucks, options, sse);
+      let retries = await tagVehicle(trucks, options, sse);
 
       if (retries.length) {
         //try one more time
-        retries = await tag(retries, options, sse);
+        retries = await tagVehicle(retries, options, sse);
 
         if (retries.length) {
           //try one more time
-          retries = await tag(retries, options, sse);
+          retries = await tagVehicle(retries, options, sse);
         }
       }
-      sse.send('tag-result', retries);
     }
   } catch (ex) {
     console.error(ex);
   }
+
+  return successfullyTagged(permitNumber);
 }
 
 export async function releaseVehicles(options, sse) {
@@ -325,8 +322,7 @@ export async function releaseVehicles(options, sse) {
         );
       }
 
-      const v = await successDownload(permit_number);
-      return _.map(v, t => t.truck_number);
+      return successfullyTagged(permit_number);
     }
   } catch (ex) {
     console.error(ex);
