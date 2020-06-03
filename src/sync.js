@@ -115,7 +115,8 @@ async function syncFromFirebase() {
 
     if (lastSnapshot) {
       await processQuery(
-        query.where('modified', '>=', new Date(lastSnapshot)), model
+        query.where('modified', '>=', new Date(lastSnapshot)),
+        model
       );
     } else {
       await processQuery(query, model);
@@ -124,8 +125,10 @@ async function syncFromFirebase() {
 
   console.log('All models synced');
 
-  accountingSettings = await frappe.getSingle('AccountingSettings');
-  accountingSettings.lastSnapshot = timestamp
+  accountingSettings = frappe.AccountingSettings = await frappe.getSingle(
+    'AccountingSettings'
+  );
+  accountingSettings.lastSnapshot = timestamp;
   await syncDoc({
     doctype: 'AccountingSettings',
     ...accountingSettings
