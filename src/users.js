@@ -247,9 +247,10 @@ export default {
     const response = await axios.post(
       `${cloudfunctionsBaseUrl}/createUser`,
       {
-        email: user.email,
+        email: user.name,
         password: user.password,
-        displayName: fbuser.displayName
+        displayName: user.fullName,
+        disabled: false
       },
       {
         headers: {
@@ -267,9 +268,9 @@ export default {
     await axios.post(
       `${cloudfunctionsBaseUrl}/updateUser/${user.userId}`,
       {
-        email: user.email,
+        email: user.name,
         password: user.password,
-        displayName: fbuser.displayName,
+        displayName: user.fullName,
         disabled: user.status !== 'Active'
       },
       {
