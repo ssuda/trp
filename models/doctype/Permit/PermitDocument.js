@@ -6,7 +6,10 @@ module.exports = class Permit extends BaseDocument {
   afterInsert() {
     if (
       this.type == 'I3MS' &&
-      (!this.quantity || !this.startDate || !this.vehicleDetails)
+      (!this.quantity ||
+        !this.startDate ||
+        !this.vehicleDetails ||
+        !this.numTrips)
     ) {
       refreshPermit(this);
     }

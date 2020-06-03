@@ -16,6 +16,8 @@ module.exports = class BaseDocument extends Observable {
     }
     await super.trigger(event, params);
 
+    //return;
+
     if (['Tax', 'Currency', 'GetStarted'].includes(this.doctype)) {
       return;
     }
@@ -34,7 +36,9 @@ module.exports = class BaseDocument extends Observable {
       await firestore
         .collection(this.doctype)
         .doc(`${accountingSettings.gstin}_${this.name.replace(/[ \/]/g, '_')}`)
-        .delete();
+        .update({
+          _deleted: true
+        });
     } else if (event === 'afterUpdate' || event === 'afterInsert') {
       if (event === 'afterInsert' && this.doctype === 'Trip' && !this.endDate) {
         return;
@@ -69,6 +73,8 @@ module.exports = class BaseDocument extends Observable {
   async compareWithCurrentDoc() {
     if (frappe.isServer && !this.isNew()) {
       let currentDoc = await frappe.db.get(this.doctype, this.name);
+
+      console.log(currentDoc.modified, this.modified);
 
       // if (typeof (this.modified) === 'string') {
       //   this.modified = new Date(this.modified);

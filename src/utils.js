@@ -373,21 +373,22 @@ export function openSettings(tab = 'General') {
 }
 
 export async function syncDoc(data) {
-  let doc;
-  if (await frappe.db.exists(data.doctype, data.name)) {
-    doc = await frappe.getDoc(data.doctype, data.name);
-    Object.assign(doc, data);
-    const changed = await doc.applyFormula();
-    console.log('formula applied', changed);
-    await doc.update();
-  } else {
-    doc = frappe.newDoc(data);
-    const changed = await doc.applyFormula();
-    console.log('formula applied', changed);
-    await doc.insert();
+  const modelDef = frappe.models[data.doctype];
+
+  if (modelDef.isSingle) {
+    let finalData = modelDef.fields.reduce((p, field) => {
+      if (data.hasOwnProperty(field.fieldname)) {
+        p[field.fieldname] = data[field.fieldname];
+      }
+      return p;
+    }, {});
+    console.log('Updating single', data.doctype, finalData);
+    const doc = await frappe.getSingle(data.doctype);
+    return doc.update(finalData);
   }
 
-  return doc;
+  console.log('Updating', data.doctype);
+  return frappe.syncDoc(data);
 }
 
 export async function getDoc(data) {
