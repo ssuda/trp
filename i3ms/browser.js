@@ -256,7 +256,7 @@ export async function tagVehicle(href, truckNo) {
   let reason = '';
   try {
     console.log('waiting for vehicle no box', truckNo);
-    await page.waitForSelector('#txtVehicleNo', { timeout: 5000 });
+    await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
     console.log('checking disabled box', truckNo);
     await page.$eval('#txtVehicleNo', el => (el.disabled = false));
     await typeInTextBox('#txtVehicleNo', truckNo);
@@ -269,11 +269,11 @@ export async function tagVehicle(href, truckNo) {
     console.log('waiting for radio or error message', truckNo);
 
     const r = await promiseAny(
-      page.waitForSelector('#rdo_GPS_0', { timeout: 5000 }),
+      page.waitForSelector('#rdo_GPS_0', { timeout: 30000 }),
       page.waitForSelector('#lblMsg')
     );
 
-    console.log('return from selectors', r);
+    console.log('Is Error? ', r == 2);
 
     if (r == 1) {
       await navigationClickHelper('#rdo_GPS_0');
@@ -284,9 +284,9 @@ export async function tagVehicle(href, truckNo) {
       await navigationClickHelper('#btnSubmit'); // Clicking the link will indirectly cause a navigation
     } else {
       reason = page.$eval('#lblMsg', el => el.innerText);
-      console.log('failed vehicle retrying...', truckNo);
 
       if (/something wrong/i.test(reason)) {
+        console.log('failed vehicle retrying...', truckNo);
         return tagVehicle(href, truckNo);
       }
     }
