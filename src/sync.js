@@ -127,7 +127,7 @@ async function syncFromFirebase() {
       await processQuery(query, model);
     }
 
-    if (!alreadySubscribed) {
+    if (!alreadySubscribed && frappe.globalConfig.realtimeSync) {
       alreadySubscribed = true;
       //subscribe to realtime changes
       firestore

@@ -157,49 +157,49 @@ export default {
               if (!doc.enabled) {
                 return showMessageDialog({
                   description:
-                    'Your Account is Disabled, Please contact SpinBi at 8105245255'
+                    `Your Account is Disabled, Please contact SpinBi at ${frappe.globalConfig.customerCare.phoneNumber}`
                 });
               }
 
-              const billingStart = DateTime.fromJSDate(
-                doc.billingPeriodStart.toDate()
-              );
-              const duration = parseInt(-billingStart.diffNow('days').days);
-              console.log('billingEnd', duration);
+              if (!doc.free) {
+                const billingStart = DateTime.fromJSDate(
+                  doc.billingPeriodStart.toDate()
+                );
+                const duration = parseInt(-billingStart.diffNow('days').days);
+                console.log('billingEnd', duration);
 
-              if (duration > frappe.globalConfig.gracePeriodDays) {
-                //make payment
-                await new Promise((resolve, reject) => {
-                  this.$modal.show(
-                    PaymentForm,
-                    {},
-                    {
-                      height: 'auto'
-                    },
-                    {
-                      'before-close': event => {
-                        resolve();
+                if (duration > frappe.globalConfig.gracePeriodDays) {
+                  //make payment
+                  await new Promise((resolve, reject) => {
+                    this.$modal.show(
+                      PaymentForm,
+                      {},
+                      {
+                        height: 'auto'
+                      },
+                      {
+                        'before-close': event => {
+                          resolve();
+                        }
                       }
-                    }
-                  );
-                });
-              } else if (duration >= 0) {
-                //warn users for payment
-                await showMessageDialog({
-                  description: `Your recharge is pending, your service will be disabled in ${frappe
-                    .globalConfig.gracePeriodDays -
-                    duration} days, please pay before to avoid disruption to your service`,
-                  buttons: [{ label: 'Ok' }]
-                });
+                    );
+                  });
+                } else if (duration >= 0) {
+                  //warn users for payment
+                  await showMessageDialog({
+                    description: `Your recharge is pending, your service will be disabled in ${frappe
+                      .globalConfig.gracePeriodDays -
+                      duration} days, please pay before to avoid disruption to your service`,
+                    buttons: [{ label: 'Ok' }]
+                  });
+                }
               }
             }
           } catch (ex) {
             console.error(ex);
           }
 
-          //if (syncEnabled) {
           SetupSync();
-          //}
 
           if (comingFromSetupWizard && !isLogin) {
             showMessageDialog({
