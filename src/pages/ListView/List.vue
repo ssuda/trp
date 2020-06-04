@@ -81,7 +81,7 @@ export default {
     return {
       data: [],
       pagination: {
-        limit: 20,
+        limit: 100,
         page: 0
       }
     };
@@ -127,8 +127,8 @@ export default {
         filters,
         orderBy: this.listConfig.orderBy || 'creation',
         order: this.listConfig.order || 'desc',
-        limit: this.pagination.limit,
-        start: this.pagination.page * this.pagination.limit
+        limit: Object.keys(filters).length ? null : this.pagination.limit
+        //start: this.pagination.page * this.pagination.limit
       });
 
       if (

@@ -61,7 +61,7 @@ export default {
     const user = frappe.currentUser.remote.data();
 
     this.referalBonus = -user.referalBonus || 0;
-    this.actualBillingAmount = user.billingAmount;
+    this.actualBillingAmount = frappe.globalConfig.price;
     const billingAmount = this.actualBillingAmount - this.referalBonus;
     this.gstAmount = billingAmount * 0.18;
     this.billingAmount = billingAmount + this.gstAmount;
