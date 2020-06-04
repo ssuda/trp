@@ -81,6 +81,11 @@ import Document from 'frappejs/model/document';
         startDate: trip.tp_date
       });
     }
+
+    const doc = await frappe.getDoc('Permit', permit.permit_number);
+    //const changed = await doc.applyFormula();
+    //console.log('before permit update', doc, changed);
+    await doc.update();
   }
 
   frappe.events.on('reload-main-window', () => {
