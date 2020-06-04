@@ -41,6 +41,7 @@ export default {
   },
 
   async getCurrentUser(gstin, refresh = false) {
+    console.log('fetching remote config');
     await this.getRemoteConfig();
 
     if (!gstin) {
@@ -50,8 +51,11 @@ export default {
 
     let user = (frappe.currentUser = firebaseAuth.currentUser);
     if (!user) {
+      console.log('Waiting for user');
       user = frappe.currentUser = await waitForUser();
     }
+
+    console.log('User after Waiting', user);
 
     if (user) {
       try {
@@ -61,6 +65,7 @@ export default {
         }
 
         if (frappe.db && !user.local) {
+          console.log('Fetching spinbi user');
           try {
             user.local = await frappe.getDoc('SpinBiUser', user.email);
           } catch (ex) {}
@@ -83,6 +88,8 @@ export default {
         }
 
         if (gstin && !user.remote) {
+          console.log('Fetching company info');
+
           user.remote = await firestore
             .collection('customers')
             .doc(gstin)

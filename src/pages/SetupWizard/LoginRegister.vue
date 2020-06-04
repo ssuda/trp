@@ -34,7 +34,6 @@ import FormControl from '@/components/Controls/FormControl';
 import Button from '@/components/Button';
 import Popover from '@/components/Popover';
 import Users from '@/users';
-import { onlyConnectToRemoteDatabase } from '@/utils';
 
 import {
   getErrorMessage,
