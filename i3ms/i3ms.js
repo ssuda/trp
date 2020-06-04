@@ -279,7 +279,7 @@ export async function tagVehicle(vehicles, options, sse) {
       retries.push(truck);
     }
 
-    return delay(200);
+    //return delay(200);
   }, Promise.resolve());
 
   console.log('Failed Vehicles', failed);

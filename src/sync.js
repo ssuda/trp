@@ -1,5 +1,5 @@
 const frappe = require('frappejs');
-const { firestore } = require('@/firebase');
+const { firestore, FieldValue } = require('@/firebase');
 //const { DateTime } = require('luxon');
 const { machineIdSync } = require('node-machine-id');
 const { syncDoc } = require('@/utils');
@@ -78,6 +78,8 @@ async function processQuery(query, model) {
   }
 }
 
+let alreadySubscribed = false;
+
 async function syncFromFirebase() {
   // check with firestore about updates and subscribe to the changes
   let accountingSettings = frappe.AccountingSettings;
@@ -87,7 +89,10 @@ async function syncFromFirebase() {
 
   const gstin = accountingSettings.gstin || frappe.currentUser.local.gstin;
   const lastSnapshot = accountingSettings.lastSnapshot;
-  const timestamp = new Date().toISOString();
+
+  const timestampRef = firestore.collection('timestamp').doc('timestamp');
+  await timestampRef.set({ timestamp: FieldValue.serverTimestamp() });
+  const timestamp = (await timestampRef.get()).get('timestamp').toDate();
 
   console.log(gstin, lastSnapshot, timestamp);
 
@@ -111,7 +116,7 @@ async function syncFromFirebase() {
       .collection(model)
       .orderBy('modified')
       .where('gstin', '==', gstin)
-      .where('modified', '<', new Date(timestamp));
+      .where('modified', '<', timestamp);
 
     if (lastSnapshot) {
       await processQuery(
@@ -122,18 +127,24 @@ async function syncFromFirebase() {
       await processQuery(query, model);
     }
 
-    // //subscribe to new changes
-    // let query = firestore
-    //   .collection(model)
-    //   .orderBy('modified')
-    //   .where('gstin', '==', gstin)
-    //   .on
+    if (!alreadySubscribed) {
+      alreadySubscribed = true;
+      //subscribe to realtime changes
+      firestore
+        .collection(model)
+        .orderBy('modified')
+        .where('gstin', '==', gstin)
+        .where('modified', '>=', timestamp)
+        .onSnapshot(function(querySnapshot) {
+          processRecord(querySnapshot.docs, model);
+        });
+    }
   }
 
   console.log('All models synced');
   accountingSettings = frappe.AccountingSettings;
   await accountingSettings.update({
-    lastSnapshot: timestamp,
+    lastSnapshot: timestamp.toISOString(),
     setupComplete: 1
   });
   frappe.AccountingSettings = accountingSettings;
