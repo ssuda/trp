@@ -1,38 +1,45 @@
 <template>
-  <div class="m-4">
-    <h1>
-      Please Pay Immediately Via UPI VPA:
-      <span class="font-bold">ssuda777@oksbi</span>
-    </h1>
-    <div class="px-8 my-8 text-sm">
-      <p>
-        Sub Total:
-        <span class="font-bold">{{ formatCurrency(actualBillingAmount) }}</span>
-      </p>
-      <p>
-        Referal Bonus:
-        <span class="font-bold">{{ formatCurrency(referalBonus) }}</span>
-      </p>
-      <p>
-        GST (18%):
-        <span class="font-bold">{{ formatCurrency(gstAmount) }}</span>
-      </p>
+  <div class="flex flex-col flex-1">
+    <PageHeader>
+      <h1 slot="title" class="text-2xl font-bold">{{ _('Billing') }}</h1>
+    </PageHeader>
+    <div class="px-8 my-8">
+      <h1>
+        Pay Via Google Pay, BHIM or PhonePe:
+        <span class="font-bold">{{ frappe.globalConfig.upi }}</span>
+      </h1>
+      <div class="px-8 my-8 text-sm">
+        <p>
+          Sub Total:
+          <span class="font-bold">{{
+            formatCurrency(actualBillingAmount)
+          }}</span>
+        </p>
+        <p>
+          Referal Bonus:
+          <span class="font-bold">{{ formatCurrency(referalBonus) }}</span>
+        </p>
+        <p>
+          GST (18%):
+          <span class="font-bold">{{ formatCurrency(gstAmount) }}</span>
+        </p>
 
-      <p class="my-4 border-t py-2">
-        Grand Total:
-        <span class="font-bold">{{ formatCurrency(billingAmount) }}</span>
-      </p>
+        <p class="my-4 border-t py-2">
+          Grand Total:
+          <span class="font-bold">{{ formatCurrency(billingAmount) }}</span>
+        </p>
+      </div>
+
+      <label>Enter UPI Transaction ID:</label>
+      <input
+        class="ml-2 rounded-4 text-md filled bg-gray-100 p-2 my-4"
+        placeholder="015221250995"
+        v-model="paymentReference"
+      />
+      <Button :disabled="!paymentReference" primary @click="updatePayment"
+        >Save</Button
+      >
     </div>
-
-    <label>Enter UPI Transaction ID:</label>
-    <input
-      class="ml-2 rounded-4 text-md filled bg-gray-100 p-2 my-4"
-      placeholder="015221250995"
-      v-model="paymentReference"
-    />
-    <Button :disabled="!paymentReference" primary @click="updatePayment"
-      >Save</Button
-    >
   </div>
 </template>
 <script>
@@ -40,6 +47,7 @@ import Button from '@/components/Button';
 import Users from '@/users';
 import frappe from 'frappejs';
 import numberFormat from 'frappejs/utils/numberFormat';
+import PageHeader from '@/components/PageHeader';
 
 export default {
   name: 'PaymentForm',
@@ -54,7 +62,8 @@ export default {
   },
 
   components: {
-    Button
+    Button,
+    PageHeader
   },
 
   mounted() {

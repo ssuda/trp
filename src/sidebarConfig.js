@@ -174,6 +174,10 @@ const config = {
           route: '/customer-care'
         },
         {
+          label: _('Billing'),
+          route: '/billing'
+        },
+        {
           label: _('Sign Out'),
           async action() {
             await users.logout();
