@@ -7,6 +7,10 @@ const { machineIdSync } = require('node-machine-id');
 
 let deviceId = machineIdSync({ original: true });
 
+function isNullOrUndefined(val) {
+  return val == null || typeof val == 'undefined';
+}
+
 module.exports = class BaseDocument extends Observable {
   // trigger methods on the class if they match
   // with the trigger name
@@ -16,7 +20,7 @@ module.exports = class BaseDocument extends Observable {
     }
     await super.trigger(event, params);
 
-    if (this._turnOffSync) {
+    if (this._turnOffSync || frappe._turnOffSync) {
       console.log('Not syncing to firestore, as it is from firestore');
       return;
     }
@@ -80,7 +84,7 @@ module.exports = class BaseDocument extends Observable {
       firestore
         .collection(this.doctype)
         .doc(`${gstin}_${this.name.replace(/[ \/]/g, '_')}`)
-        .set(obj);
+        .set(obj, { merge: true });
     }
   }
 
@@ -88,36 +92,25 @@ module.exports = class BaseDocument extends Observable {
     if (frappe.isServer && !this.isNew()) {
       let currentDoc = await frappe.db.get(this.doctype, this.name);
 
-      console.log(currentDoc.modified, this.modified);
+      //delete null or undefined in both the documents
+      for (let field in currentDoc) {
+        if (
+          isNullOrUndefined(this[field]) &&
+          isNullOrUndefined(currentDoc[field])
+        ) {
+          delete this[field];
+        }
+      }
 
-      // if (typeof (this.modified) === 'string') {
-      //   this.modified = new Date(this.modified);
-      // }
-
-      // if (typeof (currentDoc.modified) === 'string') {
-      //   currentDoc.modified = new Date(currentDoc.modified);
-      // }
-
-      // // check for conflict
-      // console.log(
-      //   'modified',
-      //   this.modified,
-      //   currentDoc.modified,
-      //   typeof this.modified,
-      //   new Date(this.modified).getTime() == new Date(currentDoc.modified).getTime()
-      // );
-
-      // if (
-      //   currentDoc &&
-      //   this.modified.getTime() != currentDoc.modified.getTime()
-      // ) {
-      //   throw new frappe.errors.Conflict(
-      //     frappe._('Document {0} {1} has been modified after loading', [
-      //       this.doctype,
-      //       this.name
-      //     ])
-      //   );
-      // }
+      // check for conflict
+      if (currentDoc && this.modified != currentDoc.modified) {
+        throw new frappe.errors.Conflict(
+          frappe._('Document {0} {1} has been modified after loading', [
+            this.doctype,
+            this.name
+          ])
+        );
+      }
 
       if (this.submitted && !this.meta.isSubmittable) {
         throw new frappe.errors.ValidationError(
