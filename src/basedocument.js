@@ -49,6 +49,10 @@ module.exports = class BaseDocument extends Observable {
         return;
       }
 
+      if (this.doctype === 'AccountingSettings' && !this.setupComplete) {
+        return;
+      }
+
       if (this.doctype === 'Truck' && !this.supplier) {
         return;
       }
