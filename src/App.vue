@@ -204,7 +204,7 @@ export default {
 
           if (comingFromSetupWizard && !isLogin) {
             showMessageDialog({
-              description: `Your billing will start in ${frappe.globalConfig.trailPeriodDays}days.`,
+              description: `Your billing will start in ${frappe.globalConfig.trailPeriodDays}days. There will be monthly subcription fee of ${frappe.globalConfig.price}/-.`,
               buttons: [{ label: 'Ok' }]
             });
           }
