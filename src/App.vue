@@ -128,7 +128,6 @@ export default {
       } else if (this.$route.path.startsWith('/settings')) {
         this.activeScreen = 'Settings';
       } else {
-        let syncEnabled = false;
         let user;
         try {
           user = await Users.getCurrentUser(null, true);

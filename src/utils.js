@@ -110,9 +110,11 @@ export async function connectToLocalDatabase(filepath) {
   frappe.db.typeMap.LongText = 'text';
   frappe.db.typeMap.Password = 'text';
 
+  frappe._turnOffSync = true;
   await frappe.db.connect();
   await migrate();
   await postStart();
+  frappe._turnOffSync = false;
 
   // set file info in configp
   let files = config.get('files') || [];
@@ -379,7 +381,7 @@ export async function syncDoc(data) {
     const finalData = {};
     const fields = modelDef.fields.map(f => f.fieldname);
 
-    for(let field in data) {
+    for (let field in data) {
       if (fields.includes(field)) {
         finalData[field] = data[field];
       }
