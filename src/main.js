@@ -83,8 +83,8 @@ import Document from 'frappejs/model/document';
     }
 
     const doc = await frappe.getDoc('Permit', permit.permit_number);
-    //const changed = await doc.applyFormula();
-    //console.log('before permit update', doc, changed);
+    const changed = await doc.applyFormula();
+    console.log('before permit update', doc, changed);
     await doc.update();
   }
 
