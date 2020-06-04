@@ -168,7 +168,7 @@ export default {
               const duration = parseInt(-billingStart.diffNow('days').days);
               console.log('billingEnd', duration);
 
-              if (duration > doc.billingGracePeriod) {
+              if (duration > frappe.globalConfig.gracePeriodDays) {
                 //make payment
                 await new Promise((resolve, reject) => {
                   this.$modal.show(
@@ -187,7 +187,8 @@ export default {
               } else if (duration >= 0) {
                 //warn users for payment
                 await showMessageDialog({
-                  description: `Your recharge is pending, your service will be disabled in ${doc.billingGracePeriod -
+                  description: `Your recharge is pending, your service will be disabled in ${frappe
+                    .globalConfig.gracePeriodDays -
                     duration} days, please pay before to avoid disruption to your service`,
                   buttons: [{ label: 'Ok' }]
                 });
@@ -203,7 +204,7 @@ export default {
 
           if (comingFromSetupWizard && !isLogin) {
             showMessageDialog({
-              description: `Your billing will start in 7days.`,
+              description: `Your billing will start in ${frappe.globalConfig.trailPeriodDays}days.`,
               buttons: [{ label: 'Ok' }]
             });
           }
