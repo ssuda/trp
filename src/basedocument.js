@@ -1,7 +1,7 @@
 const Observable = require('frappejs/utils/observable');
 const frappe = require('frappejs');
 
-const { firestore } = require('@/firebase');
+const { firestore, FieldValue } = require('@/firebase');
 
 const { machineIdSync } = require('node-machine-id');
 
@@ -16,12 +16,14 @@ module.exports = class BaseDocument extends Observable {
     }
     await super.trigger(event, params);
 
-    if (this._turnOffSync) { 
+    if (this._turnOffSync) {
       console.log('Not syncing to firestore, as it is from firestore');
-      return
+      return;
     }
 
-    if (['Tax', 'Currency', 'GetStarted', 'SingleValue'].includes(this.doctype)) {
+    if (
+      ['Tax', 'Currency', 'GetStarted', 'SingleValue'].includes(this.doctype)
+    ) {
       return;
     }
 
@@ -63,7 +65,7 @@ module.exports = class BaseDocument extends Observable {
           !['flags', 'fetchValuesCache'].includes(param)
         ) {
           if (param === 'modified') {
-            obj[param] = new Date(this[param]);
+            obj[param] = FieldValue.serverTimestamp();
           } else {
             obj[param] = this[param];
           }
