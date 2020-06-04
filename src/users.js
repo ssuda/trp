@@ -31,7 +31,18 @@ export default {
     return firebaseAuth.sendPasswordResetEmail(emailAddress);
   },
 
+  async getRemoteConfig() {
+    if (!frappe.globalConfig) {
+      const snapshot = await firestore.collection('config').get();
+      if (snapshot.size) {
+        frappe.globalConfig = snapshot.docs[0].data();
+      }
+    }
+  },
+
   async getCurrentUser(gstin, refresh = false) {
+    await this.getRemoteConfig();
+
     if (!gstin) {
       const accountingSettings = frappe.AccountingSettings || {};
       gstin = accountingSettings.gstin;
@@ -138,16 +149,15 @@ export default {
         email: user.email,
         gstin: user.gstin,
         phoneNumber: user.phoneNumber,
-        billingAmount: 10000,
         referalBonus: 0,
         referalCode,
         billingPeriodStart: DateTime.local()
-          .plus({ days: 7 })
+          .plus({ days: frappe.globalConfig.trialPeriodDays })
           .toJSDate(),
         billingPeriodEnd: DateTime.local()
-          .plus({ days: 7, months: 1 })
+          .plus({ days: frappe.globalConfig.trialPeriodDays, months: 1 })
           .toJSDate(),
-        billingGracePeriod: 7
+        billingGracePeriod: frappe.globalConfig.gracePeriodDays
       });
 
     try {

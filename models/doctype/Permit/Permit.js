@@ -202,7 +202,8 @@ module.exports = {
           exportData(
             `${permit.name} Tag Report`,
             ['Permit', 'Truck No', 'Status', 'Reason'],
-            tagged
+            tagged,
+            true
           );
         } catch (ex) {
           console.error(ex);

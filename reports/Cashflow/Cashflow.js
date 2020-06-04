@@ -1,5 +1,8 @@
 const frappe = require('frappejs');
-const { getPeriodList } = require('../FinancialStatements/FinancialStatements');
+const {
+  getPeriodList,
+  getFiscalYear
+} = require('../FinancialStatements/FinancialStatements');
 const { DateTime } = require('luxon');
 
 class Cashflow {
@@ -23,7 +26,8 @@ class Cashflow {
       .whereBetween('date', [fromDate, toDate])
       .groupBy(dateAsMonthYear);
 
-    let periodList = getPeriodList(fromDate, toDate, periodicity);
+    let fiscalYear = await getFiscalYear();
+    let periodList = getPeriodList(fromDate, toDate, periodicity, fiscalYear);
 
     let data = periodList.map(periodKey => {
       let monthYear = this.getMonthYear(periodKey, 'MMM yyyy');
