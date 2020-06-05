@@ -123,7 +123,7 @@ export default {
 
   async activated() {
     console.log('activated is called', this.doctype);
-    this.setupColumnsAndData();
+    await this.setupColumnsAndData();
     const cb = () => {
       this.updateData();
     };
@@ -165,13 +165,13 @@ export default {
       this.pagination.page = pageNumber;
     },
 
-    setupColumnsAndData() {
+    async setupColumnsAndData() {
       this.doctype = this.listConfig.doctype;
       console.log('setupcolumns is called', this.doctype);
       this.deactivated = false;
 
-      //console.log('calling updatedata', this.doctype);
-      //await this.updateData();
+      console.log('calling updatedata', this.doctype);
+      await this.updateData();
     },
 
     openForm(doc) {
