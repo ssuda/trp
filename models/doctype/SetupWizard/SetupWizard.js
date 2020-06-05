@@ -112,7 +112,18 @@ module.exports = {
       required: 1,
       getList: () => bankNames
     },
-
+    {
+      fieldname: 'i3msUsername',
+      label: 'I3MS UserName',
+      fieldtype: 'Data',
+      placeholder: 'I3MS Username'
+    },
+    {
+      fieldname: 'i3msPassword',
+      label: 'I3MS Password',
+      fieldtype: 'Password',
+      placeholder: 'I3MS Password'
+    },
     {
       fieldname: 'referalCode',
       label: 'Referal Code',
@@ -178,6 +189,8 @@ module.exports = {
     'password',
     'gstin',
     'phoneNumber',
+    'i3msUsername',
+    'i3msPassword',
     'referalCode'
     // 'bankName',
     // 'country',

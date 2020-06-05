@@ -48,12 +48,12 @@ const config = {
           label: _('Truck Lists'),
           route: '/list/TruckList',
           doctype: 'TruckList'
-        },
-        {
-          label: _('I3MS Accounts'),
-          route: '/list/I3MSAccount',
-          doctype: 'I3MSAccount'
         }
+        // {
+        //   label: _('I3MS Accounts'),
+        //   route: '/list/I3MSAccount',
+        //   doctype: 'I3MSAccount'
+        // }
       ],
       icon: getIcon('general', '24', '5')
     },

@@ -1,13 +1,11 @@
 const puppeteer = require('puppeteer');
 const _ = require('lodash');
 const moment = require('moment');
+const findChrome = require('chrome-finder');
 
 const monitorInternet = require('./monitor-internet-connection');
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-const html = async (page, handle) => page.evaluate(el => el.innerHTML, handle);
-const text = async (page, handle) => page.evaluate(el => el.innerText, handle);
 
 async function timeMe(num, txt) {
   let time = moment().format('dddd MM/DD/YYYY HH:mm:ss, ');
@@ -27,6 +25,93 @@ process.on('unhandledRejection', async (reason, p) => {
 let browser;
 let page;
 let previousUrl;
+
+async function createBrowser(headless) {
+  console.log('creating/connecting browser in headless mode', headless);
+  if (!browser) {
+    try {
+      browser = await puppeteer.launch({
+        headless: !!headless,
+        executablePath: findChrome(),
+        defaultViewport: {
+          width: 1200,
+          height: 800
+        },
+        timeout: 0,
+        args: [
+          '--remote-debugging-port=9222',
+          '--kiosk-printing',
+          '--disable-background-timer-throttling',
+          '--enable-print-preview'
+        ]
+      });
+      console.log('browser created');
+      browser.on('error', () => page.reload());
+    } catch (ex) {
+      console.error(ex);
+      browser = await puppeteer.connect({
+        browserURL: 'http://localhost:9222',
+        defaultViewport: {
+          width: 1200,
+          height: 800
+        }
+      });
+    }
+  }
+}
+
+async function createPage() {
+  credentials || (credentials = {});
+
+  const pages = await browser.pages();
+
+  page = pages[0];
+
+  monitorInternet(page);
+
+  page.on('dialog', async dialog => {
+    console.log('the dialog message is', dialog.message());
+    console.log('the dialog type is', dialog.type());
+    try {
+      await dialog.accept();
+    } catch (ex) {
+      // console.error(ex);
+    }
+    timeMe(1, 'Dismiss Dialog...');
+  });
+
+  page.on('response', async response => {
+    const url = response.url();
+    const status = response.status();
+
+    const type = response.request().resourceType();
+    const method = response.request().method();
+
+    if (
+      type == 'document' &&
+      method == 'GET' &&
+      url.includes('/i3msnew1.aspx')
+    ) {
+      console.log('calling i3ms login', url);
+      await i3msLogin();
+    }
+  });
+
+  page.on('windowerror', e => {
+    console.error(e);
+  });
+
+  try {
+    await page.exposeFunction('onPageError', e => page.emit('windowerror', e));
+    await page.evaluateOnNewDocument(() => {
+      addEventListener('error', e => onPageError(e));
+    });
+  } catch (ex) {}
+
+  //page.setDefaultTimeout(300000);
+  page.setDefaultNavigationTimeout(300000);
+}
+
 
 // utility functions
 function typeInTextBox(selector, v) {
@@ -113,106 +198,6 @@ async function login(myAttempt) {
 async function i3msLogin() {
   loginAttempt++;
   return login(loginAttempt);
-}
-
-async function createPage() {
-  credentials || (credentials = {});
-
-  const pages = await browser.pages();
-
-  page = pages[0];
-
-  monitorInternet(page);
-
-  page.on('dialog', async dialog => {
-    console.log('the dialog message is', dialog.message());
-    console.log('the dialog type is', dialog.type());
-    try {
-      await dialog.accept();
-    } catch (ex) {
-      // console.error(ex);
-    }
-    timeMe(1, 'Dismiss Dialog...');
-  });
-
-  page.on('response', async response => {
-    const url = response.url();
-    const status = response.status();
-
-    const type = response.request().resourceType();
-    const method = response.request().method();
-
-    if (
-      type == 'document' &&
-      method == 'GET' &&
-      url.includes('/i3msnew1.aspx')
-    ) {
-      console.log('calling i3ms login', url);
-      await i3msLogin();
-    }
-  });
-
-  page.on('windowerror', e => {
-    console.error(e);
-  });
-
-  try {
-    await page.exposeFunction('onPageError', e => page.emit('windowerror', e));
-    await page.evaluateOnNewDocument(() => {
-      addEventListener('error', e => onPageError(e));
-    });
-  } catch (ex) {}
-
-  //page.setDefaultTimeout(300000);
-  page.setDefaultNavigationTimeout(300000);
-}
-
-function disconnectHandler(e) {
-  console.log('browser disconnected, trying to connect after 1min');
-  browser = null;
-  page = null;
-  setTimeout(async () => {
-    await createBrowser();
-    await createPage();
-  }, 10000);
-}
-
-async function createBrowser(headless) {
-  if (!browser) {
-    try {
-      browser = await puppeteer.launch({
-        headless: true,
-        executablePath:
-          process.platform == 'win32'
-            ? 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
-            : '/usr/bin/google-chrome',
-        defaultViewport: {
-          width: 1200,
-          height: 800
-        },
-        timeout: 0,
-        args: [
-          '--remote-debugging-port=9222',
-          '--kiosk-printing',
-          '--disable-background-timer-throttling',
-          '--enable-print-preview'
-        ]
-      });
-      console.log('browser created');
-      browser.on('disconnected', disconnectHandler);
-      browser.on('error', () => page.reload());
-    } catch (ex) {
-      console.error(ex);
-      browser = await puppeteer.connect({
-        headless: !!headless,
-        browserURL: 'http://localhost:9222',
-        defaultViewport: {
-          width: 1200,
-          height: 800
-        }
-      });
-    }
-  }
 }
 
 async function promiseAny(...promises) {
@@ -736,13 +721,20 @@ export async function disconnect() {
   if (browser) {
     await browser.close();
     browser = null;
+    page = null;
   } else {
     return Promise.resolve();
   }
 }
 
 export async function openBrowser(headless) {
-  console.log('Calling createBrowser');
+
+  if (globalHeadless != headless) {
+    await disconnect();
+    globalHeadless = headless;
+  }
+
+  console.log('Calling createBrowser', headless);
   await createBrowser(headless);
   console.log('Calling createPage');
 
@@ -793,7 +785,7 @@ export async function getDetails() {
   console.log(rows);
 }
 
-let credentials;
+let credentials, globalHeadless;
 
 export async function browserInit(cred, headless) {
   credentials = cred;

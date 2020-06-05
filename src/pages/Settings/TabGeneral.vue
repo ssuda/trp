@@ -26,6 +26,8 @@ export default {
       let meta = frappe.getMeta('AccountingSettings');
       return [
         'companyName',
+        'i3msUsername',
+        'i3msPassword',
         'country',
         'bankName',
         'currency',

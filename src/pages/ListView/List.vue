@@ -23,7 +23,7 @@
         </div>
       </Row>
     </div>
-    <div class="overflow-y-auto">
+    <div class="overflow-y-auto mb-4">
       <div
         class="px-3 flex hover:bg-gray-100 rounded-md"
         v-for="doc in data"
@@ -51,6 +51,22 @@
         </Row>
       </div>
     </div>
+    <Paginate
+      v-if="showPagination"
+      class="justify-end mb-4"
+      :page-count="pagination.pageCount"
+      :prev-text="'Prev'"
+      :next-text="'Next'"
+      :click-handler="handlePageSelected"
+      :container-class="'pagination'"
+      :page-class="'page-item'"
+      :prev-class="'page-item'"
+      :prev-link-class="'page-link'"
+      :next-class="'page-item'"
+      :next-link-class="'page-link'"
+      :page-link-class="'page-link'"
+    >
+    </Paginate>
   </div>
 </template>
 <script>
@@ -70,19 +86,22 @@ export default {
     Avatar,
     Paginate
   },
-  watch: {
-    listConfig(oldValue, newValue) {
-      if (oldValue.doctype !== newValue.doctype) {
-        this.setupColumnsAndData();
-      }
-    }
-  },
+  // watch: {
+  //   listConfig(oldValue, newValue) {
+  //     if (oldValue.doctype !== newValue.doctype) {
+  //       console.log('calling setup from watch');
+  //       this.setupColumnsAndData();
+  //     }
+  //   }
+  // },
   data() {
     return {
       data: [],
+      showPagination: false,
       pagination: {
-        limit: 100,
-        page: 0
+        limit: 50,
+        page: 1,
+        pageCount: 1
       }
     };
   },
@@ -97,16 +116,62 @@ export default {
       return this.meta.hasField('image');
     }
   },
+
   async mounted() {
-    await this.setupColumnsAndData();
-    frappe.db.on(`change:${this.listConfig.doctype}`, () => {
+    console.log('mounted is called', this.doctype);
+  },
+
+  async activated() {
+    console.log('activated is called', this.doctype);
+    this.setupColumnsAndData();
+    const cb = () => {
       this.updateData();
+    };
+
+    frappe.db.on(`change:${this.listConfig.doctype}`, cb);
+    this.$once('hook:beforeDestroy', () => {
+      console.log('before destroy called');
+      frappe.db.off(`change:${this.listConfig.doctype}`, cb);
+    });
+
+    this.$once('hook:deactivated', () => {
+      console.log('before destroy called');
+      frappe.db.off(`change:${this.listConfig.doctype}`, cb);
     });
   },
+
+  deactivated() {
+    console.log('deactivated is called', this.doctype);
+    this.deactivated = true;
+  },
+
   methods: {
-    async setupColumnsAndData() {
+    async getCount(doctype, filters) {
+      const meta = frappe.getMeta(doctype);
+      const baseDoctype = meta.getBaseDocType();
+      if (meta.filters) {
+        filters = Object.assign({}, filters, meta.filters);
+      }
+
+      const builder = frappe.db.knex.count('name as count').from(baseDoctype);
+      frappe.db.applyFiltersToBuilder(builder, filters);
+
+      const res = await builder.first();
+      console.log('res', res);
+      return res.count;
+    },
+
+    handlePageSelected(pageNumber) {
+      this.pagination.page = pageNumber;
+    },
+
+    setupColumnsAndData() {
       this.doctype = this.listConfig.doctype;
-      await this.updateData();
+      console.log('setupcolumns is called', this.doctype);
+      this.deactivated = false;
+
+      //console.log('calling updatedata', this.doctype);
+      //await this.updateData();
     },
 
     openForm(doc) {
@@ -119,15 +184,33 @@ export default {
         name: doc.name
       });
     },
+
     async updateData(filters) {
+      if (this.deactivated) return;
+
       if (!filters) filters = this.getFilters();
 
-      let filterLength =  Object.keys(filters).length;
+      let filterLength = Object.keys(filters).length;
 
       if (filterLength == 1 && filters.hasOwnProperty('keywords')) {
-          filterLength = 0;
+        filterLength = 0;
       }
-      console.log('Filters length', filterLength);
+      console.log(
+        'Filters length',
+        filterLength,
+        this.doctype,
+        this.listConfig.doctype,
+        this
+      );
+
+      if (!filterLength && this.pagination.page == 1) {
+        const totalRows = parseInt(await this.getCount(this.doctype, filters));
+        this.pagination.pageCount = Math.ceil(
+          totalRows / this.pagination.limit
+        );
+        this.showPagination = totalRows > this.pagination.limit;
+        console.log(totalRows, this.showPagination, this.pagination.limit);
+      }
 
       this.data = await frappe.db.getAll({
         doctype: this.doctype,
@@ -135,8 +218,10 @@ export default {
         filters,
         orderBy: this.listConfig.orderBy || 'creation',
         order: this.listConfig.order || 'desc',
-        limit: filterLength ? null : this.pagination.limit
-        //start: this.pagination.page * this.pagination.limit
+        limit: !this.showPagination ? null : this.pagination.limit,
+        start: !this.showPagination
+          ? null
+          : (this.pagination.page - 1) * this.pagination.limit
       });
 
       if (
@@ -164,9 +249,7 @@ export default {
       }
     },
     getFilters() {
-      let filters = {
-        //keywords: ['like', '%L420000908%']
-      };
+      let filters = {};
       Object.assign(filters, this.listConfig.filters || {});
       Object.assign(filters, this.filters);
       return filters;

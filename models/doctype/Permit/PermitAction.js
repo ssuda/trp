@@ -26,13 +26,19 @@ module.exports = {
       target: 'Permit'
     },
     {
-      fieldname: 'account',
-      label: 'I3MS Account',
-      fieldtype: 'Link',
-      target: 'I3MSAccount',
-      formula: doc => doc.permit && doc.permit.account,
-      required: true
+      fieldname: 'showBrowser',
+      label: 'Show I3MS Portal',
+      fieldtype: 'Check',
+      default: 1
     },
+    // {
+    //   fieldname: 'account',
+    //   label: 'I3MS Account',
+    //   fieldtype: 'Link',
+    //   target: 'I3MSAccount',
+    //   formula: doc => doc.permit && doc.permit.account,
+    //   required: true
+    // },
     {
       fieldname: 'truckList',
       label: 'Truck List',

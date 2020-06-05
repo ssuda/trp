@@ -45,7 +45,7 @@ async function processMessage(message, cb) {
     case 'permit-report':
       {
         console.log('permit-report', args.startDate, args.endDate);
-        await browserInit(args.credentials);
+        await browserInit(args.credentials, !args.showBrowser);
         const r = await permitReport(args);
         console.log('sending permit-report results to browser', r);
         event.sender.send('permit-report-results', r);
@@ -55,6 +55,7 @@ async function processMessage(message, cb) {
     case 'tag-vehicles':
       {
         console.log('tag-vehicles', args);
+        await browserInit(args.credentials, !args.showBrowser);
         const r = await tagVehicles(args, event.sender);
         console.log('sending tag-vehicles results to browser', r);
         event.sender.send('tag-results', r);
@@ -64,6 +65,7 @@ async function processMessage(message, cb) {
     case 'release-vehicles':
       {
         console.log('release-vehicles', args);
+        await browserInit(args.credentials, !args.showBrowser);
         const r = await releaseVehicles(args, event.sender);
         console.log('sending release-vehicles results to browser', r);
         event.sender.send('release-vehicles-results', r);
@@ -73,7 +75,7 @@ async function processMessage(message, cb) {
     case 'permit-details':
       {
         console.log('permit-details', args);
-        await browserInit(args.credentials, false);
+        await browserInit(args.credentials, !args.showBrowser);
         const r = await permitDetails(args);
         console.log('sending permit-details results to browser', r);
         event.sender.send('permit-details-results', r);
@@ -86,7 +88,7 @@ async function processMessage(message, cb) {
 
         if (args.refresh) {
           for (let permit of args.permits) {
-            await browserInit(permit.credentials, false);
+            await browserInit(permit.credentials, !args.showBrowser);
             await permitDetails({
               ...permit,
               sender: event.sender
@@ -173,7 +175,7 @@ ipcMain.on('reload-main-window', () => {
   mainWindow.reload();
 });
 
-openBrowser(false);
+//openBrowser(true);
 
 function messageQueueCallback(err, result) {}
 

@@ -69,5 +69,5 @@ module.exports = {
     backgroundColor: ['responsive', 'first', 'hover', 'focus', 'focus-within'],
     display: ['group-hover']
   },
-  plugins: []
+  plugins: [require('tailwindcss-plugins/pagination')]
 };

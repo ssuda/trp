@@ -48,12 +48,6 @@
         class="flex-1"
       />
     </div>
-    <!-- <div class="flex justify-end">
-      <Paginate
-        container-class="flex flex-row"
-        :page-count="10">
-      </Paginate>
-    </div> -->
   </div>
 </template>
 <script>
@@ -67,7 +61,6 @@ import listConfigs from './listConfig';
 //import Icon from '@/components/Icon';
 import FilterDropdown from '@/components/FilterDropdown';
 import { getActionsForList } from '@/utils';
-//import Paginate from 'vuejs-paginate';
 import DropdownWithActions from '@/components/DropdownWithActions';
 
 export default {
@@ -81,7 +74,6 @@ export default {
     //Icon,
     FilterDropdown,
     //FileSelect,
-    //Paginate,
     DropdownWithActions
   },
   data() {

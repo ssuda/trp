@@ -19,6 +19,7 @@
   "dependencies": {
     "@popperjs/core": "^2.0.3",
     "axios": "^0.19.2",
+    "chrome-finder": "^1.0.7",
     "core-js": "^3.4.3",
     "electron-store": "^5.1.0",
     "fastq": "^1.8.0",
@@ -60,6 +61,7 @@
     "lint-staged": "^9.4.3",
     "prettier": "^1.19.1",
     "raw-loader": "^4.0.0",
+    "tailwindcss-plugins": "^0.3.0",
     "vue-cli-plugin-electron-builder": "https://github.com/netchampfaris/vue-cli-plugin-electron-builder",
     "vue-template-compiler": "^2.6.10"
   },

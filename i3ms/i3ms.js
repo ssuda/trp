@@ -288,10 +288,9 @@ export async function tagVehicle(vehicles, options, sse) {
 }
 
 export async function tagVehicles(options, sse) {
-  const { taggingUrl, credentials, name: permitNumber, trucks } = options;
+  const { taggingUrl, name: permitNumber, trucks } = options;
   try {
     if (trucks.length) {
-      await i3ms.browserInit(credentials);
       await i3ms.tagInit(taggingUrl);
 
       let retries = await tagVehicle(trucks, options, sse);
@@ -314,11 +313,10 @@ export async function tagVehicles(options, sse) {
 }
 
 export async function releaseVehicles(options, sse) {
-  const { credentials, trucks, permit_number } = options;
+  const { trucks, permit_number } = options;
   console.log('release was called');
   try {
     if (trucks.length) {
-      await i3ms.browserInit(credentials);
       const chunks = _.chunk(trucks, 20);
 
       for (let chunk of chunks) {
@@ -335,15 +333,4 @@ export async function releaseVehicles(options, sse) {
   } catch (ex) {
     console.error(ex);
   }
-}
-
-if (require.main === module) {
-  (async function() {
-    console.log(process.argv);
-    try {
-      await i3ms.browserInit();
-    } catch (ex) {
-      console.error(ex);
-    }
-  })();
 }
