@@ -39,7 +39,7 @@ import Document from 'frappejs/model/document';
     await frappe.syncDoc({
       doctype: 'Permit',
       name: permit.permit_number,
-      account: args.credentials.name,
+      //account: args.credentials.username,
       taggingUrl: permit.tag_url,
       vehicleDetails: permit.vehicle_details,
       startDate: permit.start_date,

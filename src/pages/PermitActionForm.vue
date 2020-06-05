@@ -27,11 +27,10 @@
                 <FormControl
                   class="mt-2 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
-                  :df="meta.getField('account')"
-                  :value="doc.account"
-                  :placeholder="'Account'"
-                  @change="value => doc.set('account', value)"
-                  :read-only="doc.permit"
+                  :df="meta.getField('showBrowser')"
+                  :value="doc.showBrowser"
+                  :showLabel="true"
+                  @change="value => doc.set('showBrowser', value)"
                 />
                 <FormControl
                   v-if="doc.action == 'tagging'"
@@ -147,25 +146,28 @@ export default {
 
   methods: {
     async onClick() {
-      if (!this.doc.account) {
-        showMessageDialog({ message: this._('Please select account') });
-        return;
-      }
+      // if (!this.doc.account) {
+      //   showMessageDialog({ message: this._('Please select account') });
+      //   return;
+      // }
       this.loading = true;
 
       if (this.doc.action === 'fetchNew') {
         const dt = DateTime.local()
           .minus({ months: 2 })
           .toISO();
-        const credentials = await frappe.getDoc(
-          'I3MSAccount',
-          this.doc.account
-        );
+        // const credentials = await frappe.getDoc(
+        //   'I3MSAccount',
+        //   this.doc.account
+        // );
+        const credentials = {
+          username: frappe.AccountingSettings.i3msUsername,
+          password: frappe.AccountingSettings.i3msPassword
+        };
         let permits = await frappe.db.getAll({
           doctype: 'Permit',
           fields: ['*'],
           filters: {
-            account: this.doc.account,
             startDate: ['>=', dt],
             type: 'I3MS'
           }
@@ -179,7 +181,8 @@ export default {
         }));
         frappe.events.trigger('permits-details', {
           credentials,
-          permits: permits
+          permits: permits,
+          showBrowser: this.doc.showBrowser
         });
         frappe.events.once('permits-details-results', () => {
           this.loading = false;
@@ -187,7 +190,11 @@ export default {
         });
       } else if (this.doc.action === 'tagging') {
         const permit = this.doc.permit;
-        const credentials = await frappe.getDoc('I3MSAccount', permit.account);
+        //const credentials = await frappe.getDoc('I3MSAccount', permit.account);
+        const credentials = {
+          username: frappe.AccountingSettings.i3msUsername,
+          password: frappe.AccountingSettings.i3msPassword
+        };
         const truckList = await frappe.getDoc('TruckList', this.doc.truckList);
         console.log(credentials, truckList);
         let trucks = truckList.trucks.split('\n').filter(Boolean);
@@ -203,7 +210,8 @@ export default {
           frappe.events.trigger('tag-vehicles', {
             credentials,
             ...permit,
-            trucks
+            trucks,
+            showBrowser: this.doc.showBrowser
           });
 
           frappe.events.on('total', total => (this.total = total));
@@ -229,7 +237,7 @@ export default {
         }
       } else if (this.doc.action === 'refresh') {
         //call permit refresh
-        refreshPermit(this.doc.permit, () => {
+        refreshPermit(this.doc.permit, this.doc.showBrowser, () => {
           this.loading = false;
           this.$router.back();
         });

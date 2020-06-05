@@ -118,6 +118,18 @@ module.exports = {
       default: 1
     },
     {
+      fieldname: 'i3msUsername',
+      label: 'I3MS UserName',
+      fieldtype: 'Data',
+      placeholder: 'I3MS Username'
+    },
+    {
+      fieldname: 'i3msPassword',
+      label: 'I3MS Password',
+      fieldtype: 'Password',
+      placeholder: 'I3MS Password'
+    },
+    {
       fieldname: 'lastSnapshot',
       label: 'Snapshot',
       fieldtype: 'Date',
@@ -131,6 +143,8 @@ module.exports = {
     'country',
     'currency',
     'fiscalYearStart',
-    'fiscalYearEnd'
+    'fiscalYearEnd',
+    'i3msUsername',
+    'i3msPassword'
   ]
 };

@@ -1,14 +1,19 @@
 import frappe from 'frappejs';
 
-export async function refreshPermit(permit, cb) {
+export async function refreshPermit(permit, showBrowser, cb) {
   console.log('refresh called');
-  let credentials;
+  //let credentials;
 
-  if (typeof permit.account == 'string') {
-    credentials = await frappe.getDoc('I3MSAccount', permit.account);
-  } else {
-    credentials = permit.account;
-  }
+  // if (typeof permit.account == 'string') {
+  //   credentials = await frappe.getDoc('I3MSAccount', permit.account);
+  // } else {
+  //   credentials = permit.account;
+  // }
+
+  const credentials = {
+    username: frappe.AccountingSettings.i3msUsername,
+    password: frappe.AccountingSettings.i3msPassword
+  };
 
   frappe.events.trigger('permit-details', {
     credentials,
@@ -17,7 +22,8 @@ export async function refreshPermit(permit, cb) {
     permit_number: permit.name,
     start_date: permit.startDate,
     end_date: permit.endDate,
-    quantity: permit.quantity
+    quantity: permit.quantity,
+    showBrowser
   });
 
   cb = cb || (() => {});

@@ -10,9 +10,12 @@ export default async function setupCompany(setupWizardValues) {
     name,
     email,
     gstin,
+    phoneNumber,
     bankName,
     fiscalYearStart,
-    fiscalYearEnd
+    fiscalYearEnd,
+    i3msUsername,
+    i3msPassword
   } = setupWizardValues;
 
   const accountingSettings = frappe.AccountingSettings;
@@ -25,6 +28,8 @@ export default async function setupCompany(setupWizardValues) {
     bankName,
     fiscalYearStart,
     fiscalYearEnd,
+    i3msUsername,
+    i3msPassword,
     currency: countryList[country]['currency']
   });
 
@@ -33,6 +38,8 @@ export default async function setupCompany(setupWizardValues) {
     logo: companyLogo,
     companyName,
     email,
+    gstin,
+    phone: phoneNumber,
     displayLogo: companyLogo ? 1 : 0
   });
 

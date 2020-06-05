@@ -65,7 +65,7 @@ export default {
       let size = {
         Desk: [width, height],
         DatabaseSelector: [600, 600],
-        SetupWizard: [600, 550],
+        SetupWizard: [600, 650],
         Settings: [460, 577],
         LoginRegister: [600, 600]
       }[value];
@@ -151,13 +151,10 @@ export default {
             if (doc && doc.exists) {
               doc = doc.data();
 
-              syncEnabled = !!doc.syncEnabled;
-
               console.log('enabled', doc.enabled);
               if (!doc.enabled) {
                 return showMessageDialog({
-                  description:
-                    `Your Account is Disabled, Please contact SpinBi at ${frappe.globalConfig.customerCare.phoneNumber}`
+                  description: `Your Account is Disabled, Please contact SpinBi at ${frappe.globalConfig.customerCare.phoneNumber}`
                 });
               }
 
