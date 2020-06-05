@@ -147,7 +147,6 @@ export default {
             }
             let doc = user.remote;
 
-            console.log(doc, doc.exists);
             if (doc && doc.exists) {
               doc = doc.data();
 

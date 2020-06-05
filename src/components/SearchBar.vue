@@ -1,5 +1,5 @@
 <template>
-  <div v-on-outside-click="clearInput" class="relative">
+  <div class="relative">
     <Dropdown :items="suggestions" class="text-sm h-full">
       <template
         v-slot="{

@@ -23,7 +23,7 @@
         <Button class="ml-2" :icon="true" type="primary" @click="makeNewDoc">
           <feather-icon name="plus" class="w-4 h-4 text-white" />
         </Button>
-        <SearchBar @input="search" class="ml-2" v-model="searchText" />
+        <SearchBar @input="search" class="ml-2" :value="searchText" />
       </template>
     </PageHeader>
     <!-- <div class="my-2 flex flex-row items-center">
@@ -44,7 +44,7 @@
       <List
         ref="list"
         :listConfig="listConfig"
-        :filters="filters"
+        :filters="currentFilters"
         class="flex-1"
       />
     </div>
@@ -122,7 +122,8 @@ export default {
       this.currentFilters = filters;
       this.$refs.list.updateData(filters);
     },
-    search() {
+    search(text) {
+      this.searchText = text;
       const filters = this.currentFilters || {};
       filters.keywords = ['like', `%${this.searchText}%`];
       this.$refs.list.updateData(filters);
