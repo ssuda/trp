@@ -121,13 +121,21 @@ export default {
     },
     async updateData(filters) {
       if (!filters) filters = this.getFilters();
+
+      let filterLength =  Object.keys(filters).length;
+
+      if (filterLength == 1 && filters.hasOwnProperty('keywords')) {
+          filterLength = 0;
+      }
+      console.log('Filters length', filterLength);
+
       this.data = await frappe.db.getAll({
         doctype: this.doctype,
         fields: ['*'],
         filters,
         orderBy: this.listConfig.orderBy || 'creation',
         order: this.listConfig.order || 'desc',
-        limit: Object.keys(filters).length ? null : this.pagination.limit
+        limit: filterLength ? null : this.pagination.limit
         //start: this.pagination.page * this.pagination.limit
       });
 

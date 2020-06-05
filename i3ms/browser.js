@@ -181,7 +181,7 @@ async function createBrowser(headless) {
   if (!browser) {
     try {
       browser = await puppeteer.launch({
-        headless: !!headless,
+        headless: true,
         executablePath:
           process.platform == 'win32'
             ? 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
@@ -797,9 +797,6 @@ let credentials;
 
 export async function browserInit(cred, headless) {
   credentials = cred;
-  // if (browser) {
-  //   await disconnect();
-  // }
   return openBrowser(headless);
 }
 
