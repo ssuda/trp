@@ -38,8 +38,15 @@
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('truckList')"
                   :value="doc.truckList"
-                  :placeholder="'Truck List'"
                   @change="value => doc.set('truckList', value)"
+                />
+                <FormControl
+                  v-if="doc.action == 'release'"
+                  class="mt-2 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('trucks')"
+                  :value="doc.trucks"
+                  @change="value => doc.set('trucks', value)"
                 />
               </div>
             </div>
@@ -238,6 +245,39 @@ export default {
         } else {
           showMessageDialog({
             description: this._('All Trucks Already Tagged'),
+            buttons: [
+              {
+                label: _('Ok')
+              }
+            ]
+          });
+          this.loading = false;
+          return;
+        }
+      } else if (this.doc.action === 'release') {
+        const permit = this.doc.permit;
+        const credentials = {
+          username: frappe.AccountingSettings.i3msUsername,
+          password: frappe.AccountingSettings.i3msPassword
+        };
+        let trucks = extractTrucks(this.doc.trucks);
+
+        if (trucks.length) {
+          this.loading = true;
+          frappe.events.trigger('release-vehicles', {
+            credentials,
+            ...permit,
+            trucks,
+            showBrowser: this.doc.showBrowser
+          });
+
+          frappe.events.once('release-vehicles-results', () => {
+            this.loading = false;
+            this.message = 'success';
+          });
+        } else {
+          showMessageDialog({
+            description: this._('No Trucks to release'),
             buttons: [
               {
                 label: _('Ok')

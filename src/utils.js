@@ -100,6 +100,14 @@ export async function connectToRemoteDatabase() {
   await postStart();
 }
 
+
+const trucksRegexp = /[A-Z]{2}[0-9]{1,2}(?:[A-Z])?(?:[A-Z]*)?[0-9]{4}/gi;
+
+export function extractTrucks(text) {
+  return Array.from(text.matchAll(trucksRegexp), m => m[0]);
+};
+
+
 export async function connectToLocalDatabase(filepath) {
   console.log('called local db connect');
   frappe.login('Administrator');
