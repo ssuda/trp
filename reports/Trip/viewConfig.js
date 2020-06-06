@@ -8,7 +8,6 @@ const viewConfig = {
     {
       fieldtype: 'Select',
       options: [
-        { label: '', value: '' },
         { label: 'I3MS', value: 'I3MS' },
         { label: 'Non I3MS', value: 'Non I3MS' }
       ],

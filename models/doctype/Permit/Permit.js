@@ -213,7 +213,7 @@ module.exports = {
   ],
   quickEditFields: [
     'type',
-    'account',
+    //'account',
     'name',
     'taggingUrl',
     'startDate',

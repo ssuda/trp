@@ -163,6 +163,7 @@ export default {
 
     handlePageSelected(pageNumber) {
       this.pagination.page = pageNumber;
+      this.updateData();
     },
 
     async setupColumnsAndData() {
