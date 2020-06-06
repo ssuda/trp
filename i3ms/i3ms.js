@@ -164,7 +164,8 @@ export async function permitDetails(permit) {
     permit_number,
     source,
     start_date,
-    end_date
+    end_date,
+    noTrips
   } = permit;
 
   console.log('inside permit details', permit);
@@ -227,7 +228,11 @@ export async function permitDetails(permit) {
   permit.tagged = await successfullyTagged(permit_number);
 
   console.log('tagged length', permit.tagged.length);
-  permit.trips = await permitReport(permit);
+  if (!noTrips) {
+    permit.trips = await permitReport(permit);
+  } else {
+    permit.trips = [];
+  }
 
   if (permit.sender) {
     console.log('sending results to browser', permit.permit_number);

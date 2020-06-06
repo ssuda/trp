@@ -162,8 +162,15 @@ import Document from 'frappejs/model/document';
 
     let batchSize = 0;
 
-    ipcRenderer.on('tag-truck-result', function(e, response) {
-      if (!permit.name) return;
+    ipcRenderer.on('tag-truck-result', async function(e, response) {
+      if (!permit.name) {
+        permit = await frappe.db.knex
+          .select('*')
+          .from('Permit')
+          .where('taggingUrl', permit.taggingUrl)
+          .first();
+      }
+
       console.log('received failed from main process', response);
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
@@ -171,12 +178,13 @@ import Document from 'frappejs/model/document';
       console.log('finally tagged', tagged);
 
       batchSize++;
-      if (batchSize >= 100) {
+      if (batchSize >= 10) {
         batchSize = 0;
         frappe.syncDoc({
           doctype: 'Permit',
           name: permit.name,
-          tagged: permit.tagged
+          tagged: permit.tagged,
+          _turnOffSync: true
         });
       }
     });
