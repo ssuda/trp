@@ -35,6 +35,20 @@ import Document from 'frappejs/model/document';
   async function savePermit(permit, args) {
     console.log('Got result from i3ms', permit);
 
+    let tagged = permit.tagged;
+    let oldTagged = args.tagged ? (typeof(args.tagged) === 'string' ? JSON.parse(args.tagged) : args.tagged) : null;
+
+    if (!oldTagged) {
+      try {
+        const currentDoc = frappe.getDoc('Permit', permit.name);
+        oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
+      } catch(ex) {
+        oldTagged = {};
+      }
+    }
+
+    tagged = Object.assign(oldTagged || {}, tagged);
+
     //save permit
     await frappe.syncDoc({
       doctype: 'Permit',
@@ -47,7 +61,7 @@ import Document from 'frappejs/model/document';
       quantity: permit.quantity,
       delivered: permit.trips.reduce((p, t) => p + +t.load_carrying, 0),
       numTrips: permit.trips.length,
-      tagged: JSON.stringify(permit.tagged)
+      tagged: JSON.stringify(tagged)
     });
 
     // insertOrUpdate Trucks
@@ -119,11 +133,14 @@ import Document from 'frappejs/model/document';
     ipcRenderer.removeAllListeners('tag-results');
 
     ipcRenderer.on('tag-results', function(e, response) {
+      let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
+      permit.tagged = JSON.stringify(Object.assign(tagged, response));
+
       // End of the tagging
       frappe.syncDoc({
         doctype: 'Permit',
         name: permit.name,
-        tagged: JSON.stringify(response)
+        tagged: permit.tagged
       });
       frappe.events.trigger('tag-results', response);
     });

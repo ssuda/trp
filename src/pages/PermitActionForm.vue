@@ -203,6 +203,9 @@ export default {
         tagged = Object.keys(tagged);
         trucks = _.difference(trucks, tagged);
 
+        this.total = tagged.length;
+        this.failed = tagged.map(t => permit.tagged[t]).length;
+
         console.log('Trucks remaining', trucks);
 
         if (trucks.length) {
@@ -214,13 +217,16 @@ export default {
             showBrowser: this.doc.showBrowser
           });
 
-          frappe.events.on('total', total => (this.total = total));
-          frappe.events.on('failed', failed => (this.failed = failed));
+          const totalCb = total => (this.total += parseInt(total));
+          const failedCb = failed => (this.failed += parseInt(failed));
+
+          frappe.events.on('total', totalCb);
+          frappe.events.on('failed', failedCb);
 
           frappe.events.once('tag-results', () => {
             this.loading = false;
-            frappe.events.off('total');
-            frappe.events.off('failed');
+            frappe.events.off('total', totalCb);
+            frappe.events.off('failed', failedCb);
             this.message = 'success';
           });
         } else {
