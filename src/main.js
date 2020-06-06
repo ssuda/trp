@@ -180,6 +180,24 @@ import Document from 'frappejs/model/document';
     });
   });
 
+  frappe.events.on('release-vehicles', permit => {
+    ipcRenderer.send('release-vehicles', permit);
+    ipcRenderer.removeAllListeners('release-vehicles-results');
+
+    ipcRenderer.on('release-vehicles-results', function(e, response) {
+      let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
+      permit.tagged = JSON.stringify(Object.assign(tagged, response));
+
+      // End of the release
+      frappe.syncDoc({
+        doctype: 'Permit',
+        name: permit.name,
+        tagged: permit.tagged
+      });
+      frappe.events.trigger('release-vehicles-results', response);
+    });
+  });
+
   frappe.events.on('check-for-updates', () => {
     let { autoUpdate } = frappe.AccountingSettings;
     if (autoUpdate == null || autoUpdate === 1) {

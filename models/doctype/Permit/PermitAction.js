@@ -43,7 +43,14 @@ module.exports = {
       fieldname: 'truckList',
       label: 'Truck List',
       fieldtype: 'Link',
-      target: 'TruckList'
+      target: 'TruckList',
+      placeholder: 'Truck List'
+    },
+    {
+      fieldname: 'trucks',
+      label: 'Trucks',
+      fieldtype: 'LongText',
+      placeholder: 'Paste Each Truck in New Line'
     },
     {
       fieldname: 'action',

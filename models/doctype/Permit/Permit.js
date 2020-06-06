@@ -168,6 +168,30 @@ module.exports = {
       }
     },
     {
+      label: 'Release',
+      condition: doc => !doc.isNew() && doc.type === 'I3MS',
+      action: async function(permit) {
+        try {
+          const doc = await frappe.getNewDoc('PermitAction');
+          doc.set({
+            label: _('Release'),
+            action: 'release',
+            buttonText: _('Release'),
+            permit
+          });
+
+          router.push({
+            name: 'PermitAction',
+            params: {
+              name: doc.name
+            }
+          });
+        } catch (ex) {
+          console.error(ex);
+        }
+      }
+    },
+    {
       label: 'Trips',
       condition: doc => !doc.isNew(),
       action: async function(permit) {
