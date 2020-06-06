@@ -12,8 +12,19 @@
         >
           <feather-icon name="upload" class="w-4 h-4 text-white" />
         </Button>
-        <DropdownWithActions :actions="actions" v-if="listConfig.actions" />
-
+        <!-- <DropdownWithActions :actions="actions" v-if="listConfig.actions" /> -->
+        <div class="flex" v-if="listConfig.actions">
+          <Button
+            v-for="action in listConfig.actions"
+            :key="action.label"
+            class="mr-2 text-white text-md text-base"
+            :icon="false"
+            type="primary"
+            @click="action.action($router)"
+          >
+            {{ action.label }}
+          </Button>
+        </div>
         <FilterDropdown
           class="ml-2 "
           ref="filterDropdown"

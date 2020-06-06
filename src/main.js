@@ -36,13 +36,17 @@ import Document from 'frappejs/model/document';
     console.log('Got result from i3ms', permit);
 
     let tagged = permit.tagged;
-    let oldTagged = args.tagged ? (typeof(args.tagged) === 'string' ? JSON.parse(args.tagged) : args.tagged) : null;
+    let oldTagged = args.tagged
+      ? typeof args.tagged === 'string'
+        ? JSON.parse(args.tagged)
+        : args.tagged
+      : null;
 
     if (!oldTagged) {
       try {
         const currentDoc = frappe.getDoc('Permit', permit.name);
         oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
-      } catch(ex) {
+      } catch (ex) {
         oldTagged = {};
       }
     }
@@ -107,6 +111,11 @@ import Document from 'frappejs/model/document';
     ipcRenderer.send('reload-main-window');
   });
 
+  frappe.events.on('open-browser', args => {
+    console.log('open browser called');
+    ipcRenderer.send('open-browser', args);
+  });
+
   frappe.events.on('permit-details', args => {
     ipcRenderer.send('permit-details', args);
     ipcRenderer.removeAllListeners();
@@ -133,15 +142,19 @@ import Document from 'frappejs/model/document';
     ipcRenderer.removeAllListeners('tag-results');
 
     ipcRenderer.on('tag-results', function(e, response) {
-      let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
-      permit.tagged = JSON.stringify(Object.assign(tagged, response));
+      if (!permit.name) {
+        savePermit(response, permit);
+      } else {
+        let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
+        permit.tagged = JSON.stringify(Object.assign(tagged, response));
 
-      // End of the tagging
-      frappe.syncDoc({
-        doctype: 'Permit',
-        name: permit.name,
-        tagged: permit.tagged
-      });
+        // End of the tagging
+        frappe.syncDoc({
+          doctype: 'Permit',
+          name: permit.name,
+          tagged: permit.tagged
+        });
+      }
       frappe.events.trigger('tag-results', response);
     });
 
@@ -150,6 +163,7 @@ import Document from 'frappejs/model/document';
     let batchSize = 0;
 
     ipcRenderer.on('tag-truck-result', function(e, response) {
+      if (!permit.name) return;
       console.log('received failed from main process', response);
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};

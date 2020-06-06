@@ -112,7 +112,6 @@ async function createPage() {
   page.setDefaultNavigationTimeout(300000);
 }
 
-
 // utility functions
 function typeInTextBox(selector, v) {
   return page.$eval(selector, (el, v) => (el.value = v), v);
@@ -188,7 +187,10 @@ async function login(myAttempt) {
     if (myAttempt != loginAttempt) {
       return;
     }
-    await page.goto(previousUrl, { waitUntil: 'networkidle2' });
+
+    if (previousUrl) {
+      await page.goto(previousUrl, { waitUntil: 'networkidle2' });
+    }
   } catch (ex) {
     console.error(ex);
     login(myAttempt);
@@ -218,15 +220,26 @@ async function promiseAny(...promises) {
 // api starts from here
 export async function tagInit(href) {
   console.log('href', href);
-  await browsePage(href);
-  console.log('waiting for #grTrAction');
-  const r = await extractRowDetails('#grTrAction');
-  const v = await page.$eval('#lbtn_count', el => el.innerText);
-  console.log('Number of vehicles tagged', v);
-  if (v) {
-    r.tagged = +v;
+  let retries = 0;
+
+  while (retries < 3) {
+    await browsePage(href);
+    console.log('waiting for #grTrAction');
+    try {
+      const r = await extractRowDetails('#grTrAction');
+      const v = await page.$eval('#lbtn_count', el => el.innerText);
+      console.log('Number of vehicles tagged', v);
+      if (v) {
+        r.tagged = +v;
+      }
+      return r;
+    } catch (ex) {
+      if (!/timeout/i.test(ex.message)) {
+        break;
+      }
+      retries++;
+    }
   }
-  return r;
 }
 
 async function navigationClickHelper(selector, timeout = 5000) {
@@ -728,7 +741,6 @@ export async function disconnect() {
 }
 
 export async function openBrowser(headless) {
-
   if (globalHeadless != headless) {
     await disconnect();
     globalHeadless = headless;
@@ -787,9 +799,12 @@ export async function getDetails() {
 
 let credentials, globalHeadless;
 
-export async function browserInit(cred, headless) {
+export async function browserInit(cred, headless, tologin) {
   credentials = cred;
-  return openBrowser(headless);
+  await openBrowser(headless);
+  if (tologin) {
+    await i3msLogin();
+  }
 }
 
 if (require.main == module) {
