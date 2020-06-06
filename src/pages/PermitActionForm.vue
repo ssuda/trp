@@ -199,14 +199,20 @@ export default {
         console.log(credentials, truckList);
         let trucks = truckList.trucks.split('\n').filter(Boolean);
 
-        let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
-        tagged = Object.keys(tagged);
+        let taggedObj = permit.tagged ? JSON.parse(permit.tagged) : {};
+        let tagged = Object.keys(taggedObj);
         trucks = _.difference(trucks, tagged);
 
         this.total = tagged.length;
-        this.failed = tagged.map(t => permit.tagged[t]).length;
+        this.failed = tagged.filter(t => taggedObj[t]).length;
 
-        console.log('Trucks remaining', trucks);
+        console.log(
+          'Trucks remaining',
+          taggedObj,
+          this.total,
+          this.failed,
+          trucks.length
+        );
 
         if (trucks.length) {
           this.loading = true;

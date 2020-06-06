@@ -7,6 +7,7 @@ import ListView from '@/pages/ListView/ListView';
 import PrintView from '@/pages/PrintView/PrintView';
 import QuickEditForm from '@/pages/QuickEditForm';
 import Report from '@/pages/Report';
+import I3msAccount from '@/pages/I3msAccount';
 
 // custom views
 import GetStarted from '@/pages/GetStarted';
@@ -106,6 +107,12 @@ const routes = [
     path: '/print/:doctype/:name',
     name: 'PrintView',
     component: PrintView,
+    props: true
+  },
+  {
+    path: '/i3msAccount',
+    name: 'I3msAccount',
+    component: I3msAccount,
     props: true
   },
   {

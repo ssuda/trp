@@ -162,7 +162,7 @@ export default {
           .plus({ days: frappe.globalConfig.trialPeriodDays })
           .toJSDate(),
         billingPeriodEnd: DateTime.local()
-          .plus({ days: frappe.globalConfig.trialPeriodDays, months: 1 })
+          .plus({ days: frappe.globalConfig.trialPeriodDays - 1, months: 1 })
           .toJSDate(),
         billingGracePeriod: frappe.globalConfig.gracePeriodDays
       });

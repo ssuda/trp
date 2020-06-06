@@ -8,18 +8,27 @@
         Pay Via Google Pay, BHIM or PhonePe:
         <span class="font-bold">{{ frappe.globalConfig.upi }}</span>
       </h1>
-      <div class="px-8 my-8 text-sm">
+      <div class="tracking-wider my-8 text-sm">
         <p>
+          Billing Period:
+          <span class="font-bold"
+            >{{
+              frappe.format(companyInfo.billingPeriodStart.toDate(), 'Date')
+            }}
+            - {{ frappe.format(companyInfo.billingPeriodEnd.toDate(), 'Date') }}
+          </span>
+        </p>
+        <p class="mt-1">
           Sub Total:
           <span class="font-bold">{{
             formatCurrency(actualBillingAmount)
           }}</span>
         </p>
-        <p>
+        <p class="mt-1">
           Referal Bonus:
           <span class="font-bold">{{ formatCurrency(referalBonus) }}</span>
         </p>
-        <p>
+        <p class="mt-1">
           GST (18%):
           <span class="font-bold">{{ formatCurrency(gstAmount) }}</span>
         </p>
@@ -32,7 +41,7 @@
 
       <label>Enter UPI Transaction ID:</label>
       <input
-        class="ml-2 rounded-4 text-md filled bg-gray-100 p-2 my-4"
+        class="ml-2 rounded-8 text-md filled bg-gray-100 p-2 my-4"
         placeholder="015221250995"
         v-model="paymentReference"
       />
@@ -57,7 +66,8 @@ export default {
       billingAmount: '',
       actualBillingAmount: '',
       gstAmount: '',
-      referalBonus: ''
+      referalBonus: '',
+      companyInfo: {}
     };
   },
 
@@ -67,9 +77,10 @@ export default {
   },
 
   mounted() {
-    const user = frappe.currentUser.remote.data();
+    const companyInfo = frappe.currentUser.remote.data();
 
-    this.referalBonus = -user.referalBonus || 0;
+    this.companyInfo = companyInfo;
+    this.referalBonus = -companyInfo.referalBonus || 0;
     this.actualBillingAmount = frappe.globalConfig.price;
     const billingAmount = this.actualBillingAmount - this.referalBonus;
     this.gstAmount = billingAmount * 0.18;
