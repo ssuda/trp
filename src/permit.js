@@ -1,6 +1,6 @@
 import frappe from 'frappejs';
 
-export async function refreshPermit(permit, showBrowser, cb) {
+export async function refreshPermit(permit, cb) {
   console.log('refresh called');
   //let credentials;
 
@@ -23,7 +23,8 @@ export async function refreshPermit(permit, showBrowser, cb) {
     start_date: permit.startDate,
     end_date: permit.endDate,
     quantity: permit.quantity,
-    showBrowser
+    showBrowser: permit.showBrowser,
+    noTrips: permit.noTrips
   });
 
   cb = cb || (() => {});

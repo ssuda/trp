@@ -245,6 +245,10 @@ export default {
           };
         } else {
           obj.taggingUrl = this.doc.taggingUrl;
+          refreshPermit({
+            ...obj,
+            noTrips: true
+          });
         }
 
         if (trucks.length) {
@@ -310,10 +314,16 @@ export default {
         }
       } else if (this.doc.action === 'refresh') {
         //call permit refresh
-        refreshPermit(this.doc.permit, this.doc.showBrowser, () => {
-          this.loading = false;
-          this.$router.back();
-        });
+        refreshPermit(
+          {
+            ...this.doc.permit,
+            ...this.doc.showBrowser
+          },
+          () => {
+            this.loading = false;
+            this.$router.back();
+          }
+        );
       }
     },
 
