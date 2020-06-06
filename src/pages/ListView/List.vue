@@ -225,29 +225,29 @@ export default {
           : (this.pagination.page - 1) * this.pagination.limit
       });
 
-      if (
-        this.doctype == 'Permit' &&
-        Object.keys(filters).length == 0 &&
-        !this.data.length
-      ) {
-        try {
-          const doc = await frappe.getNewDoc('PermitAction');
-          doc.set({
-            label: this._('Fetch Permits From I3MS'),
-            buttonText: this._('Fetching'),
-            action: 'fetchNew'
-          });
+      // if (
+      //   this.doctype == 'Permit' &&
+      //   Object.keys(filters).length == 0 &&
+      //   !this.data.length
+      // ) {
+      //   try {
+      //     const doc = await frappe.getNewDoc('PermitAction');
+      //     doc.set({
+      //       label: this._('Fetch Permits From I3MS'),
+      //       buttonText: this._('Fetching'),
+      //       action: 'fetchNew'
+      //     });
 
-          this.$router.push({
-            name: 'PermitAction',
-            params: {
-              name: doc.name
-            }
-          });
-        } catch (ex) {
-          console.error(ex);
-        }
-      }
+      //     this.$router.push({
+      //       name: 'PermitAction',
+      //       params: {
+      //         name: doc.name
+      //       }
+      //     });
+      //   } catch (ex) {
+      //     console.error(ex);
+      //   }
+      // }
     },
     getFilters() {
       let filters = {};

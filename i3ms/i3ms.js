@@ -309,6 +309,11 @@ export async function tagVehicles(options, sse) {
     console.error(ex);
   }
 
+  if (!permitNumber) {
+    return permitDetails({
+      tag_url: taggingUrl
+    });
+  }
   return successfullyTagged(permitNumber);
 }
 

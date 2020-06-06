@@ -31,14 +31,12 @@ module.exports = {
       fieldtype: 'Check',
       default: 1
     },
-    // {
-    //   fieldname: 'account',
-    //   label: 'I3MS Account',
-    //   fieldtype: 'Link',
-    //   target: 'I3MSAccount',
-    //   formula: doc => doc.permit && doc.permit.account,
-    //   required: true
-    // },
+    {
+      fieldname: 'taggingUrl',
+      label: 'Tagging Link',
+      fieldtype: 'Data',
+      placeholder: 'Tagging Link'
+    },
     {
       fieldname: 'truckList',
       label: 'Truck List',

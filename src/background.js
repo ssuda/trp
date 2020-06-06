@@ -16,7 +16,7 @@ import {
   permitReport,
   releaseVehicles
 } from '../i3ms/i3ms';
-import { browserInit, openBrowser } from '../i3ms/browser';
+import { browserInit, openBrowser, disconnect } from '../i3ms/browser';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isMac = process.platform === 'darwin';
@@ -165,6 +165,16 @@ ipcMain.on('check-for-updates', () => {
     autoUpdater.checkForUpdatesAndNotify();
     checkedForUpdate = true;
   }
+});
+
+ipcMain.on('open-browser', async (event, args) => {
+  console.log('open browser called');
+  await browserInit(args.credentials, !args.showBrowser, true);
+});
+
+ipcMain.on('close-browser', async () => {
+  console.log('close browser called');
+  await disconnect();
 });
 
 ipcMain.on('open-settings-window', (event, tab) => {

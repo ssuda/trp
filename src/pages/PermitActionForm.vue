@@ -25,7 +25,7 @@
             <div class="flex justify-between mt-2">
               <div class="w-1/3">
                 <FormControl
-                  class="mt-2 text-base"
+                  class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('showBrowser')"
                   :value="doc.showBrowser"
@@ -33,8 +33,16 @@
                   @change="value => doc.set('showBrowser', value)"
                 />
                 <FormControl
+                  v-if="doc.action == 'tagging' && !doc.permit"
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('taggingUrl')"
+                  :value="doc.taggingUrl"
+                  @change="value => doc.set('taggingUrl', value)"
+                />
+                <FormControl
                   v-if="doc.action == 'tagging'"
-                  class="mt-2 text-base"
+                  class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('truckList')"
                   :value="doc.truckList"
@@ -42,7 +50,7 @@
                 />
                 <FormControl
                   v-if="doc.action == 'release'"
-                  class="mt-2 text-base"
+                  class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('trucks')"
                   :value="doc.trucks"
@@ -90,7 +98,11 @@ import Button from '@/components/Button';
 import FormControl from '@/components/Controls/FormControl';
 import BackLink from '@/components/BackLink';
 import _ from 'lodash';
-import { handleErrorWithDialog, showMessageDialog } from '@/utils';
+import {
+  handleErrorWithDialog,
+  showMessageDialog,
+  extractTrucks
+} from '@/utils';
 
 import { refreshPermit } from '@/permit';
 
@@ -196,8 +208,7 @@ export default {
           this.$router.back();
         });
       } else if (this.doc.action === 'tagging') {
-        const permit = this.doc.permit;
-        //const credentials = await frappe.getDoc('I3MSAccount', permit.account);
+        const permit = this.doc.permit || {};
         const credentials = {
           username: frappe.AccountingSettings.i3msUsername,
           password: frappe.AccountingSettings.i3msPassword
@@ -221,14 +232,24 @@ export default {
           trucks.length
         );
 
+        let obj = {
+          credentials,
+          trucks,
+          showBrowser: this.doc.showBrowser
+        };
+
+        if (this.doc.permit) {
+          obj = {
+            ...obj,
+            ...permit
+          };
+        } else {
+          obj.taggingUrl = this.doc.taggingUrl;
+        }
+
         if (trucks.length) {
           this.loading = true;
-          frappe.events.trigger('tag-vehicles', {
-            credentials,
-            ...permit,
-            trucks,
-            showBrowser: this.doc.showBrowser
-          });
+          frappe.events.trigger('tag-vehicles', obj);
 
           const totalCb = total => (this.total += parseInt(total));
           const failedCb = failed => (this.failed += parseInt(failed));

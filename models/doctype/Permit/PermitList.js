@@ -17,7 +17,7 @@ export default {
   orderBy: 'startDate',
   actions: [
     {
-      label: 'Fetch from i3ms',
+      label: _('Fetch from i3ms'),
       action: async function(router) {
         try {
           const doc = await frappe.getNewDoc('PermitAction');
@@ -25,6 +25,28 @@ export default {
             label: _('Fetch Permits From I3MS'),
             buttonText: _('Fetching'),
             action: 'fetchNew'
+          });
+
+          router.push({
+            name: 'PermitAction',
+            params: {
+              name: doc.name
+            }
+          });
+        } catch (ex) {
+          console.error(ex);
+        }
+      }
+    },
+    {
+      label: _('Tagging'),
+      action: async function(router) {
+        try {
+          const doc = await frappe.getNewDoc('PermitAction');
+          doc.set({
+            label: _('Tagging'),
+            action: 'tagging',
+            buttonText: _('Tagging')
           });
 
           router.push({

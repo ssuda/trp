@@ -203,10 +203,19 @@ export default {
               buttons: [{ label: 'Ok' }]
             });
           }
+
+          frappe.events.trigger('open-browser', {
+            credentials: {
+              username: frappe.AccountingSettings.i3msUsername,
+              password: frappe.AccountingSettings.i3msPassword
+            },
+            showBrowser: true
+          });
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';
         }
+
         this.checkForUpdates();
       }
       if (resetRoute) {
