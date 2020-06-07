@@ -176,7 +176,7 @@ module.exports = {
           doc.set({
             label: _('Release'),
             action: 'release',
-            buttonText: _('Release'),
+            buttonText: _('Releasing'),
             permit
           });
 

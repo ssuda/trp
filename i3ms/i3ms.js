@@ -323,7 +323,7 @@ export async function tagVehicles(options, sse) {
 }
 
 export async function releaseVehicles(options, sse) {
-  const { trucks, permit_number } = options;
+  const { trucks, name: permit_number } = options;
   console.log('release was called');
   try {
     if (trucks.length) {

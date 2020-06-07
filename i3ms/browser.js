@@ -358,6 +358,7 @@ export async function releaseVehicle(href, trucks, permitNo) {
         break;
       }
     } catch (ex) {
+      console.error(ex);
       await browsePage(href);
     }
   }

@@ -41,7 +41,7 @@ module.exports = class Permit extends BaseDocument {
       return tagged.success.length;
     }
 
-    return Object.keys(tagged).length;
+    return Object.keys(tagged).filter(t => !tagged[t]).length;
   }
 
   async getQuantityDelivered() {
