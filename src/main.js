@@ -145,14 +145,11 @@ import Document from 'frappejs/model/document';
       if (!permit.name) {
         savePermit(response, permit);
       } else {
-        let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
-        permit.tagged = JSON.stringify(Object.assign(tagged, response));
-
         // End of the tagging
         frappe.syncDoc({
           doctype: 'Permit',
           name: permit.name,
-          tagged: permit.tagged
+          tagged: JSON.stringify(response)
         });
       }
       frappe.events.trigger('tag-results', response);
@@ -207,14 +204,11 @@ import Document from 'frappejs/model/document';
     ipcRenderer.removeAllListeners('release-vehicles-results');
 
     ipcRenderer.on('release-vehicles-results', function(e, response) {
-      let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
-      permit.tagged = JSON.stringify(Object.assign(tagged, response));
-
       // End of the release
       frappe.syncDoc({
         doctype: 'Permit',
         name: permit.name,
-        tagged: permit.tagged
+        tagged: JSON.stringify(response)
       });
       frappe.events.trigger('release-vehicles-results', response);
     });

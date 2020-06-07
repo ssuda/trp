@@ -49,11 +49,12 @@
                   @change="value => doc.set('truckList', value)"
                 />
                 <FormControl
-                  v-if="doc.action == 'release'"
+                  v-if="doc.action == 'release' || doc.action == 'tagging'"
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('trucks')"
                   :value="doc.trucks"
+                  placeholder="Paste the trucks, if there is no trucklist"
                   @change="value => doc.set('trucks', value)"
                 />
               </div>
@@ -203,19 +204,37 @@ export default {
           permits: permits,
           showBrowser: this.doc.showBrowser
         });
-        frappe.events.once('permits-details-results', () => {
+        frappe.events.once('permits-details-results', async () => {
           this.loading = false;
+          await showMessageDialog({
+            description: 'Permits fetched successfully',
+            buttons: [{ label: 'Ok' }]
+          });
           this.$router.back();
         });
       } else if (this.doc.action === 'tagging') {
+        if (!this.doc.truckList || !this.doc.trucks) {
+          showMessageDialog({ message: this._('Please provide trucks') });
+          return;
+        }
         const permit = this.doc.permit || {};
         const credentials = {
           username: frappe.AccountingSettings.i3msUsername,
           password: frappe.AccountingSettings.i3msPassword
         };
-        const truckList = await frappe.getDoc('TruckList', this.doc.truckList);
-        console.log(credentials, truckList);
-        let trucks = truckList.trucks.split('\n').filter(Boolean);
+
+        let trucks;
+
+        if (this.doc.truckList) {
+          const truckList = await frappe.getDoc(
+            'TruckList',
+            this.doc.truckList
+          );
+          console.log(credentials, truckList);
+          trucks = truckList.trucks.split('\n').filter(Boolean);
+        } else {
+          trucks = extractTrucks(this.doc.trucks);
+        }
 
         let taggedObj = permit.tagged ? JSON.parse(permit.tagged) : {};
         let tagged = Object.keys(taggedObj);
@@ -261,11 +280,15 @@ export default {
           frappe.events.on('total', totalCb);
           frappe.events.on('failed', failedCb);
 
-          frappe.events.once('tag-results', () => {
+          frappe.events.once('tag-results', async () => {
             this.loading = false;
             frappe.events.off('total', totalCb);
             frappe.events.off('failed', failedCb);
-            this.message = 'success';
+            await showMessageDialog({
+              description: `${this.success} Vehicles Tagged successfully`,
+              buttons: [{ label: 'Ok' }]
+            });
+            this.$router.back();
           });
         } else {
           showMessageDialog({
@@ -296,9 +319,13 @@ export default {
             showBrowser: this.doc.showBrowser
           });
 
-          frappe.events.once('release-vehicles-results', () => {
+          frappe.events.once('release-vehicles-results', async () => {
             this.loading = false;
-            this.message = 'success';
+            await showMessageDialog({
+              description: `${trucks.length} Vehicles Released successfully`,
+              buttons: [{ label: 'Ok' }]
+            });
+            this.$router.back();
           });
         } else {
           showMessageDialog({
@@ -317,10 +344,14 @@ export default {
         refreshPermit(
           {
             ...this.doc.permit,
-            ...this.doc.showBrowser
+            showBrowser: this.doc.showBrowser
           },
-          () => {
+          async () => {
             this.loading = false;
+            await showMessageDialog({
+              description: `Permit ${this.doc.permit.name} Refreshed from i3ms successfully`,
+              buttons: [{ label: 'Ok' }]
+            });
             this.$router.back();
           }
         );
