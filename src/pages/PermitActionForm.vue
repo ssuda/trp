@@ -213,7 +213,7 @@ export default {
           this.$router.back();
         });
       } else if (this.doc.action === 'tagging') {
-        if (!this.doc.truckList || !this.doc.trucks) {
+        if (!this.doc.truckList && !this.doc.trucks) {
           showMessageDialog({ message: this._('Please provide trucks') });
           return;
         }
