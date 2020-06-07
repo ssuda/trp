@@ -1,6 +1,6 @@
 'use strict';
 
-import { app, protocol, BrowserWindow, ipcMain } from 'electron';
+import { app, protocol, BrowserWindow, ipcMain, Menu } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import {
   createProtocol,
@@ -124,6 +124,29 @@ function createWindow() {
     frame: isLinux,
     resizable: true
   });
+
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Exit',
+          click() {
+            app.quit();
+          }
+        },
+        {
+          label: 'Toggle Developer Tools',
+          role: 'toggleDevTools'
+        }
+      ]
+    },
+    {
+      label: 'About',
+      submenu: [{ label: `v${app.getVersion()}` }]
+    }
+  ]);
+  Menu.setApplicationMenu(menu);
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
