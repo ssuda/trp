@@ -10,29 +10,35 @@
       <p>
         Phone: <span class="font-bold">{{ customerCare.phoneNumber }}</span>
       </p>
+
       <div class="mt-4">
-        <div class="mr-2">
+        <div class="mr-2 py-3">
           Please refer and get bonus of
           <span class="font-bold"
             >{{ frappe.globalConfig.referalBonus }}/-</span
           >
         </div>
         <p class="flex my-2">
-          Referal Code: <span class="ml-1 font-bold">{{ referalCode }}</span>
+          <span class="py-1 pr-2">Referal Code:</span>
+          <span
+            class="ml-1 font-bold border-solid border-2 border-gray-400 px-3 py-1 rounded-lg"
+            >{{ referalCode }}</span
+          >
           <a
             @click.prevent="copyToClipboard(referalCode)"
-            class="cursor-pointer text-gray-800 px-2 ml-2"
+            class="cursor-pointer text-gray-800 px-2 ml-2 border-solid border-2 border-gray-400 px-3 py-1 rounded-lg"
             primary
             >Copy</a
           >
         </p>
-        <p class="flex my-2">
-          Link:
-          <span class="ml-1 font-bold">{{
-            frappe.globalConfig.downloadUrl
-          }}</span>
+        <p class="flex my-2 py-2">
+          <span class="py-1 pr-2">Link:</span>
+          <span
+            class="ml-1 font-bold border-solid border-2 border-gray-400 px-3 py-1 rounded-lg"
+            >{{ frappe.globalConfig.downloadUrl }}</span
+          >
           <a
-            class="cursor-pointer text-gray-800 px-2 ml-2"
+            class="cursor-pointer text-gray-800 px-2 ml-2 border-solid border-2 border-gray-400 px-3 py-1 rounded-lg"
             @click.prevent="copyToClipboard(frappe.globalConfig.downloadUrl)"
             primary
             >Copy</a
