@@ -115,8 +115,13 @@ async function syncFromFirebase() {
     let query = firestore
       .collection(model)
       .orderBy('modified')
-      .where('gstin', '==', gstin)
       .where('modified', '<', timestamp);
+
+    if (model === 'SpinBiUser') {
+      query = query.where(`gstins.${gstin}`, '==', true);
+    } else {
+      query = query.where('gstin', '==', gstin);
+    }
 
     if (lastSnapshot) {
       await processQuery(

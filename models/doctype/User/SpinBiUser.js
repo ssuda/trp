@@ -33,7 +33,7 @@ module.exports = {
       fieldname: 'password',
       label: 'Password',
       fieldtype: 'Password',
-      required: 1,
+      required: 1
     },
     {
       fieldname: 'role',
@@ -64,6 +64,13 @@ module.exports = {
       fieldtype: 'Data',
       hidden: 1,
       formula: doc => accountingSettings.gstin
+    },
+    {
+      fieldname: 'companyName',
+      label: 'Company Name',
+      fieldtype: 'Data',
+      hidden: 1,
+      formula: doc => accountingSettings.companyName
     }
   ],
 

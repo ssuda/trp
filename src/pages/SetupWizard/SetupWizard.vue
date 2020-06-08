@@ -91,6 +91,7 @@ import {
   handleErrorWithDialog,
   showMessageDialog
 } from '@/utils';
+import { dbPath } from '../../utils';
 
 export default {
   name: 'SetupWizard',
@@ -100,7 +101,7 @@ export default {
       loading: false,
       valuesFilled: false,
       emailError: null,
-      loginText: 'Already Organization Setup? Login',
+      loginText: 'Already Organization Setup? Login'
     };
   },
   provide() {
@@ -152,6 +153,8 @@ export default {
       }
       try {
         this.loading = true;
+        await frappe.db.knex.destroy();
+        await connectToLocalDatabase(dbPath(this.doc.companyName));
         const fbuser = await Users.signup(this.doc);
         await setupCompany(this.doc);
         this.$emit('setup-complete');

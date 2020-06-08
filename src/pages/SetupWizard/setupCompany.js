@@ -1,10 +1,6 @@
 import frappe from 'frappejs';
 import countryList from '~/fixtures/countryInfo.json';
 import config from '@/config';
-import { connectToLocalDatabase } from '../../utils';
-
-import path from 'path';
-import { remote } from 'electron';
 
 export default async function setupCompany(setupWizardValues) {
   const {
@@ -21,11 +17,6 @@ export default async function setupCompany(setupWizardValues) {
     i3msUsername,
     i3msPassword
   } = setupWizardValues;
-
-  await frappe.db.close();
-  await connectToLocalDatabase(
-    path.join(remote.getGlobal('userData'), `${companyName}.db`)
-  );
 
   const accountingSettings = frappe.AccountingSettings;
   await accountingSettings.update({

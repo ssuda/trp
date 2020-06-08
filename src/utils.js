@@ -179,6 +179,10 @@ export function showMessageDialog({ message, description, buttons = [] }) {
   });
 }
 
+export function dbPath(companyName) {
+  path.join(remote.getGlobal('userData'), `${companyName}.db`);
+}
+
 export async function exportData(title, columns, rows = [], titleOnly = false) {
   let csvDataArray = [columns, ...rows];
   console.log(csvDataArray);
