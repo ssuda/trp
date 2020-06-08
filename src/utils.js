@@ -14,7 +14,6 @@ import Avatar from '@/components/Avatar';
 import config from '@/config';
 import Vue from 'vue';
 import FileSaver from 'file-saver';
-import fs from 'fs';
 import path from 'path';
 
 import { firebaseAuth } from '@/firebase';
