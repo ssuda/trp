@@ -41,10 +41,30 @@ module.exports = class BaseDocument extends Observable {
       return;
     }
 
+    let key = `${gstin}_${this.name.replace(/[ \/]/g, '_')}`;
+
     if (event === 'afterDelete') {
+      if (this.doctype == 'SpinBiUser') {
+        await firestore
+          .collection('SpinBiUser')
+          .doc(this.email)
+          .set(
+            {
+              gstins: {
+                [frappe.AccountingSettings.gstin]: false
+              },
+              companies: {
+                [frappe.AccountingSettings.companyName]: false
+              }
+            },
+            { merge: true }
+          );
+        return;
+      }
+
       await firestore
         .collection(this.doctype)
-        .doc(`${accountingSettings.gstin}_${this.name.replace(/[ \/]/g, '_')}`)
+        .doc(key)
         .update({
           _deleted: true
         });
@@ -80,10 +100,20 @@ module.exports = class BaseDocument extends Observable {
         }
       }
 
+      if (this.doctype == 'SpinBiUser') {
+        key = `${this.name.replace(/[ \/]/g, '_')}`;
+        obj.gstins = {
+          [gstin]: true
+        };
+        obj.companies = {
+          [frappe.AccountingSettings.companyName]: true
+        };
+      }
+
       console.log('Syncing to firestore', this.doctype);
       firestore
         .collection(this.doctype)
-        .doc(`${gstin}_${this.name.replace(/[ \/]/g, '_')}`)
+        .doc(key)
         .set(obj, { merge: true });
     }
   }

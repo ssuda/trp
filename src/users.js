@@ -10,6 +10,9 @@ import frappe from 'frappejs';
 import { DateTime } from 'luxon';
 import voucherCodes from 'voucher-code-generator';
 
+import { dbPath } from '@/utils';
+import config from '@/config';
+
 function waitForUser() {
   return new Promise((resolve, reject) => {
     const unsubscribe = firebaseAuth.onAuthStateChanged(
@@ -75,8 +78,21 @@ export default {
               .collection('SpinBiUser')
               .where('name', '==', user.email)
               .get();
+
             if (snapshot.size) {
               user.local = snapshot.docs[0].data();
+              const companies = user.local.companies;
+              if (companies) {
+                config.set(
+                  'files',
+                  Object.keys(companies)
+                    .filter(c => companies[c])
+                    .map(c => ({
+                      companyName: c,
+                      filePath: dbPath(c)
+                    }))
+                );
+              }
             }
           }
 
