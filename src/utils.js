@@ -153,12 +153,13 @@ export async function connectToLocalDatabase(filepath) {
     ];
     config.set('files', files);
   } else if (!file.companyName) {
-    (file.companyName = frappe.AccountingSettings.companyName),
-      config.set('files', files);
+    file.companyName = frappe.AccountingSettings.companyName;
+    config.set('files', files);
   }
 
   // set last selected file
   config.set('lastSelectedFilePath', filepath);
+  console.log('lastSelectedFilePath', config.get('lastSelectedFilePath', null));
 }
 
 export function showMessageDialog({ message, description, buttons = [] }) {

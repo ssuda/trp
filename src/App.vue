@@ -42,6 +42,7 @@ import Vue from 'vue';
 import { remote } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import glob from 'glob';
 
 import { connectToLocalDatabase, showMessageDialog } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
@@ -93,44 +94,59 @@ export default {
   },
   async mounted() {
     Vue.modal = this.$modal;
-
-    if (
-      process.env.NODE_ENV === 'development' &&
-      toBool(process.env.VUE_APP_DELETE_CONFIG)
-    ) {
-      try {
-        config.set('lastSelectedFilePath', null);
-        config.set('files', null);
-      } catch (ex) {
-        console.error(ex);
-      }
-    }
-
-    let dbpath = config.get('lastSelectedFilePath', null);
-
-    if (!dbpath) {
-      dbpath = ':memory:';
-    } else if (
-      process.env.NODE_ENV === 'development' &&
-      toBool(process.env.VUE_APP_DELETE_DB)
-    ) {
-      try {
-        console.log('deleting db');
-        fs.unlinkSync(dbpath);
-      } catch (ex) {
-        console.error(ex);
-      }
-    }
-
-    try {
-      await connectToLocalDatabase(dbpath);
-    } catch (ex) {
-      console.error(ex);
-    }
-
+    await this.connectToDatabase();
     this.showSetupWizardOrDesk(false);
   },
   methods: {
+    async connectToDatabase() {
+      if (
+        process.env.NODE_ENV === 'development' &&
+        toBool(process.env.VUE_APP_DELETE_CONFIG)
+      ) {
+        try {
+          console.log('setting lastSelectedFilePath to null');
+          config.set('lastSelectedFilePath', null);
+          config.set('files', null);
+        } catch (ex) {
+          console.error(ex);
+        }
+      }
+
+      let dbpath = ':memory:';
+
+      if (config.get('createNewCompany', false)) {
+        config.set('createNewCompany', false);
+      } else {
+        dbpath = config.get('lastSelectedFilePath', null);
+        console.log('lastSelectedFilePath', dbpath);
+
+        if (!dbpath) {
+          const files = glob.sync(`${remote.getGlobal('userData')}/*.db`);
+          if (files.length) {
+            dbpath = files[0];
+          }
+        }
+
+        if (
+          process.env.NODE_ENV === 'development' &&
+          toBool(process.env.VUE_APP_DELETE_DB)
+        ) {
+          try {
+            console.log('deleting db');
+            fs.unlinkSync(dbpath);
+          } catch (ex) {
+            console.error(ex);
+          }
+        }
+      }
+
+      try {
+        await connectToLocalDatabase(dbpath);
+      } catch (ex) {
+        console.error(ex);
+      }
+    },
+
     async showSetupWizardOrDesk(
       resetRoute = false,
       isLogin,
@@ -219,13 +235,15 @@ export default {
             });
           }
 
-          frappe.events.trigger('open-browser', {
-            credentials: {
-              username: frappe.AccountingSettings.i3msUsername,
-              password: frappe.AccountingSettings.i3msPassword
-            },
-            showBrowser: true
-          });
+          if (process.env.NODE_ENV !== 'development') {
+            frappe.events.trigger('open-browser', {
+              credentials: {
+                username: frappe.AccountingSettings.i3msUsername,
+                password: frappe.AccountingSettings.i3msPassword
+              },
+              showBrowser: true
+            });
+          }
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';

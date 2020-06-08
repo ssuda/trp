@@ -6,9 +6,16 @@
     <div class="window-no-drag">
       <WindowControls v-if="platform === 'Mac'" class="px-3 mb-6" />
       <div class="px-3">
-        <h6 class="text-lg font-semibold" @click="$router.push('/')">
+        <!-- <h6 class="text-lg font-semibold" @click="$router.push('/')">
           {{ companyName }}
-        </h6>
+        </h6> -->
+        <FormControl
+          class="text-base"
+          input-class="bg-gray-100 p-2 text-lg font-semibold"
+          :df="companyField"
+          :value="companyName"
+          @change="value => companies[value]()"
+        />
       </div>
       <div class="mt-3">
         <div class="mt-1 first:mt-0" v-for="group in groups" :key="group.title">
@@ -49,17 +56,26 @@
 </template>
 <script>
 import { remote } from 'electron';
+import frappe from 'frappejs';
+import glob from 'glob';
+
 import sidebarConfig from '../sidebarConfig';
 import WindowControls from './WindowControls';
+import FormControl from '@/components/Controls/FormControl';
+import config from '@/config';
+
+const fileNameRegex = /([\w ]+)\.db/i;
 
 export default {
   data() {
     return {
+      companies: {},
       companyName: '',
       groups: [],
       activeGroup: null
     };
   },
+
   computed: {
     sidebarBackground() {
       return this.platform === 'Mac'
@@ -68,14 +84,26 @@ export default {
           }
         : null;
     },
+
     appVersion() {
       return remote.app.getVersion();
+    },
+
+    companyField() {
+      return {
+        fieldtype: 'Select',
+        options: Object.keys(this.companies)
+      };
     }
   },
+
   components: {
-    WindowControls
+    WindowControls,
+    FormControl
   },
+
   async mounted() {
+    this.populateCompanies();
     this.companyName = await sidebarConfig.getTitle();
     this.groups = sidebarConfig.groups;
 
@@ -95,6 +123,7 @@ export default {
       this.activeGroup = this.groups[0];
     }
   },
+
   methods: {
     itemVisible(item) {
       if (item.condition) {
@@ -103,15 +132,18 @@ export default {
 
       return true;
     },
+
     itemActiveClass(item) {
       let { path: currentRoute, params } = this.$route;
       let routeMatch = currentRoute === item.route;
       let doctypeMatch = item.doctype && params.doctype === item.doctype;
       return routeMatch || doctypeMatch ? 'bg-white text-blue-500' : '';
     },
+
     isActiveGroup(group) {
       return this.activeGroup && group.title === this.activeGroup.title;
     },
+
     onGroupClick(group) {
       if (group.action) {
         group.action();
@@ -121,6 +153,7 @@ export default {
       }
       this.activeGroup = group;
     },
+
     onItemClick(item) {
       if (item.action) {
         item.action();
@@ -129,8 +162,31 @@ export default {
         this.routeTo(item.route);
       }
     },
+
     routeTo(route) {
       this.$router.push(route);
+    },
+
+    selectCompany(name) {
+      const filepath = this.companies[name];
+      config.set('lastSelectedFilePath', filepath);
+      frappe.events.trigger('reload-main-window');
+    },
+
+    createNewCompany() {
+      config.set('createNewCompany', true);
+      frappe.events.trigger('reload-main-window');
+    },
+
+    populateCompanies() {
+      glob(`${remote.getGlobal('userData')}/*.db`, (err, files) => {
+        this.companies = files.reduce((p, file) => {
+          p[fileNameRegex.exec(file)[1]] = () => this.selectCompany(file);
+          return p;
+        }, {});
+        this.companies['Create'] = () => this.createNewCompany();
+        console.log('files', files, this.companies, this.companyName);
+      });
     }
   }
 };

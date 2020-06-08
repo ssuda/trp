@@ -4,8 +4,7 @@ import { _ } from 'frappejs/utils';
 import Icon from './components/Icon';
 import router from './router';
 
-import { firebaseAuth } from '@/firebase';
-import users from './users';
+import Users from './users';
 
 const config = {
   getTitle: async () => {
@@ -13,11 +12,6 @@ const config = {
     return companyName;
   },
   groups: [
-    // {
-    //   title: _('Get Started'),
-    //   route: '/get-started',
-    //   icon: getIcon('general', '24', '5')
-    // },
     {
       title: _('Dashboard'),
       route: '/',
@@ -179,7 +173,7 @@ const config = {
         {
           label: _('Sign Out'),
           async action() {
-            await users.logout();
+            await Users.logout();
             frappe.events.trigger('reload-main-window');
           }
         }

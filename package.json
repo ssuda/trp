@@ -28,6 +28,7 @@
     "frappe-charts": "^1.3.0",
     "frappe-datatable": "^1.15.2",
     "frappejs": "https://github.com/frappe/frappejs",
+    "glob": "^7.1.6",
     "knex": "^0.21.1",
     "lodash": "^4.17.15",
     "luxon": "^1.21.3",
