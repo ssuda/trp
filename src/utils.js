@@ -100,17 +100,30 @@ export async function connectToRemoteDatabase() {
   await postStart();
 }
 
-
 const trucksRegexp = /[A-Z]{2}[0-9]{1,2}(?:[A-Z])?(?:[A-Z]*)?[0-9]{4}/gi;
 
 export function extractTrucks(text) {
   return Array.from(text.matchAll(trucksRegexp), m => m[0]);
-};
-
+}
 
 export async function connectToLocalDatabase(filepath) {
-  console.log('called local db connect');
+  console.log('called local db connect', filepath);
   frappe.login('Administrator');
+
+  let files = config.get('files') || [];
+  console.log('files', files);
+  let file = files.find(file => file.filePath === filepath);
+  if (file && file.companyName && !filepath.includes(file.companyName)) {
+    //move file to company name
+    file.filePath = path.resolve(
+      path.dirname(filepath),
+      `${file.companyName}.db`
+    );
+    fs.renameSync(filepath, file.filePath);
+    filepath = file.filePath;
+    config.set('files', files);
+  }
+
   frappe.db = new SQLite({
     dbPath: filepath
   });
@@ -124,9 +137,12 @@ export async function connectToLocalDatabase(filepath) {
   await postStart();
   frappe._turnOffSync = false;
 
-  // set file info in configp
-  let files = config.get('files') || [];
-  if (!files.find(file => file.filePath === filepath)) {
+  if (filepath === ':memory:') {
+    return;
+  }
+
+  // set file info in config
+  if (!file) {
     files = [
       {
         companyName: frappe.AccountingSettings.companyName,
@@ -135,6 +151,9 @@ export async function connectToLocalDatabase(filepath) {
       ...files
     ];
     config.set('files', files);
+  } else if (!file.companyName) {
+    (file.companyName = frappe.AccountingSettings.companyName),
+      config.set('files', files);
   }
 
   // set last selected file

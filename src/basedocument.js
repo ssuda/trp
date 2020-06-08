@@ -103,7 +103,11 @@ module.exports = class BaseDocument extends Observable {
       }
 
       // check for conflict
-      if (currentDoc && this.modified != currentDoc.modified) {
+      if (
+        currentDoc &&
+        currentDoc.modified &&
+        this.modified != currentDoc.modified
+      ) {
         throw new frappe.errors.Conflict(
           frappe._('Document {0} {1} has been modified after loading', [
             this.doctype,

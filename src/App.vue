@@ -45,11 +45,16 @@ import fs from 'fs';
 
 import { connectToLocalDatabase, showMessageDialog } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
-//import config from '@/config';
+import config from '@/config';
 import { DateTime } from 'luxon';
 import SetupSync from '@/sync';
 
 import PaymentForm from './components/Payment.vue';
+
+const toBool = v => {
+  v = v.toLowerCase();
+  return v === 'true' || v === '1' || v === 'on';
+};
 
 export default {
   name: 'App',
@@ -89,13 +94,23 @@ export default {
   async mounted() {
     Vue.modal = this.$modal;
 
-    const dbpath = path.join(remote.getGlobal('userData'), 'spin-trp.db');
-    const toBool = v => {
-      v = v.toLowerCase();
-      return v === 'true' || v === '1' || v === 'on';
-    };
-
     if (
+      process.env.NODE_ENV === 'development' &&
+      toBool(process.env.VUE_APP_DELETE_CONFIG)
+    ) {
+      try {
+        config.set('lastSelectedFilePath', null);
+        config.set('files', null);
+      } catch (ex) {
+        console.error(ex);
+      }
+    }
+
+    let dbpath = config.get('lastSelectedFilePath', null);
+
+    if (!dbpath) {
+      dbpath = ':memory:';
+    } else if (
       process.env.NODE_ENV === 'development' &&
       toBool(process.env.VUE_APP_DELETE_DB)
     ) {
