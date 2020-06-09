@@ -168,6 +168,7 @@ export default {
     },
 
     selectCompany(filepath) {
+      console.log('switching to', filepath);
       config.set('lastSelectedFilePath', filepath);
       frappe.events.trigger('reload-main-window');
     },
