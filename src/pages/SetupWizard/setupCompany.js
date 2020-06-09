@@ -33,6 +33,8 @@ export default async function setupCompany(setupWizardValues) {
     currency: countryList[country]['currency']
   });
 
+  await createSpinBiUser(setupWizardValues, frappe.currentUser.uid)
+
   const printSettings = await frappe.getSingle('PrintSettings');
   printSettings.update({
     logo: companyLogo,
@@ -51,6 +53,24 @@ export default async function setupCompany(setupWizardValues) {
   await frappe.GetStarted.update({ systemSetup: 1, companySetup: 1 });
   await accountingSettings.update({ setupComplete: 1 });
   frappe.AccountingSettings = accountingSettings;
+}
+
+async function createSpinBiUser(user, uid) {
+  try {
+    const doc = frappe.newDoc({
+      doctype: 'SpinBiUser',
+      name: user.email,
+      password: user.password,
+      userId: uid,
+      gstin: user.gstin,
+      fullName: user.fullname,
+      phoneNumber: user.phoneNumber,
+      role: 'Administrator'
+    });
+    await doc.insert();
+  } catch (ex) {
+    console.error(ex);
+  }
 }
 
 async function setupGlobalCurrencies(countries) {
