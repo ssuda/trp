@@ -118,7 +118,7 @@ async function syncFromFirebase() {
       .where('modified', '<', timestamp);
 
     if (model === 'SpinBiUser') {
-      query = query.where(gstins, 'array-contains', gstin);
+      query = query.where('gstins', 'array-contains', gstin);
     } else {
       query = query.where('gstin', '==', gstin);
     }
