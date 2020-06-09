@@ -179,14 +179,13 @@ export default {
     },
 
     populateCompanies() {
-      glob(`${remote.getGlobal('userData')}/*.db`, (err, files) => {
-        this.companies = files.reduce((p, file) => {
-          p[fileNameRegex.exec(file)[1]] = () => this.selectCompany(file);
-          return p;
-        }, {});
-        this.companies['Create'] = () => this.createNewCompany();
-        console.log('files', files, this.companies, this.companyName);
-      });
+      const files = config.get('files', []);
+      this.companies = files.reduce((p, file) => {
+        p[file.companyName] = () => this.selectCompany(file.filePath);
+        return p;
+      }, {});
+      this.companies['Create'] = () => this.createNewCompany();
+      console.log('files', files, this.companies, this.companyName);
     }
   }
 };
