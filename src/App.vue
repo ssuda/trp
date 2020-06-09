@@ -44,7 +44,7 @@ import path from 'path';
 import fs from 'fs';
 import glob from 'glob';
 
-import { connectToLocalDatabase, showMessageDialog } from '@/utils';
+import { connectToLocalDatabase, showMessageDialog, dbPath } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
 import config from '@/config';
 import { DateTime } from 'luxon';
@@ -118,14 +118,14 @@ export default {
         config.set('createNewCompany', false);
       } else {
         const lastSelectedFilePath = config.get('lastSelectedFilePath', null);
-        console.log('lastSelectedFilePath', dbpath);
+        console.log('lastSelectedFilePath', lastSelectedFilePath);
 
-        if (!lastSelectedFilePath) {
-          const files = glob.sync(`${remote.getGlobal('userData')}/*.db`);
-          if (files.length) {
-            dbpath = files[0];
-          }
-        } else {
+        if (lastSelectedFilePath) {
+          //   const files = glob.sync(`${remote.getGlobal('userData')}/*.db`);
+          //   if (files.length) {
+          //     dbpath = files[0];
+          //   }
+          // } else {
           dbpath = lastSelectedFilePath;
         }
 
@@ -172,6 +172,18 @@ export default {
         }
 
         console.log('current user', user);
+
+        if (!config.get('lastSelectedFilePath', null)) {
+          console.log(
+            'company',
+            user.remote.data(),
+            dbPath(user.remote.get('name'))
+          );
+          config.set('lastSelectedFilePath', dbPath(user.remote.get('name')));
+          frappe.events.trigger('reload-main-window');
+          return;
+        }
+
         //check whether he is logged in or not
         if (user) {
           try {

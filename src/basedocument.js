@@ -57,9 +57,7 @@ module.exports = class BaseDocument extends Observable {
           .set(
             {
               gstins: FieldValue.arrayRemove(gstin),
-              companies: FieldValue.arrayRemove(
-                companyName
-              )
+              companies: FieldValue.arrayRemove(companyName)
             },
             { mergeFields: ['gstins', 'companies'] }
           );
@@ -108,16 +106,18 @@ module.exports = class BaseDocument extends Observable {
 
       if (this.doctype == 'SpinBiUser') {
         key = this.name;
-        
+
         obj = Object.assign(obj, {
           gstins: FieldValue.arrayUnion(gstin),
           companies: FieldValue.arrayUnion(companyName)
         });
 
-        setOptions = { mergeFields: ['gstins', 'companies'] };
+        // if (event === 'afterUpdate') {
+        //   setOptions = { mergeFields: ['gstins', 'companies'] };
+        // }
       }
 
-      console.log('Syncing to firestore', this.doctype);
+      console.log('Syncing to firestore', this.doctype, obj);
       firestore
         .collection(this.doctype)
         .doc(key)
