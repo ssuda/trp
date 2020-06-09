@@ -62,7 +62,7 @@
       <div class=""></div>
       <button
         @click="gotoLoginRegister"
-        class="cursor-pointer text-sm text-blue-700"
+        class="cursor-pointer focus:outline-none text-sm text-blue-700"
       >
         {{ loginText }}
       </button>

@@ -83,6 +83,7 @@ export default {
             if (snapshot && snapshot.exists) {
               user.local = snapshot.data();
               const companies = user.local.companies;
+              console.log('companies', companies);
               if (companies) {
                 config.set(
                   'files',
@@ -233,7 +234,7 @@ export default {
     console.log('remoteUser', remoteUser.data());
 
     if (remoteUser && remoteUser.exists && remoteUser.get('gstin')) {
-      let setOptions = { mergeFields: ['gstins', 'companies'] };
+      let setOptions = { merge: true };
       let newDocumentBody = {
         gstins: FieldValue.arrayUnion(frappe.AccountingSettings.gstin),
         companies: FieldValue.arrayUnion(frappe.AccountingSettings.companyName)

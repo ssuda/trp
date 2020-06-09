@@ -21,6 +21,8 @@ async function processRecord(docs, model) {
       for (let field in doc) {
         if (doc[field] && doc[field].toDate) {
           doc[field] = doc[field].toDate().toISOString();
+        } else if (Array.isArray(doc[field])) {
+          delete doc[field];
         }
       }
 
