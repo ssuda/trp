@@ -154,7 +154,7 @@ export default {
       }
       try {
         this.loading = true;
-        await frappe.db.knex.destroy();
+        // frappe.db.knex.destroy();
         await connectToLocalDatabase(dbPath(this.doc.companyName));
         const fbuser = await Users.signup(this.doc);
         await setupCompany(this.doc);
