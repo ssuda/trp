@@ -250,7 +250,9 @@ export default {
       .doc(user.email)
       .get();
 
-    if (remoteUser && remoteUser.exists) {
+    console.log('remoteUser', remoteUser.data());
+
+    if (remoteUser && remoteUser.exists && remoteUser.get('gstin')) {
       let setOptions = { mergeFields: ['gstins', 'companies'] };
       let newDocumentBody = {
         gstins: FieldValue.arrayRemove(frappe.AccountingSettings.gstin),
