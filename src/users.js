@@ -235,8 +235,8 @@ export default {
     if (remoteUser && remoteUser.exists && remoteUser.get('gstin')) {
       let setOptions = { mergeFields: ['gstins', 'companies'] };
       let newDocumentBody = {
-        gstins: FieldValue.arrayRemove(frappe.AccountingSettings.gstin),
-        companies: FieldValue.arrayRemove(frappe.AccountingSettings.companyName)
+        gstins: FieldValue.arrayUnion(frappe.AccountingSettings.gstin),
+        companies: FieldValue.arrayUnion(frappe.AccountingSettings.companyName)
       };
 
       firestore

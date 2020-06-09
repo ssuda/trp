@@ -108,13 +108,13 @@ module.exports = class BaseDocument extends Observable {
 
       if (this.doctype == 'SpinBiUser') {
         key = this.name;
-        (obj = Object.assign(obj, {
+        
+        obj = Object.assign(obj, {
           gstins: FieldValue.arrayUnion(gstin),
-          companies: FieldValue.arrayUnion(
-            companyName
-          )
-        })),
-          (setOptions = { mergeFields: ['gstins', 'companies'] });
+          companies: FieldValue.arrayUnion(companyName)
+        });
+
+        setOptions = { mergeFields: ['gstins', 'companies'] };
       }
 
       console.log('Syncing to firestore', this.doctype);
