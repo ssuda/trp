@@ -167,8 +167,7 @@ export default {
       this.$router.push(route);
     },
 
-    selectCompany(name) {
-      const filepath = this.companies[name];
+    selectCompany(filepath) {
       config.set('lastSelectedFilePath', filepath);
       frappe.events.trigger('reload-main-window');
     },
