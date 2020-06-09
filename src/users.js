@@ -156,6 +156,49 @@ export default {
       }
     }
 
+    await this.createNewCustomer(user);
+
+    await this.createSpinBiUser(user, fbuser);
+
+    //update referal bonus
+    if (user.referalCode) {
+      this.updateReferalBonus(user.referalCode);
+    }
+
+    console.log('Before reauth');
+    const credential = firebase.auth.EmailAuthProvider.credential(
+      email,
+      password
+    );
+
+    await fbuser.reauthenticateWithCredential(credential);
+    frappe.currentUser && (frappe.currentUser.remote = null);
+    fbuser = await this.getCurrentUser(user.gstin);
+
+    await this.updateUsersWithNewCompanyNameAndGstin(user);
+    console.log(frappe.currentUser);
+    return fbuser;
+  },
+
+  async createSpinBiUser(user, fbuser) {
+    try {
+      const doc = frappe.newDoc({
+        doctype: 'SpinBiUser',
+        name: user.email,
+        password: user.password,
+        userId: fbuser.uid,
+        gstin: user.gstin,
+        fullName: user.fullname,
+        phoneNumber: user.phoneNumber,
+        role: 'Administrator'
+      });
+      await doc.insert();
+    } catch (ex) {
+      console.error(ex);
+    }
+  },
+
+  async createNewCustomer(user) {
     console.log('creating company', user);
     let referalCode = voucherCodes.generate({
       length: 8
@@ -181,38 +224,27 @@ export default {
           .toJSDate(),
         billingGracePeriod: frappe.globalConfig.gracePeriodDays
       });
+  },
+
+  async updateReferalBonus(referalCode) {
+    let users = await firestore
+      .collection('customers')
+      .where('referalCode', '==', referalCode)
+      .get();
+
+    let user = users.docs[0];
 
     try {
-      const doc = frappe.newDoc({
-        doctype: 'SpinBiUser',
-        name: user.email,
-        password: user.password,
-        userId: fbuser.uid,
-        gstin: user.gstin,
-        fullName: user.fullname,
-        phoneNumber: user.phoneNumber,
-        role: 'Administrator'
+      //store in firestore
+      await user.ref.update({
+        referalBonus: firebase.firestore.FieldValue.increment(1000)
       });
-      await doc.insert();
     } catch (ex) {
       console.error(ex);
     }
+  },
 
-    //update referal bonus
-    if (user.referalCode) {
-      this.updateReferalBonus(user.referalCode);
-    }
-
-    console.log('Before reauth');
-    const credential = firebase.auth.EmailAuthProvider.credential(
-      email,
-      password
-    );
-
-    await fbuser.reauthenticateWithCredential(credential);
-    frappe.currentUser && (frappe.currentUser.remote = null);
-    fbuser = await this.getCurrentUser(user.gstin);
-
+  async updateUsersWithNewCompanyNameAndGstin(user) {
     const remoteUser = await firestore
       .collection('SpinBiUser')
       .doc(user.email)
@@ -239,27 +271,6 @@ export default {
             console.log(`updated all documents inside SpinBiUser`);
           });
         });
-    }
-
-    console.log(frappe.currentUser);
-    return fbuser;
-  },
-
-  async updateReferalBonus(referalCode) {
-    let users = await firestore
-      .collection('customers')
-      .where('referalCode', '==', referalCode)
-      .get();
-
-    let user = users.docs[0];
-
-    try {
-      //store in firestore
-      await user.ref.update({
-        referalBonus: firebase.firestore.FieldValue.increment(1000)
-      });
-    } catch (ex) {
-      console.error(ex);
     }
   },
 
