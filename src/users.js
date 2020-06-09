@@ -82,7 +82,7 @@ export default {
 
             if (snapshot && snapshot.exists) {
               user.local = snapshot.data();
-              const companies = user.local.companies;
+              const companies = user.local.companies.fiter(Boolean);
               console.log('companies', companies);
               if (companies) {
                 config.set(
