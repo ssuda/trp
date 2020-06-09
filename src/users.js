@@ -85,12 +85,10 @@ export default {
               if (companies) {
                 config.set(
                   'files',
-                  Object.keys(companies)
-                    .filter(c => companies[c])
-                    .map(c => ({
-                      companyName: c,
-                      filePath: dbPath(c)
-                    }))
+                  companies.map(c => ({
+                    companyName: c,
+                    filePath: dbPath(c)
+                  }))
                 );
               }
             }
@@ -214,30 +212,32 @@ export default {
     frappe.currentUser && (frappe.currentUser.remote = null);
     fbuser = await this.getCurrentUser(user.gstin);
 
-    const remoteUser = await firestore.collection('SpinBiUser').doc(user.email).get();
+    const remoteUser = await firestore
+      .collection('SpinBiUser')
+      .doc(user.email)
+      .get();
 
     if (remoteUser && remoteUser.exists) {
-      let setOptions = { mergeFields: ['gstins', 'companies'] }
-
+      let setOptions = { mergeFields: ['gstins', 'companies'] };
       let newDocumentBody = {
-        gstins: {
-          [user.gstin]: true
-        },
-        companies: {
-          [user.companyName]: true
-        }
+        gstins: FieldValue.arrayRemove(frappe.AccountingSettings.gstin),
+        companies: FieldValue.arrayRemove(frappe.AccountingSettings.companyName)
       };
 
-      firestore.collection('SpinBiUser').where(`gstins.${remoteUser.get('gstin')}`, '==', true).get().then(response => {
-        let batch = firestore.batch();
-        response.docs.forEach((doc) => {
+      firestore
+        .collection('SpinBiUser')
+        .where('gstins', 'array-contains', remoteUser.get('gstin'))
+        .get()
+        .then(response => {
+          let batch = firestore.batch();
+          response.docs.forEach(doc => {
             const docRef = firestore.collection('SpinBiUser').doc(doc.id);
             batch.set(docRef, newDocumentBody, setOptions);
-        })
-        batch.commit().then(() => {
-            console.log(`updated all documents inside SpinBiUser`)
-        })
-      })
+          });
+          batch.commit().then(() => {
+            console.log(`updated all documents inside SpinBiUser`);
+          });
+        });
     }
 
     console.log(frappe.currentUser);

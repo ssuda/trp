@@ -45,17 +45,16 @@ module.exports = class BaseDocument extends Observable {
 
     if (event === 'afterDelete') {
       if (this.doctype == 'SpinBiUser') {
+        key = this.name;
         await firestore
           .collection('SpinBiUser')
-          .doc(this.email)
+          .doc(key)
           .set(
             {
-              gstins: {
-                [frappe.AccountingSettings.gstin]: false
-              },
-              companies: {
-                [frappe.AccountingSettings.companyName]: false
-              }
+              gstins: FieldValue.arrayRemove(frappe.AccountingSettings.gstin),
+              companies: FieldValue.arrayRemove(
+                frappe.AccountingSettings.companyName
+              )
             },
             { mergeFields: ['gstins', 'companies'] }
           );
@@ -103,14 +102,14 @@ module.exports = class BaseDocument extends Observable {
       let setOptions = { merge: true };
 
       if (this.doctype == 'SpinBiUser') {
-        key = `${this.name.replace(/[ \/]/g, '_')}`;
-        obj.gstins = {
-          [gstin]: true
-        };
-        obj.companies = {
-          [frappe.AccountingSettings.companyName]: true
-        };
-        setOptions = { mergeFields: ['gstins', 'companies'] }
+        key = this.name;
+        (obj = Object.assign(obj, {
+          gstins: FieldValue.arrayUnion(frappe.AccountingSettings.gstin),
+          companies: FieldValue.arrayUnion(
+            frappe.AccountingSettings.companyName
+          )
+        })),
+          (setOptions = { mergeFields: ['gstins', 'companies'] });
       }
 
       console.log('Syncing to firestore', this.doctype);
