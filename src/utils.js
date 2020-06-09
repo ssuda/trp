@@ -116,14 +116,13 @@ export async function connectToLocalDatabase(filepath) {
   let file = files.find(file => file.filePath === filepath);
   if (file && file.companyName && !filepath.includes(file.companyName)) {
     //move file to company name
-    file.filePath = path.resolve(
-      path.dirname(filepath),
-      `${file.companyName}.db`
-    );
+    file.filePath = dbPath(file.companyName);
     fs.renameSync(filepath, file.filePath);
     filepath = file.filePath;
     config.set('files', files);
   }
+
+  console.log('before local db connect', filepath);
 
   frappe.db = new SQLite({
     dbPath: filepath
@@ -137,6 +136,8 @@ export async function connectToLocalDatabase(filepath) {
   await migrate();
   await postStart();
   frappe._turnOffSync = false;
+
+  console.log('after local db connect', filepath);
 
   if (filepath === ':memory:') {
     return;
@@ -180,7 +181,7 @@ export function showMessageDialog({ message, description, buttons = [] }) {
 }
 
 export function dbPath(companyName) {
-  path.join(remote.getGlobal('userData'), `${companyName}.db`);
+  return path.join(remote.getGlobal('userData'), `${companyName}.db`);
 }
 
 export async function exportData(title, columns, rows = [], titleOnly = false) {
