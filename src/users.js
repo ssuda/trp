@@ -76,7 +76,7 @@ export default {
           if (!user.local) {
             const snapshot = await firestore
               .collection('SpinBiUser')
-              .where(user.email)
+              .doc(user.email)
               .get();
 
             if (snapshot && snapshot.exists) {

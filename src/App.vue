@@ -137,11 +137,11 @@ export default {
             if (dbpath != ':memory:') {
               console.log('deleting db', dbpath);
               fs.unlinkSync(dbpath);
-              dbpath = ':memory:';
             }
           } catch (ex) {
             console.error(ex);
           }
+          dbpath = ':memory:';
         }
       }
 
@@ -256,9 +256,9 @@ export default {
 
         this.checkForUpdates();
       }
-      if (resetRoute) {
-        this.$router.replace('/');
-      }
+      // if (resetRoute) {
+      //   this.$router.replace('/');
+      // }
     },
     reloadMainWindowOnSettingsClose() {
       if (this.activeScreen === 'Settings') {

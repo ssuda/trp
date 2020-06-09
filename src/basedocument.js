@@ -37,7 +37,7 @@ module.exports = class BaseDocument extends Observable {
       this.gstin ||
       (frappe.currentUser && frappe.currentUser.gstin);
 
-    if (!gstin) {
+    if (!gstin || !this.name) {
       return;
     }
 
