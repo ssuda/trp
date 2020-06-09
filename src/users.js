@@ -2,6 +2,7 @@ import {
   firebaseAuth,
   firebase,
   firestore,
+  FieldValue,
   cloudfunctionsBaseUrl
 } from '@/firebase';
 
