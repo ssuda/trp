@@ -37,6 +37,11 @@ module.exports = class BaseDocument extends Observable {
       this.gstin ||
       (frappe.currentUser && frappe.currentUser.gstin);
 
+    let companyName =
+      accountingSettings.companyName ||
+      this.companyName ||
+      (frappe.currentUser && frappe.currentUser.companyName);
+
     if (!gstin || !this.name) {
       return;
     }
@@ -51,9 +56,9 @@ module.exports = class BaseDocument extends Observable {
           .doc(key)
           .set(
             {
-              gstins: FieldValue.arrayRemove(frappe.AccountingSettings.gstin),
+              gstins: FieldValue.arrayRemove(gstin),
               companies: FieldValue.arrayRemove(
-                frappe.AccountingSettings.companyName
+                companyName
               )
             },
             { mergeFields: ['gstins', 'companies'] }
@@ -104,9 +109,9 @@ module.exports = class BaseDocument extends Observable {
       if (this.doctype == 'SpinBiUser') {
         key = this.name;
         (obj = Object.assign(obj, {
-          gstins: FieldValue.arrayUnion(frappe.AccountingSettings.gstin),
+          gstins: FieldValue.arrayUnion(gstin),
           companies: FieldValue.arrayUnion(
-            frappe.AccountingSettings.companyName
+            companyName
           )
         })),
           (setOptions = { mergeFields: ['gstins', 'companies'] });

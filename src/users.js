@@ -158,8 +158,6 @@ export default {
 
     await this.createNewCustomer(user);
 
-    await this.createSpinBiUser(user, fbuser);
-
     //update referal bonus
     if (user.referalCode) {
       this.updateReferalBonus(user.referalCode);
@@ -178,24 +176,6 @@ export default {
     await this.updateUsersWithNewCompanyNameAndGstin(user);
     console.log(frappe.currentUser);
     return fbuser;
-  },
-
-  async createSpinBiUser(user, fbuser) {
-    try {
-      const doc = frappe.newDoc({
-        doctype: 'SpinBiUser',
-        name: user.email,
-        password: user.password,
-        userId: fbuser.uid,
-        gstin: user.gstin,
-        fullName: user.fullname,
-        phoneNumber: user.phoneNumber,
-        role: 'Administrator'
-      });
-      await doc.insert();
-    } catch (ex) {
-      console.error(ex);
-    }
   },
 
   async createNewCustomer(user) {
