@@ -117,14 +117,16 @@ export default {
       if (config.get('createNewCompany', false)) {
         config.set('createNewCompany', false);
       } else {
-        dbpath = config.get('lastSelectedFilePath', null);
+        const lastSelectedFilePath = config.get('lastSelectedFilePath', null);
         console.log('lastSelectedFilePath', dbpath);
 
-        if (!dbpath) {
+        if (!lastSelectedFilePath) {
           const files = glob.sync(`${remote.getGlobal('userData')}/*.db`);
           if (files.length) {
             dbpath = files[0];
           }
+        } else {
+          dbpath = lastSelectedFilePath;
         }
 
         if (
@@ -132,9 +134,11 @@ export default {
           toBool(process.env.VUE_APP_DELETE_DB)
         ) {
           try {
-            console.log('deleting db');
-            fs.unlinkSync(dbpath);
-            dbpath = ':memory:';
+            if (dbpath != ':memory:') {
+              console.log('deleting db', dbpath);
+              fs.unlinkSync(dbpath);
+              dbpath = ':memory:';
+            }
           } catch (ex) {
             console.error(ex);
           }
