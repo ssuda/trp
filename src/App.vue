@@ -134,6 +134,7 @@ export default {
           try {
             console.log('deleting db');
             fs.unlinkSync(dbpath);
+            dbpath = ':memory:';
           } catch (ex) {
             console.error(ex);
           }
