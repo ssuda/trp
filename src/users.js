@@ -76,11 +76,11 @@ export default {
           if (!user.local) {
             const snapshot = await firestore
               .collection('SpinBiUser')
-              .where('name', '==', user.email)
+              .where(user.email)
               .get();
 
-            if (snapshot.size) {
-              user.local = snapshot.docs[0].data();
+            if (snapshot && snapshot.exists) {
+              user.local = snapshot.data();
               const companies = user.local.companies;
               if (companies) {
                 config.set(
@@ -213,6 +213,32 @@ export default {
     await fbuser.reauthenticateWithCredential(credential);
     frappe.currentUser && (frappe.currentUser.remote = null);
     fbuser = await this.getCurrentUser(user.gstin);
+
+    const remoteUser = await firestore.collection('SpinBiUser').doc(user.email).get();
+
+    if (remoteUser && remoteUser.exists) {
+      let setOptions = { mergeFields: ['gstins', 'companies'] }
+
+      let newDocumentBody = {
+        gstins: {
+          [user.gstin]: true
+        },
+        companies: {
+          [user.companyName]: true
+        }
+      };
+
+      firestore.collection('SpinBiUser').where(`gstins.${remoteUser.get('gstin')}`, '==', true).get().then(response => {
+        let batch = firestore.batch();
+        response.docs.forEach((doc) => {
+            const docRef = firestore.collection('SpinBiUser').doc(doc.id);
+            batch.set(docRef, newDocumentBody, setOptions);
+        })
+        batch.commit().then(() => {
+            console.log(`updated all documents inside SpinBiUser`)
+        })
+      })
+    }
 
     console.log(frappe.currentUser);
     return fbuser;

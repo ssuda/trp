@@ -57,7 +57,7 @@ module.exports = class BaseDocument extends Observable {
                 [frappe.AccountingSettings.companyName]: false
               }
             },
-            { merge: true }
+            { mergeFields: ['gstins', 'companies'] }
           );
         return;
       }
@@ -100,6 +100,8 @@ module.exports = class BaseDocument extends Observable {
         }
       }
 
+      let setOptions = { merge: true };
+
       if (this.doctype == 'SpinBiUser') {
         key = `${this.name.replace(/[ \/]/g, '_')}`;
         obj.gstins = {
@@ -108,13 +110,14 @@ module.exports = class BaseDocument extends Observable {
         obj.companies = {
           [frappe.AccountingSettings.companyName]: true
         };
+        setOptions = { mergeFields: ['gstins', 'companies'] }
       }
 
       console.log('Syncing to firestore', this.doctype);
       firestore
         .collection(this.doctype)
         .doc(key)
-        .set(obj, { merge: true });
+        .set(obj, setOptions);
     }
   }
 

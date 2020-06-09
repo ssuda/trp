@@ -89,9 +89,10 @@ import Users from '@/users';
 import {
   getErrorMessage,
   handleErrorWithDialog,
-  showMessageDialog
+  showMessageDialog,
+  dbPath,
+  connectToLocalDatabase
 } from '@/utils';
-import { dbPath } from '../../utils';
 
 export default {
   name: 'SetupWizard',
