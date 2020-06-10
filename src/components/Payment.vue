@@ -10,6 +10,10 @@
       </h1>
       <div class="tracking-wider my-8 text-sm">
         <p>
+          Due Date:
+          <span class="font-bold">{{ frappe.format(dueDate, 'Date') }} </span>
+        </p>
+        <p>
           Billing Period:
           <span class="font-bold"
             >{{
@@ -57,6 +61,7 @@ import Users from '@/users';
 import frappe from 'frappejs';
 import numberFormat from 'frappejs/utils/numberFormat';
 import PageHeader from '@/components/PageHeader';
+import { DateTime } from 'luxon';
 
 export default {
   name: 'PaymentForm',
@@ -68,7 +73,8 @@ export default {
       gstAmount: '',
       referalBonus: '',
       companyInfo: {},
-      taxRate: 0
+      taxRate: 0,
+      dueDate: null
     };
   },
 
@@ -77,9 +83,12 @@ export default {
     PageHeader
   },
 
-  mounted() {
+  created() {
     const companyInfo = frappe.currentUser.remote.data();
-
+    console.log('companyInfo', companyInfo);
+    this.dueDate = DateTime.fromJSDate(companyInfo.billingPeriodEnd.toDate())
+      .plus({ days: 1 })
+      .toJSDate();
     this.companyInfo = companyInfo;
     this.taxRate = frappe.globalConfig.taxRate || 0;
     this.referalBonus = -companyInfo.referalBonus || 0;

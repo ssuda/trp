@@ -275,13 +275,16 @@ export default {
       await firestore
         .collection('customers')
         .doc(user.gstin)
-        .set({
-          referalBonus: 0,
-          paymentReference,
-          enabled: true,
-          billingPeriodStart: billingStart.toJSDate(),
-          billingPeriodEnd: billingEnd.toJSDate()
-        });
+        .set(
+          {
+            referalBonus: 0,
+            paymentReference,
+            enabled: true,
+            billingPeriodStart: billingStart.toJSDate(),
+            billingPeriodEnd: billingEnd.toJSDate()
+          },
+          { merge: true }
+        );
 
       firestore.collection('payments').add({
         paymentReference,
