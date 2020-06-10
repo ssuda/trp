@@ -192,6 +192,7 @@ ipcMain.on('check-for-updates', () => {
 
 ipcMain.on('open-browser', async (event, args) => {
   console.log('open browser called');
+  await disconnect();
   await browserInit(args.credentials, !args.showBrowser, true);
 });
 
