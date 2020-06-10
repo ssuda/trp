@@ -67,7 +67,8 @@ export default {
       actualBillingAmount: '',
       gstAmount: '',
       referalBonus: '',
-      companyInfo: {}
+      companyInfo: {},
+      taxRate: 0
     };
   },
 
@@ -80,10 +81,11 @@ export default {
     const companyInfo = frappe.currentUser.remote.data();
 
     this.companyInfo = companyInfo;
+    this.taxRate = frappe.globalConfig.taxRate || 0;
     this.referalBonus = -companyInfo.referalBonus || 0;
     this.actualBillingAmount = frappe.globalConfig.price;
     const billingAmount = this.actualBillingAmount - this.referalBonus;
-    this.gstAmount = billingAmount * 0.18;
+    this.gstAmount = billingAmount * this.taxRate;
     this.billingAmount = billingAmount + this.gstAmount;
   },
 
