@@ -181,7 +181,9 @@ export default {
     populateCompanies() {
       const files = config.get('files', []);
       this.companies = files.reduce((p, file) => {
-        p[file.companyName] = () => this.selectCompany(file.filePath);
+        if (file.companyName) {
+          p[file.companyName] = () => this.selectCompany(file.filePath);
+        }
         return p;
       }, {});
       this.companies['Create'] = () => this.createNewCompany();
