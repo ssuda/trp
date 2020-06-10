@@ -48,7 +48,7 @@ const config = {
           route: '/I3msAccount'
         }
       ],
-      icon: getIcon('general', '24', '5')
+      icon: getIcon('truck', '24', '5')
     },
     {
       title: _('Sales'),

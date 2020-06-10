@@ -75,6 +75,10 @@ module.exports = class BaseDocument extends Observable {
         return;
       }
 
+      if (this.doctype === 'Account' && event !== 'afterUpdate') {
+        return;
+      }
+
       if (this.doctype === 'AccountingSettings' && !this.setupComplete) {
         return;
       }
