@@ -59,7 +59,7 @@ module.exports = class BaseDocument extends Observable {
               gstins: FieldValue.arrayRemove(gstin),
               companies: FieldValue.arrayRemove(companyName)
             },
-            { mergeFields: ['gstins', 'companies'] }
+            { merge: true }
           );
         return;
       }
@@ -111,10 +111,6 @@ module.exports = class BaseDocument extends Observable {
           gstins: FieldValue.arrayUnion(gstin),
           companies: FieldValue.arrayUnion(companyName)
         });
-
-        // if (event === 'afterUpdate') {
-        //   setOptions = { mergeFields: ['gstins', 'companies'] };
-        // }
       }
 
       console.log('Syncing to firestore', this.doctype, obj);
