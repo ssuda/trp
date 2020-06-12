@@ -100,6 +100,8 @@ module.exports = class BaseDocument extends Observable {
         ) {
           if (param === 'modified') {
             obj[param] = FieldValue.serverTimestamp();
+          } else if (this.doctype === 'Permit' && param === 'tagged') {
+            obj[param] = JSON.parse(this[param]);
           } else {
             obj[param] = this[param];
           }

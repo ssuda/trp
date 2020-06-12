@@ -110,6 +110,21 @@ export default {
             .collection('customers')
             .doc(gstin)
             .get();
+
+          let now = DateTime.now();
+          let end = DateTime.fromJSDate(
+            user.remote.get('billingPeriodEnd').toDate()
+          );
+
+          if (
+            now.startOf('day') > end.startOf('day') &&
+            !user.get('billingTagged')
+          ) {
+            user.remote.ref.update({
+              billingTagged: user.remote.get('tagged'),
+              tagged: 0
+            });
+          }
         }
       } catch (ex) {
         console.error(ex);
@@ -197,6 +212,8 @@ export default {
         phoneNumber: user.phoneNumber,
         referalBonus: 0,
         referalCode,
+        tagged: 0,
+        billingTagged: 0,
         billingPeriodStart: DateTime.local()
           .plus({ days: frappe.globalConfig.trialPeriodDays })
           .toJSDate(),
@@ -275,16 +292,14 @@ export default {
       await firestore
         .collection('customers')
         .doc(user.gstin)
-        .set(
-          {
-            referalBonus: 0,
-            paymentReference,
-            enabled: true,
-            billingPeriodStart: billingStart.toJSDate(),
-            billingPeriodEnd: billingEnd.toJSDate()
-          },
-          { merge: true }
-        );
+        .update({
+          billingTagged: 0,
+          referalBonus: 0,
+          paymentReference,
+          enabled: true,
+          billingPeriodStart: billingStart.toJSDate(),
+          billingPeriodEnd: billingEnd.toJSDate()
+        });
 
       firestore.collection('payments').add({
         paymentReference,

@@ -23,6 +23,10 @@
           </span>
         </p>
         <p class="mt-1">
+          Total Tagged:
+          <span class="font-bold">{{ companyInfo.billingTagged }}</span>
+        </p>
+        <p class="mt-1">
           Sub Total:
           <span class="font-bold">{{
             formatCurrency(actualBillingAmount)
@@ -92,7 +96,9 @@ export default {
     this.companyInfo = companyInfo;
     this.taxRate = frappe.globalConfig.taxRate || 0;
     this.referalBonus = -companyInfo.referalBonus || 0;
-    this.actualBillingAmount = frappe.globalConfig.price;
+    this.actualBillingAmount =
+      companyInfo.billingTagged * frappe.globalConfig.truckWisePayment ||
+      frappe.globalConfig.price;
     const billingAmount = this.actualBillingAmount - this.referalBonus;
     this.gstAmount = billingAmount * this.taxRate;
     this.billingAmount = billingAmount + this.gstAmount;
