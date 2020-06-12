@@ -142,6 +142,11 @@ import Document from 'frappejs/model/document';
     ipcRenderer.removeAllListeners('tag-results');
 
     ipcRenderer.on('tag-results', function(e, response) {
+
+      let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
+      let finallyTagged = Object.assign(tagged, response);
+      permit.tagged = JSON.stringify(finallyTagged);
+
       if (!permit.name) {
         savePermit(response, permit);
       } else {
@@ -149,7 +154,7 @@ import Document from 'frappejs/model/document';
         frappe.syncDoc({
           doctype: 'Permit',
           name: permit.name,
-          tagged: JSON.stringify(response)
+          tagged: permit.tagged
         });
       }
       frappe.events.trigger('tag-results', response);
@@ -171,8 +176,8 @@ import Document from 'frappejs/model/document';
       console.log('received failed from main process', response);
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
-      permit.tagged = JSON.stringify(Object.assign(tagged, response));
-      console.log('finally tagged', tagged);
+      let finallyTagged = Object.assign(tagged, response);
+      permit.tagged = JSON.stringify(finallyTagged);
 
       batchSize++;
       if (batchSize >= 10) {
@@ -181,7 +186,7 @@ import Document from 'frappejs/model/document';
           doctype: 'Permit',
           name: permit.name,
           tagged: permit.tagged,
-          _turnOffSync: true
+          _turnOffSync: Object.keys(finallyTagged).length % 100
         });
       }
     });
