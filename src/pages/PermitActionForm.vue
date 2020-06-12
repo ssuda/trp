@@ -121,8 +121,8 @@ export default {
     return {
       doc: null,
       loading: false,
-      failed: '',
-      total: '',
+      failed: 0,
+      total: 0,
       message: ''
     };
   },
