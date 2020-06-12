@@ -19,6 +19,7 @@ import router from './router';
 
 import BaseDocument from '@/basedocument';
 import Document from 'frappejs/model/document';
+import { FieldValue } from 'firebase';
 
 (async () => {
   frappe.isServer = true;
@@ -142,7 +143,6 @@ import Document from 'frappejs/model/document';
     ipcRenderer.removeAllListeners('tag-results');
 
     ipcRenderer.on('tag-results', function(e, response) {
-
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
       let finallyTagged = Object.assign(tagged, response);
       permit.tagged = JSON.stringify(finallyTagged);
@@ -181,6 +181,9 @@ import Document from 'frappejs/model/document';
 
       batchSize++;
       if (batchSize >= 10) {
+        await frappe.currentUser.remote.ref.update({
+          tagged: FieldValue.increment(batchSize)
+        });
         batchSize = 0;
         frappe.syncDoc({
           doctype: 'Permit',

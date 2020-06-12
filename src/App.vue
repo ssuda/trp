@@ -51,6 +51,7 @@ import { DateTime } from 'luxon';
 import SetupSync from '@/sync';
 
 import PaymentForm from './components/Payment.vue';
+import TermsAndConditions from './components/TermsAndConditions.vue';
 
 const toBool = v => {
   v = v.toLowerCase();
@@ -246,10 +247,22 @@ export default {
           SetupSync();
 
           if (comingFromSetupWizard && !isLogin) {
-            showMessageDialog({
-              description: `Your billing will start in ${frappe.globalConfig.trialPeriodDays}days. There will be monthly subcription fee of ${frappe.globalConfig.price}`,
-              buttons: [{ label: 'Ok' }]
-            });
+            // showMessageDialog({
+            //   description: `Your billing will start in ${frappe.globalConfig.trialPeriodDays}days. There will be monthly subcription fee of ${frappe.globalConfig.price}`,
+            //   buttons: [{ label: 'Ok' }]
+            // });
+            this.$modal.show(
+              TermsAndConditions,
+              {},
+              {
+                height: 'auto'
+              },
+              {
+                'before-close': event => {
+                  resolve();
+                }
+              }
+            );
           }
 
           if (process.env.NODE_ENV !== 'development') {
