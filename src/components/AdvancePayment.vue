@@ -27,9 +27,9 @@
       />
 
       <div class="flex">
-        <Button
+        <Button class="text-white mx-4"
           :disabled="!paymentReference"
-          type="primary"
+          type="primary" 
           @click="updatePayment"
           >Activate Now</Button>
 
