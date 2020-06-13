@@ -21,7 +21,11 @@
         placeholder="015221250995"
         v-model="paymentReference"
       />
-      <Button :disabled="!paymentReference" type="primary" @click="updatePayment">Save</Button
+      <Button
+        :disabled="!paymentReference"
+        type="primary"
+        @click="updatePayment"
+        >Save</Button
       >
     </div>
   </div>
@@ -56,8 +60,8 @@ export default {
     this.dueDate = DateTime.fromJSDate(companyInfo.billingPeriodStart.toDate())
       .plus({ days: 1 })
       .toJSDate();
-    
-    const billingAmount = frappe.globalConfig.advanceAmount;
+
+    this.billingAmount = frappe.globalConfig.advanceAmount;
   },
 
   methods: {
