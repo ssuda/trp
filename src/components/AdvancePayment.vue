@@ -31,10 +31,9 @@
           :disabled="!paymentReference"
           type="primary"
           @click="updatePayment"
-          >Activate Now</Button
-        >
+          >Activate Now</Button>
 
-        <Button v-if="showCancel" type="primary" @click="$emit('close')"
+        <Button v-if="showCancel" type="secondary" @click="$emit('close')"
           >Cancel</Button
         >
       </div>
@@ -74,7 +73,7 @@ export default {
       companyInfo.billingPeriodStart.toDate()
     );
 
-    this.dueDate = billingStarts.plus({ days: 1 }).toJSDate();
+    this.dueDate = billingStart.plus({ days: 1 }).toJSDate();
 
     this.billingAmount = frappe.globalConfig.advanceAmount;
     const startDuration = parseInt(-billingStart.diffNow('days').days);
