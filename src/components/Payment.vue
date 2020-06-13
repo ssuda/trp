@@ -24,7 +24,7 @@
         </p>
         <p class="mt-1">
           Total Tagged:
-          <span class="font-bold">{{ companyInfo.billingTagged }}</span>
+          <span class="font-bold">{{ billingTagged }}</span>
         </p>
         <p class="mt-1">
           Sub Total:
@@ -73,6 +73,7 @@ export default {
     return {
       paymentReference: '',
       billingAmount: '',
+      billingTagged: '',
       actualBillingAmount: '',
       gstAmount: '',
       referalBonus: '',
@@ -99,6 +100,7 @@ export default {
     this.actualBillingAmount =
       companyInfo.billingTagged * frappe.globalConfig.truckWisePayment;
 
+    this.billingTagged = companyInfo.billingTagged || companyInfo.tagged;
     if (
       !this.actualBillingAmount ||
       this.actualBillingAmount < frappe.globalConfig.price
