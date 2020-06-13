@@ -28,6 +28,11 @@
         <li class="mt-2">Billing is <span class="font-bold">Monthly</span></li>
 
         <li class="mt-2">
+          Monthly payment is less than minimum amount, then minimum amount
+          {{ formatCurrency(frappe.globalConfig.price) }} has to be paid
+        </li>
+
+        <li class="mt-2">
           Monthly payment is calculated after Billing period and should be paid
           within <span class="font-bold">{{ gracePeriod }} days</span>.
           Otherwise, your service will be disabled

@@ -97,8 +97,14 @@ export default {
     this.taxRate = frappe.globalConfig.taxRate || 0;
     this.referalBonus = -companyInfo.referalBonus || 0;
     this.actualBillingAmount =
-      companyInfo.billingTagged * frappe.globalConfig.truckWisePayment ||
-      frappe.globalConfig.price;
+      companyInfo.billingTagged * frappe.globalConfig.truckWisePayment;
+
+    if (
+      !this.actualBillingAmount ||
+      this.actualBillingAmount < frappe.globalConfig.price
+    ) {
+      this.actualBillingAmount = frappe.globalConfig.price;
+    }
     const billingAmount = this.actualBillingAmount - this.referalBonus;
     this.gstAmount = billingAmount * this.taxRate;
     this.billingAmount = billingAmount + this.gstAmount;
