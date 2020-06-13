@@ -213,7 +213,11 @@ export default {
         referalBonus: 0,
         referalCode,
         tagged: 0,
+        signupDate: new Date(),
         billingTagged: 0,
+        trailExpiryDate: DateTime.local()
+        .plus({ days: frappe.globalConfig.trialPeriodDays })
+        .toJSDate(),
         billingPeriodStart: DateTime.local()
           .plus({ days: frappe.globalConfig.trialPeriodDays })
           .toJSDate(),
@@ -308,6 +312,33 @@ export default {
         billingPeriod: `${billingStart.toFormat(
           'dd LLL yyyy'
         )}-${billingEnd.toFormat('dd LLL yyyy')}}`
+      });
+    } catch (ex) {
+      console.error(ex);
+    }
+  },
+
+  async updateAdvancePayment(advancePaymentReference) {
+    let user = frappe.currentUser.remote.data();
+
+    console.log('user', user);
+    console.log('updating billing details', advancePaymentReference);
+
+    try {
+      //store in firestore
+      await firestore
+        .collection('customers')
+        .doc(user.gstin)
+        .update({
+          advancePaymentReference,
+          enabled: true,
+        });
+
+      firestore.collection('payments').add({
+        paymentReference: advancePaymentReference,
+        gstin: user.gstin,
+        paymentDate: DateTime.local().toJSDate(),
+        type: 'advance'
       });
     } catch (ex) {
       console.error(ex);
