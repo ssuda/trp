@@ -7,7 +7,7 @@
     </PageHeader>
     <div class="px-8 my-2">
       <ul class="tracking-wider list-disc">
-        <li>
+        <li v-if="!trailExpired">
           Trial will be expired in
           <span class="font-bold">{{ trailPeriod }} days </span>
         </li>
@@ -19,13 +19,9 @@
         </li>
 
         <li class="mt-2">
-          Payment Per 1 Successful tagging: Rs
-          <span class="font-bold">
-            {{ formatCurrency(truckWisePayment) }}
-          </span>
+          Billing is <span class="font-bold">Monthly</span> and Only billed for
+          Successfully Tagged Trucks
         </li>
-
-        <li class="mt-2">Billing is <span class="font-bold">Monthly</span></li>
 
         <li class="mt-2">
           Monthly payment is calculated after Billing period and should be paid
@@ -38,11 +34,11 @@
           <span class="font-bold">
             {{ formatCurrency(frappe.globalConfig.price) }}</span
           >
-          (20,000 trucks included). After 20,000 Trucks, Rs
+          (Upto 20,000 Trucks). After 20,000 Trucks, Rs
           <span class="font-bold">
             {{ formatCurrency(frappe.globalConfig.truckWisePayment) }}</span
           >
-          Per Successfully tagged trucks.
+          Per Truck.
         </li>
 
         <li class="mt-2" v-if="taxRate">
@@ -64,6 +60,7 @@ import Users from '@/users';
 import frappe from 'frappejs';
 import numberFormat from 'frappejs/utils/numberFormat';
 import PageHeader from '@/components/PageHeader';
+import { DateTime } from 'luxon';
 
 export default {
   name: 'PaymentForm',
@@ -73,7 +70,8 @@ export default {
       truckWisePayment: 0,
       taxRate: 0,
       trailPeriod: 0,
-      gracePeriod: 0
+      gracePeriod: 0,
+      trailExpired: false
     };
   },
 
@@ -84,6 +82,12 @@ export default {
 
   created() {
     const companyInfo = frappe.currentUser.remote.data();
+    const billingStart = DateTime.fromJSDate(
+      companyInfo.billingPeriodStart.toDate()
+    );
+
+    this.trailExpired = parseInt(-billingStart.diffNow('days').days) > 0;
+
     this.trailPeriod =
       companyInfo.trailPeriodDays || frappe.globalConfig.trailPeriodDays;
     this.advanceAmount =
