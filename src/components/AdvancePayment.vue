@@ -73,8 +73,7 @@ export default {
       companyInfo.billingPeriodStart.toDate()
     );
 
-    this.dueDate = billingStart.plus({ days: 1 }).toJSDate();
-
+    this.dueDate = billingStart.toJSDate();
     this.billingAmount = frappe.globalConfig.advanceAmount;
     const startDuration = parseInt(-billingStart.diffNow('days').days);
     this.showCancel = startDuration <= frappe.globalConfig.gracePeriodDays;
