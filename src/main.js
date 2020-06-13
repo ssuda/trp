@@ -19,7 +19,7 @@ import router from './router';
 
 import BaseDocument from '@/basedocument';
 import Document from 'frappejs/model/document';
-import { FieldValue } from 'firebase';
+import { FieldValue } from '@/firebase';
 
 (async () => {
   frappe.isServer = true;
