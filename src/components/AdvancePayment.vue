@@ -9,6 +9,10 @@
         <span class="font-bold">{{ frappe.globalConfig.upi }}</span>
       </h1>
       <div class="tracking-wider my-8 text-sm">
+        <p>
+          Due Date:
+          <span class="font-bold">{{ frappe.format(dueDate, 'Date') }} </span>
+        </p>
         <p class="my-4 border-t py-2">
           Grand Total:
           <span class="font-bold">{{ formatCurrency(billingAmount) }}</span>
@@ -21,12 +25,19 @@
         placeholder="015221250995"
         v-model="paymentReference"
       />
-      <Button
-        :disabled="!paymentReference"
-        type="primary"
-        @click="updatePayment"
-        >Save</Button
-      >
+
+      <div class="flex">
+        <Button
+          :disabled="!paymentReference"
+          type="primary"
+          @click="updatePayment"
+          >Activate Now</Button
+        >
+
+        <Button v-if="showCancel" type="primary" @click="$emit('close')"
+          >Cancel</Button
+        >
+      </div>
     </div>
   </div>
 </template>
@@ -45,7 +56,8 @@ export default {
       paymentReference: '',
       billingAmount: '',
       companyInfo: {},
-      dueDate: null
+      dueDate: null,
+      showCancel: true
     };
   },
 
@@ -57,11 +69,16 @@ export default {
   created() {
     const companyInfo = frappe.currentUser.remote.data();
     console.log('companyInfo', companyInfo);
-    this.dueDate = DateTime.fromJSDate(companyInfo.billingPeriodStart.toDate())
-      .plus({ days: 1 })
-      .toJSDate();
+
+    const billingStart = DateTime.fromJSDate(
+      companyInfo.billingPeriodStart.toDate()
+    );
+
+    this.dueDate = billingStarts.plus({ days: 1 }).toJSDate();
 
     this.billingAmount = frappe.globalConfig.advanceAmount;
+    const startDuration = parseInt(-billingStart.diffNow('days').days);
+    this.showCancel = startDuration <= frappe.globalConfig.gracePeriodDays;
   },
 
   methods: {

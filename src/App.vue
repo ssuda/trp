@@ -237,11 +237,25 @@ export default {
                     });
                   } else if (startDuration >= 0) {
                     //warn users for payment
-                    await showMessageDialog({
-                      description: `Your trail expired, please activate in ${frappe
-                        .globalConfig.gracePeriodDays -
-                        startDuration} days, please activate before to avoid disruption to your service`,
-                      buttons: [{ label: 'Ok' }]
+                    // await showMessageDialog({
+                    //   description: `Your trail expired, please activate in ${frappe
+                    //     .globalConfig.gracePeriodDays -
+                    //     startDuration} days, please activate before to avoid disruption to your service`,
+                    //   buttons: [{ label: 'Ok' }]
+                    // });
+                    await new Promise((resolve, reject) => {
+                      this.$modal.show(
+                        AdvancePayment,
+                        {},
+                        {
+                          height: 'auto'
+                        },
+                        {
+                          'before-close': event => {
+                            resolve();
+                          }
+                        }
+                      );
                     });
                   }
                 }
