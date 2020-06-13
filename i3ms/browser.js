@@ -249,11 +249,10 @@ async function navigationClickHelper(selector, timeout = 5000) {
   ]);
 }
 
-
 async function setRadioButton(selector) {
-  return page.evaluate((selector) => {
+  return page.evaluate(selector => {
     document.querySelector(selector).checked = true;
- }, selector);
+  }, selector);
 }
 
 export async function tagVehicle(href, truckNo) {
@@ -281,14 +280,15 @@ export async function tagVehicle(href, truckNo) {
     console.log('Is Error? ', r == 2);
 
     if (r == 1) {
-      // await navigationClickHelper('#rdo_GPS_0');
-      // await navigationClickHelper('#Rdo_VTS_0');
-      // await navigationClickHelper('#Rdo_SIM_0');
       await setRadioButton('#rdo_GPS_0');
+      // await navigationClickHelper('#rdo_GPS_0');
       await setRadioButton('#Rdo_VTS_0');
-      await setRadioButton('#Rdo_SIM_0');
+      // await navigationClickHelper('#Rdo_VTS_0');
+      // await setRadioButton('#Rdo_SIM_0');
+      await navigationClickHelper('#Rdo_SIM_0');
+      // await setRadioButton('#chkClick');
       await page.click('#chkClick');
-      //await page.click('#btnSubmit');
+      // await page.click('#btnSubmit');
       await navigationClickHelper('#btnSubmit'); // Clicking the link will indirectly cause a navigation
     } else {
       reason = page.$eval('#lblMsg', el => el.innerText);

@@ -45,12 +45,19 @@ import { FieldValue } from '@/firebase';
 
     if (!oldTagged) {
       try {
-        const currentDoc = frappe.getDoc('Permit', permit.name);
+        const currentDoc = frappe.getDoc('Permit', permit.permit_number);
         oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
       } catch (ex) {
         oldTagged = {};
       }
     }
+
+    oldTagged = Object.keys(oldTagged).reduce((p, v) => {
+      if (oldTagged[v]) {
+        p[v] = oldTagged[v];
+      }
+      return p;
+    }, {});
 
     tagged = Object.assign(oldTagged || {}, tagged);
 
