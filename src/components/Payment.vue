@@ -100,7 +100,7 @@ export default {
 
     this.billingTagged = companyInfo.billingTagged || companyInfo.tagged;
     this.actualBillingAmount =
-      billingTagged * frappe.globalConfig.truckWisePayment;
+      this.billingTagged * frappe.globalConfig.truckWisePayment;
 
     if (
       !this.actualBillingAmount ||
