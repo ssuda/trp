@@ -240,7 +240,7 @@ export default {
                     await showMessageDialog({
                       description: `Your trail expired, please activate in ${frappe
                         .globalConfig.gracePeriodDays -
-                        duration} days, please activate before to avoid disruption to your service`,
+                        startDuration} days, please activate before to avoid disruption to your service`,
                       buttons: [{ label: 'Ok' }]
                     });
                   }
