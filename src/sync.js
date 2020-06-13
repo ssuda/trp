@@ -96,7 +96,8 @@ async function syncFromFirebase() {
 
   const timestampRef = firestore.collection('timestamp').doc('timestamp');
   await timestampRef.set({ timestamp: FieldValue.serverTimestamp() });
-  const timestamp = (await timestampRef.get()).get('timestamp').toDate();
+  let timestamp = await timestampRef.get();
+  timestamp = timestamp.get('timestamp').toDate();
 
   console.log(gstin, lastSnapshot, timestamp);
 
