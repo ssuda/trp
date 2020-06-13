@@ -12,14 +12,14 @@
           <span class="font-bold">{{ trailPeriod }} days </span>
         </li>
         <li class="mt-2">
-          Activation Charges after trial:
+          Activation Charges after trial: Rs
           <span class="font-bold">
             {{ formatCurrency(advanceAmount) }}
           </span>
         </li>
 
         <li class="mt-2">
-          Payment Per 1 Successful tagging:
+          Payment Per 1 Successful tagging: Rs
           <span class="font-bold">
             {{ formatCurrency(truckWisePayment) }}
           </span>
@@ -34,8 +34,15 @@
         </li>
 
         <li class="mt-2">
-          If Monthly payment is less than minimum amount, then minimum amount
-          {{ formatCurrency(frappe.globalConfig.price) }} has to be paid
+          Base Price Rs
+          <span class="font-bold">
+            {{ formatCurrency(frappe.globalConfig.price) }}</span
+          >
+          (20,000 trucks included). After 20,000 Trucks, Rs
+          <span class="font-bold">
+            {{ formatCurrency(frappe.globalConfig.truckWisePayment) }}</span
+          >
+          Per Successfully tagged trucks.
         </li>
 
         <li class="mt-2" v-if="taxRate">
@@ -57,7 +64,6 @@ import Users from '@/users';
 import frappe from 'frappejs';
 import numberFormat from 'frappejs/utils/numberFormat';
 import PageHeader from '@/components/PageHeader';
-import { DateTime } from 'luxon';
 
 export default {
   name: 'PaymentForm',
