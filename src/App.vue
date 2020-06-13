@@ -52,6 +52,7 @@ import SetupSync from '@/sync';
 
 import PaymentForm from './components/Payment.vue';
 import TermsAndConditions from './components/TermsAndConditions.vue';
+import AdvancePayment from './components/AdvancePayment.vue';
 
 const toBool = v => {
   v = v.toLowerCase();
@@ -207,10 +208,43 @@ export default {
               }
 
               if (!doc.free) {
-                const billingStart = DateTime.fromJSDate(
-                  doc.billingPeriodStart.toDate()
+                
+                if (!doc.advancePaymentReference) {
+                  const billingStart = DateTime.fromJSDate(
+                    doc.billingPeriodStart.toDate()
+                  );
+
+                  const startDuration = parseInt(-billingStart.diffNow('days').days);
+                    if (duration > frappe.globalConfig.gracePeriodDays) {
+                      //make payment
+                      await new Promise((resolve, reject) => {
+                        this.$modal.show(
+                          AdvancePayment,
+                          {},
+                          {
+                            height: 'auto'
+                          },
+                          {
+                            'before-close': event => {
+                              resolve();
+                            }
+                          }
+                        );
+                      });
+                    }  else if (duration >= 0) {
+                      //warn users for payment
+                      await showMessageDialog({
+                        description: `Your trail expired, please activate in ${frappe
+                          .globalConfig.gracePeriodDays -
+                          duration} days, please activate before to avoid disruption to your service`,
+                        buttons: [{ label: 'Ok' }]
+                      });
+                    }
+                }
+                const billingEnd = DateTime.fromJSDate(
+                  doc.billingPeriodEnd.toDate()
                 );
-                const duration = parseInt(-billingStart.diffNow('days').days);
+                const duration = parseInt(-billingEnd.diffNow('days').days);
                 console.log('billingEnd', duration);
 
                 if (duration > frappe.globalConfig.gracePeriodDays) {
@@ -232,7 +266,7 @@ export default {
                 } else if (duration >= 0) {
                   //warn users for payment
                   await showMessageDialog({
-                    description: `Your recharge is pending, your service will be disabled in ${frappe
+                    description: `Your billing is pending, your service will be disabled in ${frappe
                       .globalConfig.gracePeriodDays -
                       duration} days, please pay before to avoid disruption to your service`,
                     buttons: [{ label: 'Ok' }]
