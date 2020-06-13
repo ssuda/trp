@@ -123,7 +123,7 @@ export default {
 
           if (
             now.startOf('day') > end.startOf('day') &&
-            !user.get('billingTagged')
+            !user.remote.get('billingTagged')
           ) {
             user.remote.ref.update({
               billingTagged: user.remote.get('tagged'),
@@ -131,7 +131,7 @@ export default {
             });
           } else if (
             now.startOf('day') >= start.startOf('day') &&
-            !user.get('trailEnded')
+            !user.remote.get('trailEnded')
           ) {
             user.remote.ref.update({
               tagged: 0,
