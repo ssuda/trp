@@ -40,6 +40,7 @@
                   :value="doc.taggingUrl"
                   @change="value => doc.set('taggingUrl', value)"
                 />
+                
                 <FormControl
                   v-if="doc.action == 'tagging'"
                   class="mt-4 text-base"
@@ -48,6 +49,11 @@
                   :value="doc.truckList"
                   @change="value => doc.set('truckList', value)"
                 />
+                
+                <hr class="mt-4"
+                  v-if="doc.action == 'release' || doc.action == 'tagging'"
+                 >
+
                 <FormControl
                   v-if="doc.action == 'release' || doc.action == 'tagging'"
                   class="mt-4 text-base"
@@ -79,7 +85,6 @@
             <p class="ml-8">Success: {{ success }}</p>
             <p class="ml-8">Failed: {{ failed }}</p>
           </div>
-
           <div
             class="px-8 mt-5 font-medium text-green-600"
             v-if="doc.action === 'tagging'"
@@ -368,3 +373,14 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+hr {
+  border:none;
+  border-top:2px dotted #f00;
+  color:#fff;
+  background-color:#fff;
+  height:1px;
+  width:100%;
+}
+</style>
