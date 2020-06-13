@@ -171,6 +171,10 @@ const config = {
           route: '/billing'
         },
         {
+          label: _('Terms and Conditions'),
+          route: '/terms-conditions'
+        },
+        {
           label: _('Sign Out'),
           async action() {
             await Users.logout();

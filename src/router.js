@@ -18,6 +18,7 @@ import PermitActionForm from '@/pages/PermitActionForm';
 import DataImport from '@/pages/Import';
 import CustomerCare from '@/pages/CustomerCare';
 import Payment from './components/Payment';
+import TermsAndConditions from './components/TermsAndConditions';
 
 Vue.use(Router);
 
@@ -29,6 +30,10 @@ const routes = [
   {
     path: '/get-started',
     component: GetStarted
+  },
+  {
+    path: '/terms-conditions',
+    component: TermsAndConditions
   },
   {
     path: '/edit/JournalEntry/:name',
