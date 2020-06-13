@@ -104,7 +104,7 @@ export async function connectToRemoteDatabase() {
 const trucksRegexp = /[A-Z]{2}[0-9]{1,2}(?:[A-Z])?(?:[A-Z]*)?[0-9]{4}/gi;
 
 export function extractTrucks(text) {
-  return Array.from(new Set(text.matchAll(trucksRegexp), m => m[0]));
+  return [...new Set(Array.from(text.matchAll(trucksRegexp), m => m[0]))];
 }
 
 export async function connectToLocalDatabase(filepath) {
