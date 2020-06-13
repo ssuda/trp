@@ -91,9 +91,11 @@ export default {
   created() {
     const companyInfo = frappe.currentUser.remote.data();
     console.log('companyInfo', companyInfo);
+
     this.dueDate = DateTime.fromJSDate(companyInfo.billingPeriodEnd.toDate())
       .plus({ days: 1 })
       .toJSDate();
+
     this.companyInfo = companyInfo;
     this.taxRate = frappe.globalConfig.taxRate || 0;
     this.referalBonus = -companyInfo.referalBonus || 0;
@@ -126,7 +128,17 @@ export default {
       }
 
       console.log(this.paymentReference);
-      await Users.updatePayment(this.paymentReference);
+      await Users.updatePayment(this.paymentReference, {
+        paymentReference: this.paymentReference,
+        billingTagged: this.billingTagged,
+        billingAmount: this.actualBillingAmount,
+        referalBonus: this.referalBonus,
+        subTotal: this.actualBillingAmount - this.referalBonus,
+        tax: this.gstAmount,
+        grossTotal: this.billingAmount,
+        billingPeriodStart: this.companyInfo.billingPeriodStart.toDate(),
+        billingPeriodEnd: this.companyInfo.billingPeriodEnd.toDate()
+      });
       this.$emit('close');
     }
   }

@@ -291,7 +291,7 @@ export default {
     }
   },
 
-  async updatePayment(paymentReference) {
+  async updatePayment(paymentReference, billingDetails) {
     let user = frappe.currentUser.remote.data();
 
     console.log('user', user);
@@ -319,12 +319,9 @@ export default {
         });
 
       firestore.collection('payments').add({
-        paymentReference,
         gstin: user.gstin,
         paymentDate: DateTime.local().toJSDate(),
-        billingPeriod: `${billingStart.toFormat(
-          'dd LLL yyyy'
-        )}-${billingEnd.toFormat('dd LLL yyyy')}}`
+        ...billingDetails
       });
     } catch (ex) {
       console.error(ex);
