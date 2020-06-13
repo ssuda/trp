@@ -208,38 +208,42 @@ export default {
               }
 
               if (!doc.free) {
-                
                 if (!doc.advancePaymentReference) {
                   const billingStart = DateTime.fromJSDate(
                     doc.billingPeriodStart.toDate()
                   );
 
-                  const startDuration = parseInt(-billingStart.diffNow('days').days);
-                    if (duration > frappe.globalConfig.gracePeriodDays) {
-                      //make payment
-                      await new Promise((resolve, reject) => {
-                        this.$modal.show(
-                          AdvancePayment,
-                          {},
-                          {
-                            height: 'auto'
-                          },
-                          {
-                            'before-close': event => {
-                              resolve();
-                            }
+                  const startDuration = parseInt(
+                    -billingStart.diffNow('days').days
+                  );
+
+                  console.log('billingStart', startDuration);
+
+                  if (startDuration > frappe.globalConfig.gracePeriodDays) {
+                    //make payment
+                    await new Promise((resolve, reject) => {
+                      this.$modal.show(
+                        AdvancePayment,
+                        {},
+                        {
+                          height: 'auto'
+                        },
+                        {
+                          'before-close': event => {
+                            resolve();
                           }
-                        );
-                      });
-                    }  else if (duration >= 0) {
-                      //warn users for payment
-                      await showMessageDialog({
-                        description: `Your trail expired, please activate in ${frappe
-                          .globalConfig.gracePeriodDays -
-                          duration} days, please activate before to avoid disruption to your service`,
-                        buttons: [{ label: 'Ok' }]
-                      });
-                    }
+                        }
+                      );
+                    });
+                  } else if (startDuration >= 0) {
+                    //warn users for payment
+                    await showMessageDialog({
+                      description: `Your trail expired, please activate in ${frappe
+                        .globalConfig.gracePeriodDays -
+                        duration} days, please activate before to avoid disruption to your service`,
+                      buttons: [{ label: 'Ok' }]
+                    });
+                  }
                 }
                 const billingEnd = DateTime.fromJSDate(
                   doc.billingPeriodEnd.toDate()

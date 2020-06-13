@@ -111,7 +111,7 @@ export default {
             .doc(gstin)
             .get();
 
-          let now = DateTime.now();
+          let now = DateTime.local();
           let end = DateTime.fromJSDate(
             user.remote.get('billingPeriodEnd').toDate()
           );
@@ -216,8 +216,8 @@ export default {
         signupDate: new Date(),
         billingTagged: 0,
         trailExpiryDate: DateTime.local()
-        .plus({ days: frappe.globalConfig.trialPeriodDays })
-        .toJSDate(),
+          .plus({ days: frappe.globalConfig.trialPeriodDays })
+          .toJSDate(),
         billingPeriodStart: DateTime.local()
           .plus({ days: frappe.globalConfig.trialPeriodDays })
           .toJSDate(),
@@ -331,7 +331,7 @@ export default {
         .doc(user.gstin)
         .update({
           advancePaymentReference,
-          enabled: true,
+          enabled: true
         });
 
       firestore.collection('payments').add({
