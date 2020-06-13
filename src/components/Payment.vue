@@ -97,10 +97,11 @@ export default {
     this.companyInfo = companyInfo;
     this.taxRate = frappe.globalConfig.taxRate || 0;
     this.referalBonus = -companyInfo.referalBonus || 0;
-    this.actualBillingAmount =
-      companyInfo.billingTagged * frappe.globalConfig.truckWisePayment;
 
     this.billingTagged = companyInfo.billingTagged || companyInfo.tagged;
+    this.actualBillingAmount =
+      billingTagged * frappe.globalConfig.truckWisePayment;
+
     if (
       !this.actualBillingAmount ||
       this.actualBillingAmount < frappe.globalConfig.price
