@@ -112,8 +112,13 @@ export default {
             .get();
 
           let now = DateTime.local();
+
           let end = DateTime.fromJSDate(
             user.remote.get('billingPeriodEnd').toDate()
+          );
+
+          let start = DateTime.fromJSDate(
+            user.remote.get('billingPeriodStart').toDate()
           );
 
           if (
@@ -123,6 +128,14 @@ export default {
             user.remote.ref.update({
               billingTagged: user.remote.get('tagged'),
               tagged: 0
+            });
+          } else if (
+            now.startOf('day') >= start.startOf('day') &&
+            !user.get('trailEnded')
+          ) {
+            user.remote.ref.update({
+              tagged: 0,
+              trailEnded: true
             });
           }
         }
