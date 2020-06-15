@@ -32,6 +32,17 @@
                   :showLabel="true"
                   @change="value => doc.set('showBrowser', value)"
                 />
+
+                <FormControl
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('numBrowsers')"
+                  :value="doc.numBrowsers"
+                  :showLabel="true"
+                  v-if="doc.action == 'tagging'"
+                  @change="value => doc.set('numBrowsers', value)"
+                />
+
                 <FormControl
                   v-if="doc.action == 'tagging' && !doc.permit"
                   class="mt-4 text-base"
@@ -49,11 +60,8 @@
                   :value="doc.truckList"
                   @change="value => doc.set('truckList', value)"
                 />
-
-                <hr class="mt-4" v-if="doc.action == 'tagging'" />
-
                 <FormControl
-                  v-if="doc.action == 'release' || doc.action == 'tagging'"
+                  v-if="doc.action == 'release'"
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('trucks')"
@@ -218,6 +226,15 @@ export default {
       } else if (this.doc.action === 'tagging') {
         if (!this.doc.truckList && !this.doc.trucks) {
           showMessageDialog({ message: this._('Please provide trucks') });
+          this.loading = false;
+          return;
+        }
+
+        if (this.doc.numBrowsers > 10) {
+          showMessageDialog({
+            message: this._('Number of browsers not more than 10')
+          });
+          this.loading = false;
           return;
         }
         const permit = this.doc.permit || {};
@@ -257,7 +274,8 @@ export default {
         let obj = {
           credentials,
           trucks,
-          showBrowser: this.doc.showBrowser
+          showBrowser: this.doc.showBrowser,
+          numBrowsers: this.doc.numBrowsers
         };
 
         if (this.doc.permit) {
@@ -277,8 +295,18 @@ export default {
           this.loading = true;
           frappe.events.trigger('tag-vehicles', obj);
 
-          const totalCb = total => (this.total += parseInt(total));
-          const failedCb = failed => (this.failed += parseInt(failed));
+          const totalCb = total => {
+            console.log('received total', this.total, total);
+            this.total += parseInt(total);
+          };
+
+          const failedCb = failed => {
+            console.log('received failed', failed);
+            this.failed += parseInt(failed);
+          };
+
+          frappe.events.off('total', totalCb);
+          frappe.events.off('failed', failedCb);
 
           frappe.events.on('total', totalCb);
           frappe.events.on('failed', failedCb);

@@ -1,6 +1,8 @@
 const moment = require('moment');
 
-const i3ms = require('./browser');
+const browser = require('./browser');
+
+const i3ms = browser();
 const _ = require('lodash');
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -246,7 +248,7 @@ export async function permitDetails(permit) {
   return permit;
 }
 
-export async function tagVehicle(vehicles, options, sse) {
+export async function tagVehicle(obj, vehicles, options, sse) {
   const { taggingUrl } = options;
   let sno = 1;
   let retries = [];
@@ -255,23 +257,22 @@ export async function tagVehicle(vehicles, options, sse) {
   await vehicles.reduce(async (p, truck) => {
     await p;
 
-    if (sse) {
-      sse.send('total', sno);
-    }
     sno++;
 
-    console.log(sno, 'Tagging vehicle', truck);
+    console.log(sno, obj.tabNo, 'Tagging vehicle', truck);
 
-    let reason = await i3ms.tagVehicle(taggingUrl, truck);
+    let reason = await obj.tagVehicle(taggingUrl, truck);
 
     if (reason && /is already tagged/i.test(reason)) {
       reason = '';
+    } else if (sse) {
+      sse.send('total', 1);
     }
 
     if (reason) {
       failed[truck] = reason;
       if (sse) {
-        sse.send('failed', Object.keys(failed).length);
+        sse.send('failed', 1);
       }
     }
 
@@ -292,23 +293,74 @@ export async function tagVehicle(vehicles, options, sse) {
   return retries;
 }
 
+async function tabTagging(taggingUrl, tab, chunk, options, sse) {
+  await tab.tagInit(taggingUrl);
+
+  console.log(tab.tabNo, 'tagging chunk', chunk);
+  let retries = await tagVehicle(tab, chunk, options, sse);
+
+  if (retries.length) {
+    //try one more time
+    retries = await tagVehicle(tab, retries, options, sse);
+
+    if (retries.length) {
+      //try one more time
+      retries = await tagVehicle(tab, retries, options, sse);
+    }
+  }
+}
+
+async function tagFromTab(taggingUrl, chunk, options, sse) {
+  const tab = browser();
+  await tab.browserInit(options.credentials, !options.showBrowser, true);
+  await tabTagging(taggingUrl, tab, chunk, options, sse);
+  return tab;
+}
+
+async function openTabs(taggingUrl, chunks, options, sse) {
+  try {
+    let tabs = [];
+    let numTabs = (+options.numBrowsers || 4) - 1;
+
+    let arr = [];
+
+    for (let i = 0; i < numTabs; ++i) {
+      arr.push(i);
+    }
+
+    console.log('creating browsers', arr);
+
+    await Promise.all(
+      arr.map(async i => {
+        console.log('creating browser', i);
+        const tab = await tagFromTab(taggingUrl, chunks[i], options, sse);
+        tabs.push(tab);
+      })
+    );
+
+    for (let i = 0; i < numTabs; ++i) {
+      await tabs[i].disconnect();
+    }
+  } catch (ex) {
+    console.error(ex);
+  }
+}
+
 export async function tagVehicles(options, sse) {
   const { taggingUrl, name: permitNumber, trucks } = options;
+  let chunks = _.chunk(
+    trucks,
+    Math.ceil(trucks.length / (+options.numBrowsers || 4))
+  );
+  let chunk = chunks[0];
   try {
     if (trucks.length) {
-      await i3ms.tagInit(taggingUrl);
-
-      let retries = await tagVehicle(trucks, options, sse);
-
-      if (retries.length) {
-        //try one more time
-        retries = await tagVehicle(retries, options, sse);
-
-        if (retries.length) {
-          //try one more time
-          retries = await tagVehicle(retries, options, sse);
-        }
-      }
+      //await i3ms.tagInit(taggingUrl);
+      i3ms.tabNo = 0;
+      await Promise.all([
+        openTabs(taggingUrl, chunks.slice(1), options, sse),
+        tabTagging(taggingUrl, i3ms, chunk, options, sse)
+      ]);
     }
   } catch (ex) {
     console.error(ex);
@@ -347,4 +399,12 @@ export async function releaseVehicles(options, sse) {
   } catch (ex) {
     console.error(ex);
   }
+}
+
+export async function browserInit(cred, headless, tologin) {
+  return i3ms.browserInit(cred, headless, tologin);
+}
+
+export async function disconnect(cred, headless, tologin) {
+  return i3ms.disconnect();
 }

@@ -317,15 +317,15 @@ export default {
             );
           }
 
-          if (process.env.NODE_ENV !== 'development') {
-            frappe.events.trigger('open-browser', {
-              credentials: {
-                username: frappe.AccountingSettings.i3msUsername,
-                password: frappe.AccountingSettings.i3msPassword
-              },
-              showBrowser: true
-            });
-          }
+          //if (process.env.NODE_ENV !== 'development') {
+          frappe.events.trigger('open-browser', {
+            credentials: {
+              username: frappe.AccountingSettings.i3msUsername,
+              password: frappe.AccountingSettings.i3msPassword
+            },
+            showBrowser: true
+          });
+          //}
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';
