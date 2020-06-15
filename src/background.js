@@ -14,6 +14,7 @@ import {
   permitDetails,
   permitsDetails,
   permitReport,
+  newPermits,
   releaseVehicles,
   browserInit,
   disconnect
@@ -208,6 +209,10 @@ ipcMain.on('open-settings-window', (event, tab) => {
 
 ipcMain.on('reload-main-window', () => {
   mainWindow.reload();
+});
+
+ipcMain.on('auto-tagging', (event, args) => {
+  newPermits(args, event.sender);
 });
 
 //openBrowser(true);

@@ -75,5 +75,6 @@ module.exports = {
 
   PrintSettings: require('./doctype/PrintSettings/PrintSettings'),
   GetStarted: require('./doctype/GetStarted/GetStarted'),
-  AccountingLedgerEntry: require('./doctype/AccountingLedgerEntry/AccountingLedgerEntry.js')
+  AccountingLedgerEntry: require('./doctype/AccountingLedgerEntry/AccountingLedgerEntry.js'),
+  AutoTagging: require('./doctype/Permit/AutoTagging')
 };

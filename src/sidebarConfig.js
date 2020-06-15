@@ -44,6 +44,11 @@ const config = {
           doctype: 'TruckList'
         },
         {
+          label: _('Auto Tagging'),
+          route: '/list/AutoTagging',
+          doctype: 'AutoTagging'
+        },
+        {
           label: _('I3MS Account'),
           route: '/I3msAccount'
         }

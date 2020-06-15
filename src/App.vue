@@ -308,11 +308,6 @@ export default {
               {},
               {
                 height: 'auto'
-              },
-              {
-                'before-close': event => {
-                  resolve();
-                }
               }
             );
           }
@@ -342,8 +337,13 @@ export default {
         frappe.events.trigger('reload-main-window');
       }
     },
+
     checkForUpdates() {
       frappe.events.trigger('check-for-updates');
+    },
+
+    setupAutoTagging() {
+      frappe.events.trigger('auto-tagging');
     }
   }
 };
