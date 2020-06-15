@@ -126,8 +126,8 @@ import { FieldValue } from '@/firebase';
 
   frappe.events.on('permit-details', args => {
     ipcRenderer.send('permit-details', args);
-    ipcRenderer.removeAllListeners();
-    ipcRenderer.on('permit-details-results', (e, permit) => {
+    ipcRenderer.removeAllListeners('permit-details-results');
+    ipcRenderer.once('permit-details-results', (e, permit) => {
       savePermit(permit, args);
       frappe.events.trigger('permit-details-results', e);
     });
@@ -135,8 +135,8 @@ import { FieldValue } from '@/firebase';
 
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
-    ipcRenderer.removeAllListeners();
-    ipcRenderer.on('permits-details-results', e => {
+    ipcRenderer.removeAllListeners('permits-details-results');
+    ipcRenderer.once('permits-details-results', e => {
       frappe.events.trigger('permits-details-results', e);
     });
 
@@ -149,7 +149,7 @@ import { FieldValue } from '@/firebase';
     ipcRenderer.send('tag-vehicles', permit);
     ipcRenderer.removeAllListeners('tag-results');
 
-    ipcRenderer.on('tag-results', function(e, response) {
+    ipcRenderer.once('tag-results', function(e, response) {
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
       let finallyTagged = Object.assign(tagged, response);
       permit.tagged = JSON.stringify(finallyTagged);
@@ -218,7 +218,7 @@ import { FieldValue } from '@/firebase';
     ipcRenderer.send('release-vehicles', permit);
     ipcRenderer.removeAllListeners('release-vehicles-results');
 
-    ipcRenderer.on('release-vehicles-results', function(e, response) {
+    ipcRenderer.once('release-vehicles-results', function(e, response) {
       console.log(
         'Updating permit after release',
         Object.keys(response).length
@@ -237,6 +237,98 @@ import { FieldValue } from '@/firebase';
     let { autoUpdate } = frappe.AccountingSettings;
     if (autoUpdate == null || autoUpdate === 1) {
       ipcRenderer.send('check-for-updates');
+    }
+  });
+
+  async function tagPermit(doc) {
+    const credentials = {
+      username: frappe.AccountingSettings.i3msUsername,
+      password: frappe.AccountingSettings.i3msPassword
+    };
+
+    const truckList = await frappe.getDoc('TruckList', doc.truckList);
+
+    console.log(credentials, truckList);
+    let trucks = truckList.trucks.split('\n').filter(Boolean);
+
+    let permit = doc.permit;
+
+    let obj = {
+      credentials,
+      trucks,
+      showBrowser: true,
+      numBrowsers: doc.numBrowsers
+    };
+
+    obj = {
+      ...obj,
+      ...permit
+    };
+
+    if (trucks.length) {
+      frappe.events.trigger('tag-vehicles', obj);
+    }
+  }
+
+  frappe.events.on('auto-tagging', async () => {
+    //Fetch autoTagging
+    let docs = await frappe.db.getAll({
+      doctype: 'AutoTagging'
+    });
+
+    if (docs.length) {
+      const credentials = {
+        username: frappe.AccountingSettings.i3msUsername,
+        password: frappe.AccountingSettings.i3msPassword
+      };
+
+      ipcRenderer.send('auto-tagging', credentials);
+
+      ipcRenderer.removeAllListeners('auto-tagging');
+      ipcRenderer.on('new-permits', async (e, permits) => {
+        //find docs;
+        let autoTags = docs.filter(doc => {
+          let permit = permits.find(
+            p =>
+              p.source == doc.source &&
+              (!doc.transportedFrom ||
+                doc.transportedFrom == p.transported_from)
+          );
+          if (permit) {
+            doc.permit = {
+              name: permit.permit_number,
+              taggingUrl: permit.tag_url
+            };
+            return true;
+          }
+          return false;
+        });
+
+        //sort by priority and sort by permit number
+        if (autoTags.length) {
+          if (autoTags.length > 1) {
+            autoTags = autoTags.sort((a, b) => {
+              if (a.priority < b.priority) {
+                return -1;
+              }
+
+              if (a.priority > b.priority) {
+                return 1;
+              }
+
+              if (a.permit.permit_number > b.permit.permit_number) {
+                return 1;
+              }
+
+              return -1;
+            });
+          }
+
+          for (let i = 0; i < autoTags.length; ++i) {
+            await tagPermit(autoTags[i]);
+          }
+        }
+      });
     }
   });
 
