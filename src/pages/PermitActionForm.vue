@@ -50,10 +50,7 @@
                   @change="value => doc.set('truckList', value)"
                 />
 
-                <hr
-                  class="mt-4"
-                  v-if="doc.action == 'release' || doc.action == 'tagging'"
-                />
+                <hr class="mt-4" v-if="doc.action == 'tagging'" />
 
                 <FormControl
                   v-if="doc.action == 'release' || doc.action == 'tagging'"
@@ -61,7 +58,7 @@
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('trucks')"
                   :value="doc.trucks"
-                  placeholder="Paste the trucks, if there is no trucklist"
+                  placeholder="Paste the trucks"
                   @change="value => doc.set('trucks', value)"
                 />
               </div>

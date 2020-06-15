@@ -222,7 +222,6 @@ module.exports = {
             tagged[t] ? 'Fail' : 'Success',
             tagged[t]
           ]);
-          console.log(tagged);
           exportData(
             `${permit.name} Tag Report`,
             ['Permit', 'Truck No', 'Status', 'Reason'],
