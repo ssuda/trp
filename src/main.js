@@ -219,6 +219,10 @@ import { FieldValue } from '@/firebase';
     ipcRenderer.removeAllListeners('release-vehicles-results');
 
     ipcRenderer.on('release-vehicles-results', function(e, response) {
+      console.log(
+        'Updating permit after release',
+        Object.keys(response).length
+      );
       // End of the release
       frappe.syncDoc({
         doctype: 'Permit',

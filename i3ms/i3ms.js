@@ -146,7 +146,7 @@ export async function successfullyTagged(permitNo, credentials) {
     permitNo = t['Permit No.'];
   }
 
-  const v = await i3ms.taggedVehicles(
+  const v = await i3ms.releasePage(
     'https://i3ms.orissaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
     permitNo
   );
@@ -328,17 +328,21 @@ export async function releaseVehicles(options, sse) {
   try {
     if (trucks.length) {
       const chunks = _.chunk(trucks, 20);
+      let tagged = [];
 
       for (let chunk of chunks) {
         console.log('chunk', chunk);
-        await i3ms.releaseVehicle(
+        tagged = await i3ms.releasePage(
           'https://i3ms.orissaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
-          chunk,
-          permit_number
+          permit_number,
+          chunk
         );
       }
 
-      return successfullyTagged(permit_number);
+      return tagged.reduce((p, t) => {
+        p[t] = '';
+        return p;
+      }, {});
     }
   } catch (ex) {
     console.error(ex);

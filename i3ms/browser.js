@@ -311,84 +311,23 @@ export async function tagVehicle(href, truckNo) {
   }
 }
 
-export async function releaseVehicle(href, trucks, permitNo) {
-  console.log(href);
-  await browsePage(href);
-
-  console.log('before selectSecondOption');
-  await page.waitForSelector('#ddlTransporter');
-
-  const numberOfOptions = await page.$$eval(
-    '#ddlTransporter option',
-    options => options.length
-  );
-
+export async function releasePage(href, permitNo, trucks) {
+  let numberOfOptions = 3;
   let option = 2;
+
   while (option <= numberOfOptions) {
     try {
-      console.log('before ddlTransporter');
-
-      await selectOption('#ddlTransporter', option);
-
-      if (permitNo[0] == 'L') {
-        await page.select('#ddlPermitType', '1');
-      } else {
-        await page.select('#ddlPermitType', '2');
-      }
-      await typeInTextBox('#txtPermitNo', permitNo);
-      const [response] = await Promise.all([
-        page.waitForNavigation(), // The promise resolves after navigation has finished
-        page.click('#btnGetVehicle') // Clicking the link will indirectly cause a navigation
-      ]);
-
-      console.log('waiting for selector');
-
-      await page.waitForSelector('#lstFrom');
-      const r = await page.$eval('#lstFrom', el => {
-        const arr = [];
-
-        for (let i = 0; i < el.options.length; ++i) {
-          arr.push(el.options[i].value);
-        }
-
-        return arr;
-      });
-
-      if (!r.length && option < numberOfOptions) {
-        option++;
-      } else {
-        for (let truckNo of trucks) {
-          console.log('releasing trucks', truckNo);
-          await page.select('#lstFrom', truckNo);
-          await delay(2000);
-          await page.click('#btnAdd');
-        }
-        await page.click('#btnRelease');
-        await delay(2000);
-        break;
-      }
-    } catch (ex) {
-      console.error(ex);
+      console.log(href);
       await browsePage(href);
-    }
-  }
-}
 
-export async function taggedVehicles(href, permitNo) {
-  console.log(href, permitNo);
-  await browsePage(href);
+      console.log('before selectSecondOption');
+      await page.waitForSelector('#ddlTransporter');
 
-  console.log('before selectSecondOption');
-  await page.waitForSelector('#ddlTransporter');
+      numberOfOptions = await page.$$eval(
+        '#ddlTransporter option',
+        options => options.length
+      );
 
-  const numberOfOptions = await page.$$eval(
-    '#ddlTransporter option',
-    options => options.length
-  );
-
-  let option = 2;
-  while (option <= numberOfOptions) {
-    try {
       console.log('before ddlTransporter');
 
       await selectOption('#ddlTransporter', option);
@@ -407,7 +346,7 @@ export async function taggedVehicles(href, permitNo) {
       console.log('waiting for selector');
 
       await page.waitForSelector('#lstFrom');
-      const r = await page.$eval('#lstFrom', el => {
+      let r = await page.$eval('#lstFrom', el => {
         const arr = [];
 
         for (let i = 0; i < el.options.length; ++i) {
@@ -420,7 +359,17 @@ export async function taggedVehicles(href, permitNo) {
       if (!r.length && option < numberOfOptions) {
         option++;
       } else {
-        console.log('returning');
+        if (trucks) {
+          for (let truckNo of trucks) {
+            console.log('releasing trucks', truckNo);
+            await page.select('#lstFrom', truckNo);
+            await delay(2000);
+            await page.click('#btnAdd');
+          }
+          await page.click('#btnRelease');
+          await delay(2000);
+          r = _.difference(r, trucks);
+        }
         return r;
       }
     } catch (ex) {
