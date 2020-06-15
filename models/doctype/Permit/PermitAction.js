@@ -27,9 +27,15 @@ module.exports = {
     },
     {
       fieldname: 'showBrowser',
-      label: 'Show I3MS Portal',
+      label: 'Show Browsers',
       fieldtype: 'Check',
       default: 1
+    },
+    {
+      fieldname: 'numBrowsers',
+      label: 'Number of Browsers (1 to 10)',
+      fieldtype: 'Data',
+      default: 4
     },
     {
       fieldname: 'taggingUrl',

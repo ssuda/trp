@@ -14,9 +14,10 @@ import {
   permitDetails,
   permitsDetails,
   permitReport,
-  releaseVehicles
+  releaseVehicles,
+  browserInit,
+  disconnect
 } from '../i3ms/i3ms';
-import { browserInit, openBrowser, disconnect } from '../i3ms/browser';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isMac = process.platform === 'darwin';
