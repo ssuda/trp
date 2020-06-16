@@ -20,7 +20,7 @@ module.exports = class BaseDocument extends Observable {
     }
     await super.trigger(event, params);
 
-    if (this._turnOffSync || frappe._turnOffSync) {
+    if (this._turnOffSync || frappe._turnOffSync || this.meta.turnOffSync) {
       console.log('Not syncing to firestore, as it is from firestore');
       return;
     }

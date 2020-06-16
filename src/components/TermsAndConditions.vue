@@ -17,7 +17,7 @@
             {{ formatCurrency(advanceAmount) }}
           </span>
         </li>
-
+        <!-- 
         <li class="mt-2">
           Billing is <span class="font-bold">Monthly</span> and Only billed for
           Successfully Tagged Trucks
@@ -27,18 +27,18 @@
           Monthly payment is calculated after Billing period and should be paid
           within <span class="font-bold">{{ gracePeriod }} days</span>.
           Otherwise, your service will be disabled
-        </li>
+        </li> -->
 
         <li class="mt-2">
-          Base Price Rs
+          Monthly Price Rs
           <span class="font-bold">
             {{ formatCurrency(frappe.globalConfig.price) }}</span
           >
-          (Upto 20,000 Trucks). After 20,000 Trucks, Rs
+          <!-- (Upto 20,000 Trucks). After 20,000 Trucks, Rs
           <span class="font-bold">
             {{ formatCurrency(frappe.globalConfig.truckWisePayment) }}</span
           >
-          Per Truck.
+          Per Truck. -->
         </li>
 
         <li class="mt-2" v-if="taxRate">

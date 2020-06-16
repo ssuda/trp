@@ -327,6 +327,7 @@ export default {
         }
 
         this.checkForUpdates();
+        this.setupAutoTagging();
       }
       // if (resetRoute) {
       //   this.$router.replace('/');

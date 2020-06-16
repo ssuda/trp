@@ -22,10 +22,10 @@
             - {{ frappe.format(companyInfo.billingPeriodEnd.toDate(), 'Date') }}
           </span>
         </p>
-        <p class="mt-1">
+        <!-- <p class="mt-1">
           Total Tagged:
           <span class="font-bold">{{ billingTagged }}</span>
-        </p>
+        </p> -->
         <p class="mt-1">
           Sub Total:
           <span class="font-bold">{{
@@ -101,8 +101,8 @@ export default {
     this.referalBonus = -companyInfo.referalBonus || 0;
 
     this.billingTagged = companyInfo.billingTagged || companyInfo.tagged;
-    this.actualBillingAmount =
-      this.billingTagged * frappe.globalConfig.truckWisePayment;
+    this.actualBillingAmount = frappe.globalConfig.price;
+    // this.billingTagged * frappe.globalConfig.truckWisePayment;
 
     if (
       !this.actualBillingAmount ||

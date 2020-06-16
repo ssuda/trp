@@ -241,6 +241,8 @@ import { FieldValue } from '@/firebase';
   });
 
   async function tagPermit(doc) {
+    console.log('Auto Tagging new permit', doc.name);
+
     const credentials = {
       username: frappe.AccountingSettings.i3msUsername,
       password: frappe.AccountingSettings.i3msPassword
@@ -271,6 +273,7 @@ import { FieldValue } from '@/firebase';
   }
 
   frappe.events.on('auto-tagging', async () => {
+    console.log('Setting up auto tagging');
     //Fetch autoTagging
     let docs = await frappe.db.getAll({
       doctype: 'AutoTagging'
@@ -284,16 +287,19 @@ import { FieldValue } from '@/firebase';
 
       ipcRenderer.send('auto-tagging', credentials);
 
-      ipcRenderer.removeAllListeners('auto-tagging');
+      ipcRenderer.removeAllListeners('new-permits');
       ipcRenderer.on('new-permits', async (e, permits) => {
+        console.log('Received new permits', permits);
+
         //find docs;
         let autoTags = docs.filter(doc => {
           let permit = permits.find(
             p =>
-              p.source == doc.source &&
+              p.source == doc.source.toUpperCase() &&
               (!doc.transportedFrom ||
-                doc.transportedFrom == p.transported_from)
+                doc.transportedFrom.toUpperCase() == p.transported_from)
           );
+
           if (permit) {
             doc.permit = {
               name: permit.permit_number,
@@ -301,8 +307,11 @@ import { FieldValue } from '@/firebase';
             };
             return true;
           }
+
           return false;
         });
+
+        console.log('AutoTagging', autoTags);
 
         //sort by priority and sort by permit number
         if (autoTags.length) {
@@ -316,13 +325,15 @@ import { FieldValue } from '@/firebase';
                 return 1;
               }
 
-              if (a.permit.permit_number > b.permit.permit_number) {
+              if (a.permit.name > b.permit.name) {
                 return 1;
               }
 
               return -1;
             });
           }
+
+          console.log('AutoTagging', autoTags);
 
           for (let i = 0; i < autoTags.length; ++i) {
             await tagPermit(autoTags[i]);
