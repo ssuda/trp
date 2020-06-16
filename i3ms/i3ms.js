@@ -50,17 +50,17 @@ export async function newPermits(credentials, sse) {
             permit_number,
             start_date,
             end_date,
+            source,
             tag_url,
             vehicle_details,
-            sender,
             quantity
           ] = [
             r['Permit No.'],
             startDate,
             endDate,
+            '',
             r['Tag New Vehicle'],
             r['Vehicle Details'],
-            args.sender,
             0
           ];
 
@@ -90,11 +90,11 @@ export async function newPermits(credentials, sse) {
 
               if (!source) {
                 source = r['Requested By'];
-                const index = source.indexOf('(');
+                // const index = source.indexOf('(');
 
-                if (index != -1) {
-                  source = source.substr(0, index);
-                }
+                // if (index != -1) {
+                //   source = source.substr(0, index);
+                // }
               }
 
               if (r['Permit Qty.']) {
@@ -138,7 +138,7 @@ export async function newPermits(credentials, sse) {
       console.error(ex);
     }
 
-    await delay(120000);
+    await delay(out.length ? 300000 : 120000);
   }
 }
 

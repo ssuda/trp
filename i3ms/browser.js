@@ -397,12 +397,12 @@ module.exports = function() {
       rows,
       (p, row) => {
         p[row[0]] = row[2]
-          .substr(
+          /*.substr(
             0,
             row[2].lastIndexOf('(') != -1
               ? row[2].lastIndexOf('(')
               : row[2].length
-          )
+          )*/
           .toUpperCase();
         return p;
       },

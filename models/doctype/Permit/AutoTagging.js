@@ -7,6 +7,7 @@ module.exports = {
   isSingle: 0,
   isChild: 0,
   isSubmittable: 0,
+  turnOffSync: 1,
   documentClass: require('./AutoTaggingDocument'),
   keywordFields: ['source', 'transportedFrom', 'truckList', 'priority'],
   showTitle: false,
