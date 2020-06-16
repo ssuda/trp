@@ -38,7 +38,6 @@ module.exports = {
       options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
       required: 1
     },
-
     {
       fieldname: 'numBrowsers',
       label: 'Number of Browsers (1 to 10)',
