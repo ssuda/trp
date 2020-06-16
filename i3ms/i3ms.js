@@ -12,8 +12,11 @@ export async function newPermits(credentials, sse) {
   let hiddenBrowser = browser();
 
   await hiddenBrowser.browserInit(credentials, true, true);
+  let out = [];
 
   while (true) {
+    out = [];
+
     try {
       let result;
 
@@ -27,8 +30,6 @@ export async function newPermits(credentials, sse) {
           break;
         } catch (ex) {}
       }
-
-      const out = [];
 
       await result.reduce(async (p, r) => {
         await p;
@@ -138,7 +139,7 @@ export async function newPermits(credentials, sse) {
       console.error(ex);
     }
 
-    await delay(out.length ? 300000 : 120000);
+    await delay(out.length ? 300000 : 60000);
   }
 }
 
@@ -393,13 +394,15 @@ export async function tagVehicle(obj, vehicles, options, sse) {
 
     sno++;
 
-    console.log(sno, obj.tabNo, 'Tagging vehicle', truck);
+    console.log(sno, 'Tagging vehicle', truck);
 
     let reason = await obj.tagVehicle(taggingUrl, truck);
 
     if (reason && /is already tagged/i.test(reason)) {
-      reason = '';
-    } else if (sse) {
+      reason = 'Already Tagged by SomeOne';
+    }
+
+    if (sse) {
       sse.send('total', 1);
     }
 
