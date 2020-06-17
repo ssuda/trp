@@ -1,4 +1,5 @@
 const moment = require('moment');
+require('console-stamp')(console, '[HH:MM:ss.l]');
 
 const browser = require('./browser');
 
@@ -542,6 +543,6 @@ export async function browserInit(cred, headless, tologin) {
   return i3ms.browserInit(cred, headless, tologin);
 }
 
-export async function disconnect(cred, headless, tologin) {
+export async function disconnect() {
   return i3ms.disconnect();
 }

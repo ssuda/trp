@@ -211,6 +211,36 @@ module.exports = {
       }
     },
     {
+      label: 'Trip Report',
+      condition: doc => !doc.isNew(),
+      action: async function(permit) {
+        try {
+          const meta = frappe.getMeta('Trip');
+          const fields = meta.fields.filter(field => !field.hidden);
+
+          const columns = fields.map(f => f.fieldname);
+
+          const trips = await frappe.db.getAll({
+            doctype: 'Trip',
+            fields: columns,
+            filters: {
+              Permit: ['=', permit.name]
+            },
+            orderBy: 'creation',
+            order: 'desc'
+          });
+
+          const rows = trips.map(trip => {
+            return columns.map(c => trip[c]);
+          });
+
+          exportData(`${permit.name} Trips Report`, columns, rows, true);
+        } catch (ex) {
+          console.error(ex);
+        }
+      }
+    },
+    {
       label: 'Tag Report',
       condition: doc => !doc.isNew() && doc.type === 'I3MS',
       action: async function(permit) {
