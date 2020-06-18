@@ -14,6 +14,18 @@ module.exports = {
       placeholder: 'Full Name'
     },
     {
+      fieldname: 'gstin',
+      label: 'GSTIN No.',
+      fieldtype: 'Data',
+      placeholder: '29AAGCB7383J1Z1'
+    },
+    {
+      fieldname: 'pan',
+      label: 'PAN',
+      fieldtype: 'Data',
+      placeholder: 'ABCDE1234F'
+    },
+    {
       fieldname: 'image',
       label: 'Image',
       fieldtype: 'AttachImage'
@@ -100,5 +112,5 @@ module.exports = {
     }
   ],
 
-  quickEditFields: ['email', 'phone', 'address', 'defaultAccount', 'currency']
+  quickEditFields: ['email', 'phone', 'pan', 'gstin', 'address', 'defaultAccount', 'currency']
 };
