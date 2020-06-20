@@ -112,5 +112,13 @@ module.exports = {
     }
   ],
 
-  quickEditFields: ['email', 'phone', 'pan', 'gstin', 'address', 'defaultAccount', 'currency']
+  quickEditFields: [
+    'email',
+    'phone',
+    'pan',
+    'gstin',
+    'address',
+    'defaultAccount',
+    'currency'
+  ]
 };
