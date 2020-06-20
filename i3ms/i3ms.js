@@ -303,7 +303,8 @@ export async function permitDetails(permit) {
     source,
     start_date,
     end_date,
-    noTrips
+    noTrips,
+    validate
   } = permit;
 
   console.log('inside permit details', permit);
@@ -323,6 +324,30 @@ export async function permitDetails(permit) {
 
     if (!permit_number) {
       permit_number = r['Permit No.'];
+    }
+
+    if (validate) {
+      let result = await i3ms.getPermits(
+        'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
+        '#grdTransporterActions',
+        true
+      );
+
+      let found = false;
+      for (let i = 0; i < result.length; ++i) {
+        if (r['Permit No.'] == permit_number) {
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        permit.sender.send(
+          'permit-details-results',
+          null
+        );
+        return null;
+      }
     }
 
     if (!start_date) {

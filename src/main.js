@@ -36,7 +36,8 @@ import { FieldValue } from '@/firebase';
   async function savePermit(permit, args) {
     console.log('Got result from i3ms', permit);
 
-    let tagged = permit.tagged;
+    let tagged = permit.tagged || {};
+
     let oldTagged = args.tagged
       ? typeof args.tagged === 'string'
         ? JSON.parse(args.tagged)
@@ -65,7 +66,6 @@ import { FieldValue } from '@/firebase';
     await frappe.syncDoc({
       doctype: 'Permit',
       name: permit.permit_number,
-      //account: args.credentials.username,
       taggingUrl: permit.tag_url,
       vehicleDetails: permit.vehicle_details,
       startDate: permit.start_date,
@@ -76,43 +76,45 @@ import { FieldValue } from '@/firebase';
       tagged: JSON.stringify(tagged)
     });
 
-    // insertOrUpdate Trucks
-    for (let truck of permit.trips.map(t => t.truck_number)) {
-      console.log('inserting truck', truck);
-      await frappe.syncDoc({
-        doctype: 'Truck',
-        name: truck
-      });
+    if (permit.trips) {
+      // insertOrUpdate Trucks
+      for (let truck of permit.trips.map(t => t.truck_number)) {
+        console.log('inserting truck', truck);
+        await frappe.syncDoc({
+          doctype: 'Truck',
+          name: truck
+        });
+      }
+
+      for (let trip of permit.trips) {
+        console.log('inserting trip', {
+          doctype: 'Trip',
+          name: trip.tp_number,
+          permit: permit.permit_number,
+          truck: trip.truck_number,
+          tpNumber: trip.tp_number,
+          tpUrl: trip.tp_url,
+          loadQty: trip.load_carrying,
+          startDate: trip.tp_date
+        });
+
+        await frappe.syncDoc({
+          doctype: 'Trip',
+          name: trip.tp_number,
+          permit: permit.permit_number,
+          truck: trip.truck_number,
+          tpNumber: trip.tp_number,
+          tpUrl: trip.tp_url,
+          loadQty: trip.load_carrying,
+          startDate: trip.tp_date
+        });
+      }
+
+      const doc = await frappe.getDoc('Permit', permit.permit_number);
+      const changed = await doc.applyFormula();
+      console.log('before permit update', doc, changed);
+      await doc.update();
     }
-
-    for (let trip of permit.trips) {
-      console.log('inserting trip', {
-        doctype: 'Trip',
-        name: trip.tp_number,
-        permit: permit.permit_number,
-        truck: trip.truck_number,
-        tpNumber: trip.tp_number,
-        tpUrl: trip.tp_url,
-        loadQty: trip.load_carrying,
-        startDate: trip.tp_date
-      });
-
-      await frappe.syncDoc({
-        doctype: 'Trip',
-        name: trip.tp_number,
-        permit: permit.permit_number,
-        truck: trip.truck_number,
-        tpNumber: trip.tp_number,
-        tpUrl: trip.tp_url,
-        loadQty: trip.load_carrying,
-        startDate: trip.tp_date
-      });
-    }
-
-    const doc = await frappe.getDoc('Permit', permit.permit_number);
-    const changed = await doc.applyFormula();
-    console.log('before permit update', doc, changed);
-    await doc.update();
   }
 
   frappe.events.on('reload-main-window', () => {
@@ -126,17 +128,18 @@ import { FieldValue } from '@/firebase';
 
   frappe.events.on('permit-details', args => {
     ipcRenderer.send('permit-details', args);
-    ipcRenderer.removeAllListeners('permit-details-results');
     ipcRenderer.once('permit-details-results', (e, permit) => {
-      savePermit(permit, args);
-      frappe.events.trigger('permit-details-results', e);
+      if (permit) {
+        savePermit(permit, args);
+      }
+      frappe.events.trigger('permit-details-results', permit);
     });
   });
 
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
-    ipcRenderer.removeAllListeners('permits-details-results');
     ipcRenderer.once('permits-details-results', e => {
+      ipcRenderer.removeAllListeners('permit-details-results');
       frappe.events.trigger('permits-details-results', e);
     });
 
@@ -147,9 +150,13 @@ import { FieldValue } from '@/firebase';
 
   frappe.events.on('tag-vehicles', permit => {
     ipcRenderer.send('tag-vehicles', permit);
-    ipcRenderer.removeAllListeners('tag-results');
 
     ipcRenderer.once('tag-results', function(e, response) {
+
+      ipcRenderer.removeAllListeners('tag-truck-result');
+      ipcRenderer.removeAllListeners('failed');
+      ipcRenderer.removeAllListeners('total');
+
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
       let finallyTagged = Object.assign(tagged, response);
       permit.tagged = JSON.stringify(finallyTagged);
@@ -166,8 +173,6 @@ import { FieldValue } from '@/firebase';
       }
       frappe.events.trigger('tag-results', response);
     });
-
-    ipcRenderer.removeAllListeners('tag-truck-result');
 
     let batchSize = 0;
 
@@ -201,13 +206,11 @@ import { FieldValue } from '@/firebase';
       }
     });
 
-    ipcRenderer.removeAllListeners('failed');
     ipcRenderer.on('failed', (e, results) => {
       console.log('received failed from main process', results);
       frappe.events.trigger('failed', results);
     });
 
-    ipcRenderer.removeAllListeners('total');
     ipcRenderer.on('total', (event, results) => {
       console.log('received total from main process', results);
       frappe.events.trigger('total', results);
@@ -216,7 +219,6 @@ import { FieldValue } from '@/firebase';
 
   frappe.events.on('release-vehicles', permit => {
     ipcRenderer.send('release-vehicles', permit);
-    ipcRenderer.removeAllListeners('release-vehicles-results');
 
     ipcRenderer.once('release-vehicles-results', function(e, response) {
       console.log(
@@ -287,9 +289,12 @@ import { FieldValue } from '@/firebase';
 
       ipcRenderer.send('auto-tagging', credentials);
 
-      ipcRenderer.removeAllListeners('new-permits');
-      ipcRenderer.on('new-permits', async (e, permits) => {
+      ipcRenderer.once('new-permits', async (e, permits) => {
         console.log('Received new permits', permits);
+
+        for (let i = 0; i < permits.length; ++i) {
+          savePermit(permits[i], {});
+        }
 
         //find docs;
         let autoTags = docs.filter(doc => {

@@ -24,7 +24,8 @@ export async function refreshPermit(permit, cb) {
     end_date: permit.endDate,
     quantity: permit.quantity,
     showBrowser: permit.showBrowser,
-    noTrips: permit.noTrips
+    noTrips: permit.noTrips,
+    validate: permit.validate
   });
 
   cb = cb || (() => {});
