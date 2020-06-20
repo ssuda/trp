@@ -56,7 +56,7 @@ module.exports = {
       fieldname: 'template',
       label: 'Template',
       fieldtype: 'Select',
-      options: ['Basic', 'Minimal', 'Business'],
+      options: ['Basic', 'Minimal', 'Business', 'SpinBi'],
       default: 'Basic'
     },
     {

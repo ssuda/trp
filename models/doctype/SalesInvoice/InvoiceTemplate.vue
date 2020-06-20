@@ -6,6 +6,7 @@
 import Basic from './Templates/Basic';
 import Minimal from './Templates/Minimal';
 import Business from './Templates/Business';
+import SpinBi from './Templates/SpinBi';
 
 export default {
   name: 'InvoiceTemplate',
@@ -16,7 +17,8 @@ export default {
       let templates = {
         Basic,
         Minimal,
-        Business
+        Business,
+        SpinBi
       };
       if (!(type in templates)) {
         type = 'Basic';
