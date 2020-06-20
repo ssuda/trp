@@ -48,7 +48,7 @@ async function processMessage(message, cb) {
       {
         console.log('permit-report', args.startDate, args.endDate);
         await browserInit(args.credentials, !args.showBrowser);
-        const r = await permitReport(args);
+        const r = await permitReport(args, event.sender);
         console.log('sending permit-report results to browser', r);
         event.sender.send('permit-report-results', r);
       }
@@ -78,7 +78,7 @@ async function processMessage(message, cb) {
       {
         console.log('permit-details', args);
         await browserInit(args.credentials, !args.showBrowser);
-        const r = await permitDetails(args);
+        const r = await permitDetails(args, event.sender);
         console.log('sending permit-details results to browser', r);
         event.sender.send('permit-details-results', r);
       }
@@ -91,17 +91,13 @@ async function processMessage(message, cb) {
         if (args.refresh) {
           for (let permit of args.permits) {
             await browserInit(permit.credentials, !args.showBrowser);
-            await permitDetails({
-              ...permit,
-              sender: event.sender
-            });
+            await permitDetails(permit, event.sender);
           }
           return event.sender.send('permits-details-results');
         }
 
         await browserInit(args.credentials, false);
-        args.sender = event.sender;
-        const r = await permitsDetails(args);
+        const r = await permitsDetails(args, event.sender);
         console.log('sending permits-details results to browser', r);
         event.sender.send('permits-details-results', r);
       }

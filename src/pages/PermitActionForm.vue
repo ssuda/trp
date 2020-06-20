@@ -286,20 +286,23 @@ export default {
         } else {
           obj.taggingUrl = this.doc.taggingUrl;
           let ret = await new Promise((resolve, reject) => {
-            refreshPermit({
-              ...obj,
-              noTrips: true,
-              validate: true
-            },
-            (permit) => {
-              resolve(permit)
-            }
+            refreshPermit(
+              {
+                ...obj,
+                noTrips: true,
+                validate: true
+              },
+              permit => {
+                resolve(permit);
+              }
             );
-          })
+          });
 
           if (!ret) {
             showMessageDialog({
-              description: this._('No Permit to tag vehicles, please check in i3ms'),
+              description: this._(
+                'No Permit to tag vehicles, please check in i3ms'
+              ),
               buttons: [
                 {
                   label: _('Ok')
@@ -308,7 +311,7 @@ export default {
             });
             this.loading = false;
           }
-                      return;
+          return;
         }
 
         if (trucks.length) {

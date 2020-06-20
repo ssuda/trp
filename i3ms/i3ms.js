@@ -189,8 +189,7 @@ export async function permitsDetails(args) {
         start_date: startDate,
         end_date: endDate,
         tag_url: r['Tag New Vehicle'],
-        vehicle_details: r['Vehicle Details'],
-        sender: args.sender
+        vehicle_details: r['Vehicle Details']
       };
 
       if (!permit.tag_url) {
@@ -205,7 +204,7 @@ export async function permitsDetails(args) {
       if (permit.tag_url) {
         try {
           console.log('fetching permit', permit.permit_number);
-          const l = await permitDetails(permit);
+          const l = await permitDetails(permit, args.sender);
           console.log('finished fetching permit', permit.permit_number);
           out.push(l);
         } catch (ex) {
@@ -223,7 +222,7 @@ export async function permitsDetails(args) {
   return out;
 }
 
-export async function permitReport(args) {
+export async function permitReport(args, sse) {
   let fromDate = moment(args.start_date).format('DD-MMM-YYYY');
   let toDate = moment(args.end_date).format('DD-MMM-YYYY');
 
@@ -271,7 +270,7 @@ export async function permitReport(args) {
   }
 }
 
-export async function successfullyTagged(permitNo, credentials) {
+async function successfullyTagged(permitNo, credentials) {
   if (credentials) {
     console.log(credentials);
     await i3ms.browserInit(credentials);
@@ -295,7 +294,7 @@ export async function successfullyTagged(permitNo, credentials) {
   }, {});
 }
 
-export async function permitDetails(permit) {
+export async function permitDetails(permit, sse) {
   let {
     tag_url,
     vehicle_details,
@@ -304,6 +303,7 @@ export async function permitDetails(permit) {
     start_date,
     end_date,
     noTrips,
+    noTagged,
     validate
   } = permit;
 
@@ -327,6 +327,8 @@ export async function permitDetails(permit) {
     }
 
     if (validate) {
+      console.log('fetching permit in the list', permit_number);
+
       let result = await i3ms.getPermits(
         'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
@@ -335,17 +337,15 @@ export async function permitDetails(permit) {
 
       let found = false;
       for (let i = 0; i < result.length; ++i) {
-        if (r['Permit No.'] == permit_number) {
+        if (result[i]['Permit No.'] == permit_number) {
+          console.log('found permit in the list', permit_number);
           found = true;
           break;
         }
       }
 
-      if (!found) {
-        permit.sender.send(
-          'permit-details-results',
-          null
-        );
+      if (!found && sse) {
+        sse.send('permit-details-results', null);
         return null;
       }
     }
@@ -388,7 +388,11 @@ export async function permitDetails(permit) {
     });
   }
 
-  permit.tagged = await successfullyTagged(permit_number);
+  if (!noTagged) {
+    permit.tagged = await successfullyTagged(permit_number);
+  } else {
+    permit.tagged = {};
+  }
 
   console.log('tagged length', permit.tagged.length);
   if (!noTrips) {
@@ -397,9 +401,9 @@ export async function permitDetails(permit) {
     permit.trips = [];
   }
 
-  if (permit.sender) {
+  if (sse) {
     console.log('sending results to browser', permit.permit_number);
-    permit.sender.send(
+    sse.send(
       'permit-details-results',
       _.omit(permit, ['sender', 'credentials'])
     );
@@ -530,9 +534,12 @@ export async function tagVehicles(options, sse) {
   }
 
   if (!permitNumber) {
-    return permitDetails({
-      tag_url: taggingUrl
-    });
+    return permitDetails(
+      {
+        tag_url: taggingUrl
+      },
+      sse
+    );
   }
   return successfullyTagged(permitNumber);
 }
