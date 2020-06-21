@@ -144,7 +144,7 @@ export default {
         const json = csv2json(csvString, { parseNumbers: true });
         json.forEach(row => {
           header.forEach(h => {
-            if (isNullOrUndefined(row[h])) {
+            if (isNullOrUndefined(row[h]) || row[h] === '') {
               delete row[h];
             }
           });
