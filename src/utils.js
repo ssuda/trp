@@ -180,6 +180,10 @@ export function showMessageDialog({ message, description, buttons = [] }) {
   });
 }
 
+export function isNullOrUndefined(val) {
+  return val == null || typeof val == 'undefined';
+}
+
 export function dbPath(companyName) {
   return path.join(remote.getGlobal('userData'), `${companyName}.db`);
 }

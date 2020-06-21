@@ -176,6 +176,9 @@ let TwoColumnForm = {
       handleErrorWithDialog(e, this.doc);
     },
     async activateInlineEditing(df) {
+      // reset error messages
+      this.$set(this.errors, df.fieldname, null);
+
       if (df.inline) {
         this.inlineEditField = df;
         if (!this.doc[df.fieldname]) {

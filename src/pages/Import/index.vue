@@ -61,6 +61,7 @@ import FileSelect from '@/components/FileSelect';
 import { exportData, getDoc, showMessageDialog } from '@/utils';
 import BackLink from '@/components/BackLink';
 import { DateTime } from 'luxon';
+import { isNullOrUndefined } from '@/utils';
 
 export default {
   name: 'ImportData',
@@ -120,29 +121,34 @@ export default {
         const fieldMap = {};
 
         let header = reader.result.split('\n')[0];
-        header = header.split(',').map(label => {
-          let fieldname;
-          label = label.replace(/\(.*$/, '');
-          meta.fields.some(field => {
-            if (field.label === label.trim()) {
-              fieldname = field.fieldname;
-              fieldMap[fieldname] = field;
-              return true;
-            }
-          });
-          return fieldname;
-        });
+
+        header = header
+          .split(',')
+          .map(label => {
+            let fieldname;
+            label = label.replace(/\(.*$/, '');
+            meta.fields.some(field => {
+              if (field.label === label.trim()) {
+                fieldname = field.fieldname;
+                fieldMap[fieldname] = field;
+                return true;
+              }
+            });
+            return fieldname;
+          })
+          .filter(Boolean);
+
         let csvString = reader.result.split('\n');
         csvString[0] = header;
         csvString = csvString.join('\n');
         const json = csv2json(csvString, { parseNumbers: true });
-        // json.forEach(row => {
-        //   header.forEach(h => {
-        //     if (fieldMap[h].fieldtype == 'Date' || fieldMap[h].fieldtype === 'Datetime') {
-        //       row[h] = DateTime.fromISO(row[h]).toLocal().toISO()
-        //     }
-        //   });
-        // });
+        json.forEach(row => {
+          header.forEach(h => {
+            if (isNullOrUndefined(row[h])) {
+              delete row[h];
+            }
+          });
+        });
         console.log('json', json);
         this.data = await Promise.all(json.map(row => this.makeNewDoc(row)));
         this.submitting = true;

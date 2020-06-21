@@ -7,9 +7,7 @@ const { machineIdSync } = require('node-machine-id');
 
 let deviceId = machineIdSync({ original: true });
 
-function isNullOrUndefined(val) {
-  return val == null || typeof val == 'undefined';
-}
+const { isNullOrUndefined } = require('@/utils');
 
 module.exports = class BaseDocument extends Observable {
   // trigger methods on the class if they match
