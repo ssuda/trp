@@ -38,7 +38,7 @@ export async function newPermits(credentials, sse) {
           return Promise.resolve();
         }
 
-        if (!r['Vehicle Details']) {
+        if (!r['Tag New Vehicle']) {
           const createdAt = moment(
             r['Request On'] || r['Requested On'],
             'DD MMM YYYY'
