@@ -163,7 +163,11 @@ export async function connectToLocalDatabase(filepath) {
   console.log('lastSelectedFilePath', config.get('lastSelectedFilePath', null));
 }
 
-export function showMessageDialog({ message, description, buttons = [] }) {
+export function showMessageDialog({
+  message,
+  description,
+  buttons = [{ label: 'Ok' }]
+}) {
   return new Promise((resolve, reject) => {
     Vue.modal.show('dialog', {
       title: message,
