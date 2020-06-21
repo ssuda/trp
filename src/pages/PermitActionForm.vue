@@ -310,8 +310,8 @@ export default {
               ]
             });
             this.loading = false;
+            return;
           }
-          return;
         }
 
         if (trucks.length) {

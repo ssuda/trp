@@ -61,7 +61,7 @@ import { FieldValue } from '@/firebase';
     }, {});
 
     tagged = Object.assign(oldTagged || {}, tagged);
-
+    let trips = permit.trips || [];
     //save permit
     await frappe.syncDoc({
       doctype: 'Permit',
@@ -71,8 +71,8 @@ import { FieldValue } from '@/firebase';
       startDate: permit.start_date,
       endDate: permit.end_date,
       quantity: permit.quantity,
-      delivered: permit.trips.reduce((p, t) => p + +t.load_carrying, 0),
-      numTrips: permit.trips.length,
+      delivered: trips.reduce((p, t) => p + +t.load_carrying, 0),
+      numTrips: trips.length,
       tagged: JSON.stringify(tagged)
     });
 
@@ -152,7 +152,6 @@ import { FieldValue } from '@/firebase';
     ipcRenderer.send('tag-vehicles', permit);
 
     ipcRenderer.once('tag-results', function(e, response) {
-
       ipcRenderer.removeAllListeners('tag-truck-result');
       ipcRenderer.removeAllListeners('failed');
       ipcRenderer.removeAllListeners('total');
@@ -289,7 +288,7 @@ import { FieldValue } from '@/firebase';
 
       ipcRenderer.send('auto-tagging', credentials);
 
-      ipcRenderer.once('new-permits', async (e, permits) => {
+      ipcRenderer.on('new-permits', async (e, permits) => {
         console.log('Received new permits', permits);
 
         for (let i = 0; i < permits.length; ++i) {
@@ -315,8 +314,6 @@ import { FieldValue } from '@/firebase';
 
           return false;
         });
-
-        console.log('AutoTagging', autoTags);
 
         //sort by priority and sort by permit number
         if (autoTags.length) {
