@@ -52,7 +52,7 @@ export default {
       !frappe.AccountingSettings.i3msUsername ||
       !frappe.AccountingSettings.i3msPassword
     ) {
-      this.$router.replace('/i3msAccount');
+      this.$router.push('/i3msAccount');
     }
   }
 };
