@@ -28,8 +28,8 @@ export default {
 
 <style scoped>
 textarea {
-    min-height: 20rem;
-    max-height: 50rem;
-    overflow: auto;
+  min-height: 20rem;
+  max-height: 50rem;
+  overflow: auto;
 }
 </style>

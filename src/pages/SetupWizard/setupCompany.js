@@ -33,7 +33,7 @@ export default async function setupCompany(setupWizardValues) {
     currency: countryList[country]['currency']
   });
 
-  await createSpinBiUser(setupWizardValues, frappe.currentUser.uid)
+  await createSpinBiUser(setupWizardValues, frappe.currentUser.uid);
 
   const printSettings = await frappe.getSingle('PrintSettings');
   printSettings.update({

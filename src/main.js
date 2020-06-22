@@ -137,7 +137,7 @@ import { FieldValue } from '@/firebase';
   ipcRenderer.on('permits-details-results', e => {
     frappe.events.trigger('permits-details-results', e);
   });
-  
+
   ipcRenderer.on('failed', (e, results) => {
     console.log('received failed from main process', results);
     frappe.events.trigger('failed', results);
@@ -210,7 +210,6 @@ import { FieldValue } from '@/firebase';
         });
       }
     });
-
   });
 
   frappe.events.on('release-vehicles', permit => {
@@ -238,7 +237,7 @@ import { FieldValue } from '@/firebase';
     }
   });
 
-  frappe.events.on('refresh-permits', (args) => {
+  frappe.events.on('refresh-permits', args => {
     ipcRenderer.send('refresh-permits', args);
   });
 

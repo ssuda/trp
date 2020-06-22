@@ -35,6 +35,8 @@ import ProfitAndLoss from './ProfitAndLoss';
 import Expenses from './Expenses';
 import TripStats from './TripStats';
 
+import frappe from 'frappejs';
+
 export default {
   name: 'Dashboard',
   components: {

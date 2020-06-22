@@ -364,7 +364,6 @@ export default {
           return;
         }
       } else if (this.doc.action === 'refresh') {
-
         //call permit refresh
         refreshPermit(
           {
