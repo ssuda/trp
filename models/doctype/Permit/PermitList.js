@@ -22,7 +22,7 @@ export default {
         try {
           const doc = await frappe.getNewDoc('PermitAction');
           doc.set({
-            label: _('Fetch Permits From I3MS'),
+            label: _('Fetch New Permits From I3MS'),
             buttonText: _('Fetching'),
             action: 'fetchNew'
           });

@@ -1,6 +1,33 @@
 import frappe from 'frappejs';
 import { DateTime } from 'luxon';
 
+
+export function pickPermitFields(permit) {
+  return (({
+    name,
+    transportedFrom,
+    source,
+    quantity,
+    startDate,
+    taggingUrl,
+    vehicleDetails,
+    material,
+    destination,
+    endDate
+  }) => ({
+    name,
+    transportedFrom,
+    source,
+    quantity,
+    startDate,
+    taggingUrl,
+    vehicleDetails,
+    material,
+    destination,
+    endDate
+   }))(permit);
+}
+
 export async function twoMonthsOldPermits() {
   const dt = DateTime.local()
     .minus({ months: 2 })
