@@ -328,7 +328,7 @@ export async function permitDetails(permit, sse) {
         .format('YYYY-MM-DD');
     }
 
-    permit = Object.assign(permit, {
+    permit = {
       name: permitNumber,
       transportedFrom,
       source,
@@ -337,7 +337,7 @@ export async function permitDetails(permit, sse) {
       taggingUrl,
       vehicleDetails,
       endDate
-    });
+    };
   }
 
   if (!noTagged) {
