@@ -1,5 +1,6 @@
 productName: SpinBi ERP
 appId: com.spinbi.trp
+copyright: Copyright © 2020 SpinBi Technologies,
 win:
   target:
       - target: nsis
@@ -9,6 +10,7 @@ win:
 nsis:
   perMachine: true
   oneClick: true
+  license: eula.txt
 
 publish:
   provider: s3
