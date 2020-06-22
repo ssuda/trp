@@ -45,6 +45,15 @@ export default {
     ProfitAndLoss,
     Expenses,
     TripStats
+  },
+
+  created() {
+    if (
+      !frappe.AccountingSettings.i3msUsername ||
+      !frappe.AccountingSettings.i3msPassword
+    ) {
+      this.$router.replace('/i3msAccount');
+    }
   }
 };
 </script>
