@@ -177,10 +177,11 @@ export default {
 
   methods: {
     async onClick() {
-      // if (!this.doc.account) {
-      //   showMessageDialog({ message: this._('Please select account') });
-      //   return;
-      // }
+      const credentials = {
+        username: frappe.AccountingSettings.i3msUsername,
+        password: frappe.AccountingSettings.i3msPassword
+      };
+
       this.loading = true;
 
       if (this.doc.action === 'fetchNew') {
@@ -215,10 +216,6 @@ export default {
           return;
         }
         const permit = this.doc.permit || {};
-        const credentials = {
-          username: frappe.AccountingSettings.i3msUsername,
-          password: frappe.AccountingSettings.i3msPassword
-        };
 
         let trucks;
 
@@ -335,10 +332,6 @@ export default {
         }
       } else if (this.doc.action === 'release') {
         const permit = this.doc.permit;
-        const credentials = {
-          username: frappe.AccountingSettings.i3msUsername,
-          password: frappe.AccountingSettings.i3msPassword
-        };
         let trucks = extractTrucks(this.doc.trucks);
 
         if (trucks.length) {
