@@ -312,6 +312,7 @@ export default {
             );
           }
 
+          this.openBrowser();
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';
