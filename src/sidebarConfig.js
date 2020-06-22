@@ -49,8 +49,12 @@ const config = {
           doctype: 'AutoTagging'
         },
         {
+          label: _('I3MS Returns'),
+          route: '/i3msReturns'
+        },
+        {
           label: _('I3MS Account'),
-          route: '/I3msAccount'
+          route: '/i3msAccount'
         }
       ],
       icon: getIcon('truck', '24', '5')

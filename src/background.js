@@ -15,8 +15,10 @@ import {
   permitsDetails,
   permitReport,
   newPermits,
+  refreshPermits,
   releaseVehicles,
   browserInit,
+  busyFlag,
   disconnect
 } from '../i3ms/i3ms';
 
@@ -42,6 +44,8 @@ const messageQueue = fastq(processMessage, 1);
 
 async function processMessage(message, cb) {
   const { event, args, type } = message;
+
+  busyFlag.isBusy = true;
 
   switch (type) {
     case 'permit-report':
@@ -105,6 +109,7 @@ async function processMessage(message, cb) {
   }
 
   cb(null);
+  busyFlag.isBusy = false;
 }
 
 function createWindow() {
@@ -209,6 +214,10 @@ ipcMain.on('reload-main-window', () => {
 
 ipcMain.on('auto-tagging', (event, args) => {
   newPermits(args, event.sender);
+});
+
+ipcMain.on('refresh-permits', (event, args) => {
+  refreshPermits(args, event.sender);
 });
 
 //openBrowser(true);

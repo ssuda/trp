@@ -82,10 +82,22 @@ module.exports = {
       fieldtype: 'Data'
     },
     {
+      fieldname: 'transportedFrom',
+      label: 'Transported From',
+      fieldtype: 'Data',
+      hidden: 1
+    },
+    {
       fieldname: 'tagged',
       label: 'Tagged',
       fieldtype: 'Text',
       hidden: true
+    },
+    {
+      fieldname: 'closed',
+      label: 'Closed',
+      fieldtype: 'Check',
+      default: 0
     },
     {
       fieldname: 'numTagged',

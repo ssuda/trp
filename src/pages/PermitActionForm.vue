@@ -116,7 +116,7 @@ import {
   extractTrucks
 } from '@/utils';
 
-import { refreshPermit } from '@/permit';
+import { refreshPermit, twoMonthsOldPermits } from '@/permit';
 
 export default {
   name: 'PermitActionForm',
@@ -184,37 +184,14 @@ export default {
       this.loading = true;
 
       if (this.doc.action === 'fetchNew') {
-        const dt = DateTime.local()
-          .minus({ months: 2 })
-          .toISO();
-        // const credentials = await frappe.getDoc(
-        //   'I3MSAccount',
-        //   this.doc.account
-        // );
-        const credentials = {
-          username: frappe.AccountingSettings.i3msUsername,
-          password: frappe.AccountingSettings.i3msPassword
-        };
-        let permits = await frappe.db.getAll({
-          doctype: 'Permit',
-          fields: ['*'],
-          filters: {
-            startDate: ['>=', dt],
-            type: 'I3MS'
-          }
-        });
-        permits = permits.map(permit => ({
-          tag_url: permit.taggingUrl,
-          vehicle_details: permit.vehicleDetails,
-          permit_number: permit.name,
-          start_date: permit.startDate,
-          end_date: permit.endDate
-        }));
+        let permits = await twoMonthsOldPermits();
+
         frappe.events.trigger('permits-details', {
           credentials,
-          permits: permits,
+          permits,
           showBrowser: this.doc.showBrowser
         });
+
         frappe.events.once('permits-details-results', async () => {
           this.loading = false;
           await showMessageDialog({
