@@ -71,7 +71,12 @@ export async function permitsDetails(args, sse, browser = i3ms) {
 
   console.log('permits details called', permits.length);
 
-  permits = permits.map(p => p.name);
+  permits = permits.map(p => {
+    if (args.i3msReturns) {
+      CLOSED_PERMITS[p.name] = p.closed;
+    }
+    return p.name;
+  });
 
   console.log('Number of permits in last two months', permits.length);
   let result = [];
@@ -104,7 +109,7 @@ export async function permitsDetails(args, sse, browser = i3ms) {
       return Promise.resolve();
     }
 
-    if (!permits.includes(r['Permit No.'])) {
+    if (args.i3msReturns || !permits.includes(r['Permit No.'])) {
       console.log('Permit not exists', r['Permit No.']);
 
       const createdAt = moment(
@@ -129,7 +134,7 @@ export async function permitsDetails(args, sse, browser = i3ms) {
         vehicleDetails: r['Vehicle Details']
       };
 
-      if (args.onlyNewPermits && taggingUrl) {
+      if (args.onlyNewPermits && permit.taggingUrl) {
         return Promise.resolve();
       }
 
@@ -178,6 +183,8 @@ export async function permitReport(args, sse, browser = i3ms) {
         toDate
       );
 
+      console.log('permit details', r);
+
       let trips = r.trucks.filter(t => t['Pass Number']);
 
       trips = _.map(trips, tpDetails => {
@@ -203,8 +210,11 @@ export async function permitReport(args, sse, browser = i3ms) {
         };
       });
 
+      delete r.trucks;
+      r.trips = trips;
+
       //console.log(trips);
-      return trips;
+      return r;
     } catch (ex) {
       retries++;
     }
@@ -338,7 +348,31 @@ export async function permitDetails(permit, sse) {
 
   console.log('tagged length', permit.tagged.length);
   if (!noTrips) {
-    permit.trips = await permitReport(permit);
+    let reportResult = await permitReport(permit);
+
+    if (!permit.material) {
+      permit.material = reportResult['Mineral Name'];
+    }
+
+    if (!permit.destination) {
+      permit.destination = reportResult['Destination'];
+    }
+
+    if (!permit.transportedFrom) {
+      permit.transportedFrom = reportResult['Name Of Consigner'];
+    }
+
+    // if (!permit.consignee) {
+    //   permit.consignee = reportResult['Name Of Consignee'];
+    // }
+
+    if (!permit.quantity) {
+      permit.quantity = parseFloat(
+        reportResult['Permit Quantity'].replace(/[^\d\.]/g, '')
+      );
+    }
+
+    permit.trips = reportResult.trips;
     //check whether there no trips for in last one week
     const latestTrip = permit.trips.reduce((p, trip) => {
       if (p > trip.tp_date.getTime()) {
@@ -350,9 +384,20 @@ export async function permitDetails(permit, sse) {
 
     const now = +new Date();
 
+    console.log(
+      'latest trip',
+      permit.name,
+      latestTrip,
+      now,
+      (now - latestTrip) / 1000 > 7 * 24 * 3600
+    );
+
     if ((now - latestTrip) / 1000 > 7 * 24 * 3600) {
       permit.closed = 1;
       CLOSED_PERMITS[permit.name] = 1;
+    } else {
+      permit.closed = 0;
+      CLOSED_PERMITS[permit.name] = 0;
     }
   } else {
     permit.trips = [];

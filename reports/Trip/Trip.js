@@ -77,6 +77,10 @@ class Trip {
       groupNumber++;
       trips = trips.select('Permit.source as source');
       groupNumber++;
+      trips = trips.select('Permit.destination as destination');
+      groupNumber++;
+      trips = trips.select('Permit.material as material');
+      groupNumber++;
     }
 
     if (params.customer) {
