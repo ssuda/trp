@@ -127,26 +127,33 @@ import { FieldValue } from '@/firebase';
     ipcRenderer.send('open-browser', args);
   });
 
+  ipcRenderer.on('permit-details-results', (e, permit) => {
+    if (permit) {
+      savePermit(permit, {});
+    }
+    frappe.events.trigger('permit-details-results', permit);
+  });
+
+  ipcRenderer.on('permits-details-results', e => {
+    frappe.events.trigger('permits-details-results', e);
+  });
+  
+  ipcRenderer.on('failed', (e, results) => {
+    console.log('received failed from main process', results);
+    frappe.events.trigger('failed', results);
+  });
+
+  ipcRenderer.on('total', (event, results) => {
+    console.log('received total from main process', results);
+    frappe.events.trigger('total', results);
+  });
+
   frappe.events.on('permit-details', args => {
     ipcRenderer.send('permit-details', args);
-    ipcRenderer.once('permit-details-results', (e, permit) => {
-      if (permit) {
-        savePermit(permit, args);
-      }
-      frappe.events.trigger('permit-details-results', permit);
-    });
   });
 
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
-    ipcRenderer.once('permits-details-results', e => {
-      ipcRenderer.removeAllListeners('permit-details-results');
-      frappe.events.trigger('permits-details-results', e);
-    });
-
-    ipcRenderer.on('permit-details-results', async (e, permit) => {
-      savePermit(permit, args);
-    });
   });
 
   frappe.events.on('tag-vehicles', permit => {
@@ -154,8 +161,6 @@ import { FieldValue } from '@/firebase';
 
     ipcRenderer.once('tag-results', function(e, response) {
       ipcRenderer.removeAllListeners('tag-truck-result');
-      ipcRenderer.removeAllListeners('failed');
-      ipcRenderer.removeAllListeners('total');
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
       let finallyTagged = Object.assign(tagged, response);
@@ -206,15 +211,6 @@ import { FieldValue } from '@/firebase';
       }
     });
 
-    ipcRenderer.on('failed', (e, results) => {
-      console.log('received failed from main process', results);
-      frappe.events.trigger('failed', results);
-    });
-
-    ipcRenderer.on('total', (event, results) => {
-      console.log('received total from main process', results);
-      frappe.events.trigger('total', results);
-    });
   });
 
   frappe.events.on('release-vehicles', permit => {
@@ -240,6 +236,10 @@ import { FieldValue } from '@/firebase';
     if (autoUpdate == null || autoUpdate === 1) {
       ipcRenderer.send('check-for-updates');
     }
+  });
+
+  frappe.events.on('refresh-permits', (args) => {
+    ipcRenderer.send('refresh-permits', args);
   });
 
   async function tagPermit(doc) {

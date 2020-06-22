@@ -116,7 +116,7 @@ import {
   extractTrucks
 } from '@/utils';
 
-import { refreshPermit, twoMonthsOldPermits } from '@/permit';
+import { refreshPermit, twoMonthsOldPermits, pickPermitFields } from '@/permit';
 
 export default {
   name: 'PermitActionForm',
@@ -182,6 +182,8 @@ export default {
         password: frappe.AccountingSettings.i3msPassword
       };
 
+      const permit = pickPermitFields(this.doc.permit || {});
+
       this.loading = true;
 
       if (this.doc.action === 'fetchNew') {
@@ -215,7 +217,6 @@ export default {
           this.loading = false;
           return;
         }
-        const permit = this.doc.permit || {};
 
         let trucks;
 
@@ -266,8 +267,8 @@ export default {
                 noTrips: true,
                 validate: true
               },
-              permit => {
-                resolve(permit);
+              p => {
+                resolve(p);
               }
             );
           });
@@ -331,7 +332,6 @@ export default {
           return;
         }
       } else if (this.doc.action === 'release') {
-        const permit = this.doc.permit;
         let trucks = extractTrucks(this.doc.trucks);
 
         if (trucks.length) {
@@ -364,10 +364,11 @@ export default {
           return;
         }
       } else if (this.doc.action === 'refresh') {
+
         //call permit refresh
         refreshPermit(
           {
-            ...this.doc.permit,
+            ...permit,
             showBrowser: this.doc.showBrowser
           },
           async () => {

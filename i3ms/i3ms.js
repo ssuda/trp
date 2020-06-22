@@ -21,6 +21,8 @@ export async function newPermits(credentials, sse) {
   while (true) {
     let out = [];
     try {
+      console.log('Calling new permits');
+
       out = await permitsDetails(
         {
           onlyNewPermits: true
@@ -40,6 +42,8 @@ export async function newPermits(credentials, sse) {
 }
 
 export async function refreshPermits(args, sse) {
+  console.log('Calling refreshPermits');
+
   let hiddenBrowser = browser();
   await hiddenBrowser.browserInit(args.credentials, true, true);
 
@@ -50,8 +54,9 @@ export async function refreshPermits(args, sse) {
   });
 
   while (true) {
-    await delay(1800000);
+    await delay(process.env.NODE_ENV === 'development' ? 60000 : 3600000);
 
+    console.log('Calling refresh permits');
     while (busyFlag.isBusy) {
       await delay(120000);
     }
@@ -221,20 +226,20 @@ export async function permitReport(args, sse, browser = i3ms) {
   }
 }
 
-async function successfullyTagged(permitNo, credentials) {
+async function successfullyTagged(permitNo, credentials, browser=i3ms) {
   if (credentials) {
     console.log(credentials);
-    await i3ms.browserInit(credentials);
+    await browser.browserInit(credentials);
   }
 
   console.log('permitno', permitNo);
   if (/^http/i.test(permitNo)) {
     console.log('Trying to browser', permitNo);
-    const t = await i3ms.tagInit(permitNo);
+    const t = await browser.tagInit(permitNo);
     permitNo = t['Permit No.'];
   }
 
-  const v = await i3ms.releasePage(
+  const v = await browser.releasePage(
     'https://i3ms.orissaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
     permitNo
   );
@@ -245,7 +250,7 @@ async function successfullyTagged(permitNo, credentials) {
   }, {});
 }
 
-export async function permitDetails(permit, sse) {
+export async function permitDetails(permit, sse, browser = i3ms) {
   let {
     taggingUrl,
     vehicleDetails,
@@ -255,6 +260,7 @@ export async function permitDetails(permit, sse) {
     endDate,
     noTrips,
     noTagged,
+    quantity,
     validate,
     transportedFrom
   } = permit;
@@ -262,7 +268,6 @@ export async function permitDetails(permit, sse) {
   console.log('inside permit details', permit);
 
   if (!permit.quantity || !permit.transportedFrom || !permit.source) {
-    let quantity = 0;
 
     if (taggingUrl && !vehicleDetails) {
       const u = new URL(taggingUrl);
@@ -272,7 +277,7 @@ export async function permitDetails(permit, sse) {
     }
 
     console.log('before get permit details');
-    const r = await i3ms.getPermitDetails(vehicleDetails);
+    const r = await browser.getPermitDetails(vehicleDetails);
 
     if (!permitNumber) {
       permitNumber = r['Permit No.'];
@@ -281,7 +286,7 @@ export async function permitDetails(permit, sse) {
     if (validate) {
       console.log('fetching permit in the list', permitNumber);
 
-      let result = await i3ms.getPermits(
+      let result = await browser.getPermits(
         'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
         true
@@ -327,28 +332,28 @@ export async function permitDetails(permit, sse) {
         .local()
         .format('YYYY-MM-DD');
     }
-
-    permit = {
-      name: permitNumber,
-      transportedFrom,
-      source,
-      quantity,
-      startDate,
-      taggingUrl,
-      vehicleDetails,
-      endDate
-    };
   }
+  
+  permit = {
+    name: permitNumber,
+    transportedFrom,
+    source,
+    quantity,
+    startDate,
+    taggingUrl,
+    vehicleDetails,
+    endDate
+  };
 
   if (!noTagged) {
-    permit.tagged = await successfullyTagged(permitNumber);
+    permit.tagged = await successfullyTagged(permitNumber, null, browser);
   } else {
     permit.tagged = {};
   }
 
   console.log('tagged length', permit.tagged.length);
   if (!noTrips) {
-    let reportResult = await permitReport(permit);
+    let reportResult = await permitReport(permit, sse, browser);
 
     if (!permit.material) {
       permit.material = reportResult['Mineral Name'];
@@ -382,22 +387,25 @@ export async function permitDetails(permit, sse) {
       return trip.tp_date.getTime();
     }, 0);
 
-    const now = +new Date();
 
-    console.log(
-      'latest trip',
-      permit.name,
-      latestTrip,
-      now,
-      (now - latestTrip) / 1000 > 7 * 24 * 3600
-    );
+    if (latestTrip) {
+      const now = +new Date();
 
-    if ((now - latestTrip) / 1000 > 7 * 24 * 3600) {
-      permit.closed = 1;
-      CLOSED_PERMITS[permit.name] = 1;
-    } else {
-      permit.closed = 0;
-      CLOSED_PERMITS[permit.name] = 0;
+      console.log(
+        'latest trip',
+        permit.name,
+        latestTrip,
+        now,
+        (now - latestTrip) / 1000 > 7 * 24 * 3600
+      );
+
+      if ((now - latestTrip) / 1000 > 7 * 24 * 3600) {
+        permit.closed = 1;
+        CLOSED_PERMITS[permit.name] = 1;
+      } else {
+        permit.closed = 0;
+        CLOSED_PERMITS[permit.name] = 0;
+      }
     }
   } else {
     permit.trips = [];
