@@ -359,8 +359,7 @@ export default {
 
         frappe.events.trigger('refresh-permits', {
           credentials,
-          permits,
-          showBrowser: this.doc.showBrowser
+          permits
         });
       }
     }
