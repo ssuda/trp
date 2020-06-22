@@ -2,7 +2,7 @@
   <div id="importWizard" class="modal-body" style="overflow: hidden;">
     <div class="mx-auto col-12 text-center pb-3">
       <input ref="fileInput" @change="importCSV" id="file-input" type="file" />
-      <div class="form-check-label bold">{{ "Drag & Drop a CSV file" }}</div>
+      <div class="form-check-label bold">{{ 'Drag & Drop a CSV file' }}</div>
     </div>
     <div class="row footer-divider mb-3">
       <div class="col-12" style="border-bottom:1px solid #e9ecef"></div>

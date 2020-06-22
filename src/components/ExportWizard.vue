@@ -7,14 +7,27 @@
         class="form-check-input"
         type="checkbox"
         v-model="selectAllFlag"
-      >
-      <label class="form-check-label bold ml-2" for="select-cbox">{{ "Select/Clear All" }}</label>
+      />
+      <label class="form-check-label bold ml-2" for="select-cbox">{{
+        'Select/Clear All'
+      }}</label>
     </div>
-    <hr width="93%">
+    <hr width="93%" />
     <div class="row ml-4 mb-4">
-      <div v-for="column in columns" :key="column.id" class="form-check mt-2 col-6">
-        <input :id="column.id" class="form-check-input" type="checkbox" v-model="column.checked">
-        <label class="form-check-label" :for="column.id">{{ column.content }}</label>
+      <div
+        v-for="column in columns"
+        :key="column.id"
+        class="form-check mt-2 col-6"
+      >
+        <input
+          :id="column.id"
+          class="form-check-input"
+          type="checkbox"
+          v-model="column.checked"
+        />
+        <label class="form-check-label" :for="column.id">{{
+          column.content
+        }}</label>
       </div>
     </div>
     <div class="row footer-divider mb-3">

@@ -1,7 +1,6 @@
 import frappe from 'frappejs';
 import { DateTime } from 'luxon';
 
-
 export function pickPermitFields(permit) {
   return (({
     name,
@@ -25,7 +24,7 @@ export function pickPermitFields(permit) {
     material,
     destination,
     endDate
-   }))(permit);
+  }))(permit);
 }
 
 export async function twoMonthsOldPermits() {

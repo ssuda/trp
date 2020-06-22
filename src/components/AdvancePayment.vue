@@ -27,11 +27,13 @@
       />
 
       <div class="flex">
-        <Button class="text-white mx-4"
+        <Button
+          class="text-white mx-4"
           :disabled="!paymentReference"
-          type="primary" 
+          type="primary"
           @click="updatePayment"
-          >Activate Now</Button>
+          >Activate Now</Button
+        >
 
         <Button v-if="showCancel" type="secondary" @click="$emit('close')"
           >Cancel</Button

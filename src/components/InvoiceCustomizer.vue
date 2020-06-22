@@ -6,7 +6,9 @@
           <h4>Customize</h4>
         </div>
         <div class="col-6 text-right">
-          <f-button secondary @click="saveAndClose">{{ _('Save & Close') }}</f-button>
+          <f-button secondary @click="saveAndClose">{{
+            _('Save & Close')
+          }}</f-button>
         </div>
       </div>
       <div class="row">
@@ -14,7 +16,9 @@
           <form-layout :doc="doc" :fields="fields" @updateDoc="saveDoc" />
           <sketch-picker v-model="color" class="shadow-none" />
           <div class="mt-3">
-            <f-button secondary @click="openCompanySettings">{{ _('Company Settings') }}</f-button>
+            <f-button secondary @click="openCompanySettings">{{
+              _('Company Settings')
+            }}</f-button>
           </div>
         </div>
       </div>
