@@ -8,6 +8,7 @@ import PrintView from '@/pages/PrintView/PrintView';
 import QuickEditForm from '@/pages/QuickEditForm';
 import Report from '@/pages/Report';
 import I3msAccount from '@/pages/I3msAccount';
+import I3msReturns from '@/pages/I3msReturns';
 
 // custom views
 import GetStarted from '@/pages/GetStarted';
@@ -118,6 +119,12 @@ const routes = [
     path: '/i3msAccount',
     name: 'I3msAccount',
     component: I3msAccount,
+    props: true
+  },
+  {
+    path: '/i3msReturns',
+    name: 'i3msReturns',
+    component: I3msReturns,
     props: true
   },
   {

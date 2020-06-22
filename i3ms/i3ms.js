@@ -8,133 +8,28 @@ const _ = require('lodash');
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+export let busyFlag = {
+  isBusy: false
+};
+
 //export methods
 export async function newPermits(credentials, sse) {
   let hiddenBrowser = browser();
 
   await hiddenBrowser.browserInit(credentials, true, true);
-  let out = [];
 
   while (true) {
-    out = [];
-
+    let out = [];
     try {
-      let result;
+      out = await permitsDetails(
+        {
+          onlyNewPermits: true
+        },
+        null,
+        hiddenBrowser
+      );
 
-      for (let attempts = 0; attempts < 3; ++attempts) {
-        try {
-          result = await hiddenBrowser.getPermits(
-            'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
-            '#grdTransporterActions',
-            false
-          );
-          break;
-        } catch (ex) {}
-      }
-
-      await result.reduce(async (p, r) => {
-        await p;
-        if (/javascript/i.test(r['Permit No.']) || !r['Permit No.']) {
-          return Promise.resolve();
-        }
-
-        if (!r['Tag New Vehicle']) {
-          const createdAt = moment(
-            r['Request On'] || r['Requested On'],
-            'DD MMM YYYY'
-          );
-
-          const startDate = createdAt.local().format('YYYY-MM-DD');
-          createdAt.add(1, 'month');
-          const endDate = createdAt.local().format('YYYY-MM-DD');
-
-          let [
-            permit_number,
-            start_date,
-            end_date,
-            source,
-            tag_url,
-            vehicle_details,
-            quantity
-          ] = [
-            r['Permit No.'],
-            startDate,
-            endDate,
-            '',
-            r['Tag New Vehicle'],
-            r['Vehicle Details'],
-            0
-          ];
-
-          if (!tag_url) {
-            const u = new URL(vehicle_details);
-            tag_url =
-              'https://i3ms.orissaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
-              u.search;
-          }
-
-          console.log(tag_url);
-
-          if (tag_url) {
-            try {
-              console.log('before get permit details');
-              const r = await hiddenBrowser.getPermitDetails(vehicle_details);
-
-              if (!permit_number) {
-                permit_number = r['Permit No.'];
-              }
-
-              if (!start_date) {
-                start_date = moment(r['Requested On'], 'DD MMM YYYY')
-                  .local()
-                  .format('YYYY-MM-DD');
-              }
-
-              if (!source) {
-                source = r['Requested By'];
-                // const index = source.indexOf('(');
-
-                // if (index != -1) {
-                //   source = source.substr(0, index);
-                // }
-              }
-
-              if (r['Permit Qty.']) {
-                quantity = parseFloat(r['Permit Qty.'].replace(/[^\d\.]/g, ''));
-              }
-
-              const validity = r['Permit Validity'] || '';
-
-              if (validity) {
-                end_date = moment(validity, 'DD MMM YYYY')
-                  .local()
-                  .format('YYYY-MM-DD');
-              }
-
-              let permit = {
-                permit_number,
-                source,
-                quantity,
-                start_date,
-                tag_url,
-                vehicle_details,
-                end_date,
-                transported_from: r['Transported From']
-              };
-
-              out.push(permit);
-            } catch (ex) {
-              console.error(ex);
-            }
-          }
-        } else {
-          console.log('Permit already exists', r['Permit No.']);
-        }
-
-        return Promise.resolve();
-      }, Promise.resolve());
-
-      console.log('permits details', out);
+      console.log('new permits details', out);
       sse.send('new-permits', out);
     } catch (ex) {
       console.error(ex);
@@ -144,22 +39,49 @@ export async function newPermits(credentials, sse) {
   }
 }
 
-export async function permitsDetails(args, sse) {
+export async function refreshPermits(args, sse) {
+  let hiddenBrowser = browser();
+  await hiddenBrowser.browserInit(args.credentials, true, true);
+
+  const permits = args.permits || [];
+
+  permits.forEach(permit => {
+    CLOSED_PERMITS[permit.name] = permit.closed;
+  });
+
+  while (true) {
+    await delay(1800000);
+
+    while (busyFlag.isBusy) {
+      await delay(120000);
+    }
+
+    try {
+      await permitsDetails({}, sse, hiddenBrowser);
+    } catch (ex) {
+      console.error(ex);
+    }
+  }
+}
+
+const CLOSED_PERMITS = {};
+
+export async function permitsDetails(args, sse, browser = i3ms) {
   let permits = args.permits || [];
 
   console.log('permits details called', permits.length);
 
-  permits = permits.map(p => p.permit_number);
+  permits = permits.map(p => p.name);
 
   console.log('Number of permits in last two months', permits.length);
-  let result;
+  let result = [];
 
   for (let attempts = 0; attempts < 3; ++attempts) {
     try {
-      result = await i3ms.getPermits(
+      result = await browser.getPermits(
         'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
-        true
+        !args.onlyNewPermits
       );
       break;
     } catch (ex) {}
@@ -167,45 +89,64 @@ export async function permitsDetails(args, sse) {
 
   const out = [];
 
+  const lastMonth = moment()
+    .subtract(1, 'months')
+    .endOf('month');
+
+  console.log('Total number of permits', result.length);
   await result.reduce(async (p, r) => {
     await p;
     if (/javascript/i.test(r['Permit No.']) || !r['Permit No.']) {
       return Promise.resolve();
     }
 
+    if (CLOSED_PERMITS[r['Permit No.']]) {
+      return Promise.resolve();
+    }
+
     if (!permits.includes(r['Permit No.'])) {
-      console.log('Permit not exists', r['Permit No.'], permits);
+      console.log('Permit not exists', r['Permit No.']);
 
       const createdAt = moment(
         r['Request On'] || r['Requested On'],
         'DD MMM YYYY'
       );
+
+      if (args.i3msReturns && createdAt.isAfter(lastMonth)) {
+        console.log('This Permit is this month', r['Permit No.']);
+        return Promise.resolve();
+      }
+
       const startDate = createdAt.local().format('YYYY-MM-DD');
       createdAt.add(1, 'month');
       const endDate = createdAt.local().format('YYYY-MM-DD');
 
       let permit = {
-        permit_number: r['Permit No.'],
-        start_date: startDate,
-        end_date: endDate,
-        tag_url: r['Tag New Vehicle'],
-        vehicle_details: r['Vehicle Details']
+        name: r['Permit No.'],
+        startDate: startDate,
+        endDate: endDate,
+        taggingUrl: r['Tag New Vehicle'],
+        vehicleDetails: r['Vehicle Details']
       };
 
-      if (!permit.tag_url) {
-        const u = new URL(permit.vehicle_details);
-        permit.tag_url =
+      if (args.onlyNewPermits && taggingUrl) {
+        return Promise.resolve();
+      }
+
+      if (!permit.taggingUrl) {
+        const u = new URL(permit.vehicleDetails);
+        permit.taggingUrl =
           'https://i3ms.orissaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
           u.search;
       }
 
-      console.log(permit.tag_url);
+      console.log(permit.taggingUrl);
 
-      if (permit.tag_url) {
+      if (permit.taggingUrl) {
         try {
-          console.log('fetching permit', permit.permit_number);
-          const l = await permitDetails(permit, sse);
-          console.log('finished fetching permit', permit.permit_number);
+          console.log('fetching permit', permit.name);
+          const l = await permitDetails(permit, sse, browser);
+          console.log('finished fetching permit', permit.name);
           out.push(l);
         } catch (ex) {
           console.error(ex);
@@ -222,17 +163,17 @@ export async function permitsDetails(args, sse) {
   return out;
 }
 
-export async function permitReport(args, sse) {
-  let fromDate = moment(args.start_date).format('DD-MMM-YYYY');
-  let toDate = moment(args.end_date).format('DD-MMM-YYYY');
+export async function permitReport(args, sse, browser = i3ms) {
+  let fromDate = moment(args.startDate).format('DD-MMM-YYYY');
+  let toDate = moment(args.endDate).format('DD-MMM-YYYY');
 
   let retries = 0;
 
   while (retries < 3) {
     try {
-      let r = await i3ms.permitVehicles(
+      let r = await browser.permitVehicles(
         'https://i3ms.orissaminerals.gov.in/i3MS/ePassReports/PermitWiseTransportDetails.aspx?linkn=313&linkm=15&Openstate=0',
-        args.permit_number,
+        args.name,
         fromDate,
         toDate
       );
@@ -296,38 +237,39 @@ async function successfullyTagged(permitNo, credentials) {
 
 export async function permitDetails(permit, sse) {
   let {
-    tag_url,
-    vehicle_details,
-    permit_number,
+    taggingUrl,
+    vehicleDetails,
+    name: permitNumber,
     source,
-    start_date,
-    end_date,
+    startDate,
+    endDate,
     noTrips,
     noTagged,
-    validate
+    validate,
+    transportedFrom
   } = permit;
 
   console.log('inside permit details', permit);
 
-  if (!permit.quantity) {
+  if (!permit.quantity || !permit.transportedFrom || !permit.source) {
     let quantity = 0;
 
-    if (tag_url && !vehicle_details) {
-      const u = new URL(tag_url);
-      vehicle_details =
+    if (taggingUrl && !vehicleDetails) {
+      const u = new URL(taggingUrl);
+      vehicleDetails =
         'https://i3ms.orissaminerals.gov.in/i3ms/pms/VehicleDetails.aspx' +
         u.search;
     }
 
     console.log('before get permit details');
-    const r = await i3ms.getPermitDetails(vehicle_details);
+    const r = await i3ms.getPermitDetails(vehicleDetails);
 
-    if (!permit_number) {
-      permit_number = r['Permit No.'];
+    if (!permitNumber) {
+      permitNumber = r['Permit No.'];
     }
 
     if (validate) {
-      console.log('fetching permit in the list', permit_number);
+      console.log('fetching permit in the list', permitNumber);
 
       let result = await i3ms.getPermits(
         'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
@@ -337,8 +279,8 @@ export async function permitDetails(permit, sse) {
 
       let found = false;
       for (let i = 0; i < result.length; ++i) {
-        if (result[i]['Permit No.'] == permit_number) {
-          console.log('found permit in the list', permit_number);
+        if (result[i]['Permit No.'] == permitNumber) {
+          console.log('found permit in the list', permitNumber);
           found = true;
           break;
         }
@@ -350,19 +292,18 @@ export async function permitDetails(permit, sse) {
       }
     }
 
-    if (!start_date) {
-      start_date = moment(r['Requested On'], 'DD MMM YYYY')
+    if (!startDate) {
+      startDate = moment(r['Requested On'], 'DD MMM YYYY')
         .local()
         .format('YYYY-MM-DD');
     }
 
     if (!source) {
       source = r['Requested By'];
-      const index = source.indexOf('(');
+    }
 
-      if (index != -1) {
-        source = source.substr(0, index);
-      }
+    if (!transportedFrom) {
+      transportedFrom = r['Transported From'];
     }
 
     if (r['Permit Qty.']) {
@@ -372,24 +313,25 @@ export async function permitDetails(permit, sse) {
     const validity = r['Permit Validity'] || '';
 
     if (validity) {
-      end_date = moment(validity, 'DD MMM YYYY')
+      endDate = moment(validity, 'DD MMM YYYY')
         .local()
         .format('YYYY-MM-DD');
     }
 
     permit = Object.assign(permit, {
-      permit_number,
+      name: permitNumber,
+      transportedFrom,
       source,
       quantity,
-      start_date,
-      tag_url,
-      vehicle_details,
-      end_date
+      startDate,
+      taggingUrl,
+      vehicleDetails,
+      endDate
     });
   }
 
   if (!noTagged) {
-    permit.tagged = await successfullyTagged(permit_number);
+    permit.tagged = await successfullyTagged(permitNumber);
   } else {
     permit.tagged = {};
   }
@@ -397,19 +339,34 @@ export async function permitDetails(permit, sse) {
   console.log('tagged length', permit.tagged.length);
   if (!noTrips) {
     permit.trips = await permitReport(permit);
+    //check whether there no trips for in last one week
+    const latestTrip = permit.trips.reduce((p, trip) => {
+      if (p > trip.tp_date.getTime()) {
+        return p;
+      }
+
+      return trip.tp_date.getTime();
+    }, 0);
+
+    const now = +new Date();
+
+    if ((now - latestTrip) / 1000 > 7 * 24 * 3600) {
+      permit.closed = 1;
+      CLOSED_PERMITS[permit.name] = 1;
+    }
   } else {
     permit.trips = [];
   }
 
   if (sse) {
-    console.log('sending results to browser', permit.permit_number);
+    console.log('sending results to browser', permitNumber);
     sse.send(
       'permit-details-results',
       _.omit(permit, ['sender', 'credentials'])
     );
   }
 
-  console.log('returning from permitdetails', permit.permit_number);
+  console.log('returning from permitdetails', permitNumber);
   return permit;
 }
 
@@ -536,7 +493,7 @@ export async function tagVehicles(options, sse) {
   if (!permitNumber) {
     return permitDetails(
       {
-        tag_url: taggingUrl
+        taggingUrl: taggingUrl
       },
       sse
     );
@@ -545,7 +502,7 @@ export async function tagVehicles(options, sse) {
 }
 
 export async function releaseVehicles(options, sse) {
-  const { trucks, name: permit_number } = options;
+  const { trucks, name: permitNumber } = options;
   console.log('release was called');
   try {
     if (trucks.length) {
@@ -556,7 +513,7 @@ export async function releaseVehicles(options, sse) {
         console.log('chunk', chunk);
         tagged = await i3ms.releasePage(
           'https://i3ms.orissaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
-          permit_number,
+          permitNumber,
           chunk
         );
       }

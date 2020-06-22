@@ -1,5 +1,25 @@
 import frappe from 'frappejs';
 
+export async function twoMonthsOldPermits() {
+  const dt = DateTime.local()
+    .minus({ months: 2 })
+    .toISO();
+
+  const credentials = {
+    username: frappe.AccountingSettings.i3msUsername,
+    password: frappe.AccountingSettings.i3msPassword
+  };
+
+  return frappe.db.getAll({
+    doctype: 'Permit',
+    fields: ['*'],
+    filters: {
+      startDate: ['>=', dt],
+      type: 'I3MS'
+    }
+  });
+}
+
 export async function refreshPermit(permit, cb) {
   console.log('refresh called');
   //let credentials;
@@ -17,15 +37,7 @@ export async function refreshPermit(permit, cb) {
 
   frappe.events.trigger('permit-details', {
     credentials,
-    tag_url: permit.taggingUrl,
-    vehicle_details: permit.vehicleDetails,
-    permit_number: permit.name,
-    start_date: permit.startDate,
-    end_date: permit.endDate,
-    quantity: permit.quantity,
-    showBrowser: permit.showBrowser,
-    noTrips: permit.noTrips,
-    validate: permit.validate
+    ...permit
   });
 
   cb = cb || (() => {});

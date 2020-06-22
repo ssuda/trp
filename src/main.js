@@ -46,7 +46,7 @@ import { FieldValue } from '@/firebase';
 
     if (!oldTagged) {
       try {
-        const currentDoc = frappe.getDoc('Permit', permit.permit_number);
+        const currentDoc = frappe.getDoc('Permit', permit.name);
         oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
       } catch (ex) {
         oldTagged = {};
@@ -65,12 +65,7 @@ import { FieldValue } from '@/firebase';
     //save permit
     await frappe.syncDoc({
       doctype: 'Permit',
-      name: permit.permit_number,
-      taggingUrl: permit.tag_url,
-      vehicleDetails: permit.vehicle_details,
-      startDate: permit.start_date,
-      endDate: permit.end_date,
-      quantity: permit.quantity,
+      ..._.omit(permit, ['tagged', 'trips']),
       delivered: trips.reduce((p, t) => p + +t.load_carrying, 0),
       numTrips: trips.length,
       tagged: JSON.stringify(tagged)
@@ -90,7 +85,7 @@ import { FieldValue } from '@/firebase';
         console.log('inserting trip', {
           doctype: 'Trip',
           name: trip.tp_number,
-          permit: permit.permit_number,
+          permit: permit.name,
           truck: trip.truck_number,
           tpNumber: trip.tp_number,
           tpUrl: trip.tp_url,
@@ -101,7 +96,7 @@ import { FieldValue } from '@/firebase';
         await frappe.syncDoc({
           doctype: 'Trip',
           name: trip.tp_number,
-          permit: permit.permit_number,
+          permit: permit.name,
           truck: trip.truck_number,
           tpNumber: trip.tp_number,
           tpUrl: trip.tp_url,
@@ -110,7 +105,7 @@ import { FieldValue } from '@/firebase';
         });
       }
 
-      const doc = await frappe.getDoc('Permit', permit.permit_number);
+      const doc = await frappe.getDoc('Permit', permit.name);
       const changed = await doc.applyFormula();
       console.log('before permit update', doc, changed);
       await doc.update();
@@ -301,14 +296,11 @@ import { FieldValue } from '@/firebase';
             p =>
               p.source == doc.source.toUpperCase() &&
               (!doc.transportedFrom ||
-                doc.transportedFrom.toUpperCase() == p.transported_from)
+                doc.transportedFrom.toUpperCase() == p.transportedFrom)
           );
 
           if (permit) {
-            doc.permit = {
-              name: permit.permit_number,
-              taggingUrl: permit.tag_url
-            };
+            doc.permit = permit;
             return true;
           }
 

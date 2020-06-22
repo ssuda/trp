@@ -70,6 +70,15 @@ class Trip {
       groupNumber++;
     }
 
+    if (params.i3msReturns) {
+      trips = trips.select('permit');
+      groupNumber++;
+      trips = trips.select('Permit.transportedFrom as transportedFrom');
+      groupNumber++;
+      trips = trips.select('Permit.source as source');
+      groupNumber++;
+    }
+
     if (params.customer) {
       trips = trips.select('Permit.customer as customer');
       groupNumber++;
@@ -86,7 +95,7 @@ class Trip {
       .sum('loadQty as loadQty')
       .sum('unloadQty as unloadQty');
 
-    if (params.customer || params.type) {
+    if (params.customer || params.type || params.i3msReturns) {
       trips = trips.join('Permit', 'Permit.name', 'Trip.permit');
     }
 
@@ -99,13 +108,11 @@ class Trip {
         .map((v, i) => i + 1)
         .join(',');
       trips = trips.groupByRaw(s);
-      if (params.dashboard) {
+      if (params.dashboard || params.i3msReturns) {
         trips = trips.orderByRaw('1');
       } else {
         trips = trips.orderByRaw('1 desc');
       }
-    } else {
-      //trips = trips.groupByRaw('1, 2');
     }
 
     if (params.customer) {
@@ -156,7 +163,7 @@ class Trip {
       entry.unloadQty = entry.unloadQty || 0;
       unloaded += entry.unloadQty;
 
-      if (!params.dashboard) {
+      if (!params.dashboard && !params.i3msReturns) {
         entry.numPermits = numberFormat.formatNumber(entry.numPermits, '#,###');
         entry.numTrips = numberFormat.formatNumber(entry.numTrips, '#,###');
         entry.loadQty = numberFormat.formatNumber(entry.loadQty);
@@ -165,9 +172,13 @@ class Trip {
 
       if (entry.periodicity) {
         if (params.periodicity === 'day') {
-          if (params.dashboard) {
+          if (params.dashboard || params.i3msReturns) {
             let startDate = DateTime.fromISO(entry.periodicity);
-            entry.periodicity = `${startDate.toFormat('LLL dd')}`;
+            if (!params.i3msReturns) {
+              entry.periodicity = `${startDate.toFormat('LLL dd')}`;
+            } else {
+              entry.periodicity = `${startDate.toFormat('dd-MM-yyyy')}`;
+            }
           } else {
             entry.periodicity = frappe.format(entry.periodicity, 'Date');
           }
@@ -186,7 +197,7 @@ class Trip {
       glEntries.push(entry);
     }
 
-    if (!params.dashboard) {
+    if (!params.dashboard && !params.i3msReturns) {
       glEntries.unshift({
         customer: '',
         truckOwner: '',

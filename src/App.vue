@@ -312,18 +312,7 @@ export default {
             );
           }
 
-          if (
-            frappe.AccountingSettings.i3msUsername &&
-            frappe.AccountingSettings.i3msPassword
-          ) {
-            frappe.events.trigger('open-browser', {
-              credentials: {
-                username: frappe.AccountingSettings.i3msUsername,
-                password: frappe.AccountingSettings.i3msPassword
-              },
-              showBrowser: true
-            });
-          }
+         
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';
@@ -348,6 +337,34 @@ export default {
 
     setupAutoTagging() {
       frappe.events.trigger('auto-tagging');
+    },
+
+
+    openBrowser() {
+      if (
+          frappe.AccountingSettings.i3msUsername &&
+          frappe.AccountingSettings.i3msPassword
+      ) {
+
+        const credentials = {
+            username: frappe.AccountingSettings.i3msUsername,
+            password: frappe.AccountingSettings.i3msPassword
+          };
+
+        frappe.events.trigger('open-browser', {
+          credentials,
+          showBrowser: true
+        });
+
+        //fetch permits
+        let permits = await twoMonthsOldPermits();
+        
+        frappe.events.trigger('refresh-permits', {
+          credentials,
+          permits,
+          showBrowser: this.doc.showBrowser
+        });
+      }
     }
   }
 };
