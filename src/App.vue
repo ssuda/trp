@@ -40,9 +40,7 @@ import WindowsTitleBar from '@/components/WindowsTitleBar';
 import LoginRegister from './pages/SetupWizard/LoginRegister';
 import Vue from 'vue';
 import { remote } from 'electron';
-import path from 'path';
 import fs from 'fs';
-import glob from 'glob';
 
 import { connectToLocalDatabase, showMessageDialog, dbPath } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
@@ -53,6 +51,8 @@ import SetupSync from '@/sync';
 import PaymentForm from './components/Payment.vue';
 import TermsAndConditions from './components/TermsAndConditions.vue';
 import AdvancePayment from './components/AdvancePayment.vue';
+
+import { twoMonthsOldPermits } from '@/permit';
 
 const toBool = v => {
   v = v.toLowerCase();
@@ -221,7 +221,7 @@ export default {
 
                   if (startDuration > frappe.globalConfig.gracePeriodDays) {
                     //make payment
-                    await new Promise((resolve, reject) => {
+                    await new Promise((resolve, _) => {
                       this.$modal.show(
                         AdvancePayment,
                         {},
@@ -229,7 +229,7 @@ export default {
                           height: 'auto'
                         },
                         {
-                          'before-close': event => {
+                          'before-close': _ => {
                             resolve();
                           }
                         }
@@ -243,7 +243,7 @@ export default {
                     //     startDuration} days, please activate before to avoid disruption to your service`,
                     //   buttons: [{ label: 'Ok' }]
                     // });
-                    await new Promise((resolve, reject) => {
+                    await new Promise((resolve, _) => {
                       this.$modal.show(
                         AdvancePayment,
                         {},
@@ -251,7 +251,7 @@ export default {
                           height: 'auto'
                         },
                         {
-                          'before-close': event => {
+                          'before-close': _ => {
                             resolve();
                           }
                         }
@@ -267,7 +267,7 @@ export default {
 
                 if (duration > frappe.globalConfig.gracePeriodDays) {
                   //make payment
-                  await new Promise((resolve, reject) => {
+                  await new Promise((resolve, _) => {
                     this.$modal.show(
                       PaymentForm,
                       {},
@@ -275,7 +275,7 @@ export default {
                         height: 'auto'
                       },
                       {
-                        'before-close': event => {
+                        'before-close': _ => {
                           resolve();
                         }
                       }
@@ -312,7 +312,6 @@ export default {
             );
           }
 
-         
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';
@@ -339,17 +338,15 @@ export default {
       frappe.events.trigger('auto-tagging');
     },
 
-
-    openBrowser() {
+    async openBrowser() {
       if (
-          frappe.AccountingSettings.i3msUsername &&
-          frappe.AccountingSettings.i3msPassword
+        frappe.AccountingSettings.i3msUsername &&
+        frappe.AccountingSettings.i3msPassword
       ) {
-
         const credentials = {
-            username: frappe.AccountingSettings.i3msUsername,
-            password: frappe.AccountingSettings.i3msPassword
-          };
+          username: frappe.AccountingSettings.i3msUsername,
+          password: frappe.AccountingSettings.i3msPassword
+        };
 
         frappe.events.trigger('open-browser', {
           credentials,
@@ -358,7 +355,7 @@ export default {
 
         //fetch permits
         let permits = await twoMonthsOldPermits();
-        
+
         frappe.events.trigger('refresh-permits', {
           credentials,
           permits,

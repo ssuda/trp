@@ -1,14 +1,10 @@
 import frappe from 'frappejs';
+import { DateTime } from 'luxon';
 
 export async function twoMonthsOldPermits() {
   const dt = DateTime.local()
     .minus({ months: 2 })
     .toISO();
-
-  const credentials = {
-    username: frappe.AccountingSettings.i3msUsername,
-    password: frappe.AccountingSettings.i3msPassword
-  };
 
   return frappe.db.getAll({
     doctype: 'Permit',
@@ -22,13 +18,6 @@ export async function twoMonthsOldPermits() {
 
 export async function refreshPermit(permit, cb) {
   console.log('refresh called');
-  //let credentials;
-
-  // if (typeof permit.account == 'string') {
-  //   credentials = await frappe.getDoc('I3MSAccount', permit.account);
-  // } else {
-  //   credentials = permit.account;
-  // }
 
   const credentials = {
     username: frappe.AccountingSettings.i3msUsername,

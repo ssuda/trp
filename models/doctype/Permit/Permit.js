@@ -116,6 +116,11 @@ module.exports = {
       formula: doc => doc.getNumberOfTrips()
     },
     {
+      fieldname: 'material',
+      label: 'Material',
+      fieldtype: 'Data'
+    },
+    {
       fieldname: 'delivered',
       label: 'Delivered',
       fieldtype: 'Float',
@@ -286,6 +291,7 @@ module.exports = {
     'quantity',
     'source',
     'destination',
+    'material',
     'customer'
   ]
 };

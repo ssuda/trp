@@ -53,7 +53,7 @@ async function processMessage(message, cb) {
         console.log('permit-report', args.startDate, args.endDate);
         await browserInit(args.credentials, !args.showBrowser);
         const r = await permitReport(args, event.sender);
-        console.log('sending permit-report results to browser', r);
+        console.log('sending permit-report results to browser', r.trips);
         event.sender.send('permit-report-results', r);
       }
       break;
@@ -222,7 +222,7 @@ ipcMain.on('refresh-permits', (event, args) => {
 
 //openBrowser(true);
 
-function messageQueueCallback(err, result) {}
+function messageQueueCallback() {}
 
 ipcMain.on('permit-report', async (event, args) => {
   messageQueue.push(

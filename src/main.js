@@ -17,6 +17,8 @@ import VModal from 'vue-js-modal';
 import App from './App';
 import router from './router';
 
+import _ from 'lodash';
+
 import BaseDocument from '@/basedocument';
 import Document from 'frappejs/model/document';
 import { FieldValue } from '@/firebase';
@@ -32,6 +34,10 @@ import { FieldValue } from '@/firebase';
   frappe.registerModels(coreModels);
   frappe.registerModels(models);
   frappe.fetch = window.fetch.bind();
+
+  if (process.env.NODE_ENV !== 'development') {
+    console.log = function() {};
+  }
 
   async function savePermit(permit, args) {
     console.log('Got result from i3ms', permit);
