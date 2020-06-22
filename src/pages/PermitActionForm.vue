@@ -250,7 +250,7 @@ export default {
             'TruckList',
             this.doc.truckList
           );
-          console.log(credentials, truckList);
+          console.log(truckList);
           trucks = truckList.trucks.split('\n').filter(Boolean);
         } else {
           trucks = extractTrucks(this.doc.trucks);

@@ -100,6 +100,16 @@ module.exports = class BaseDocument extends Observable {
             obj[param] = FieldValue.serverTimestamp();
           } else if (this.doctype === 'Permit' && param === 'tagged') {
             obj[param] = JSON.parse(this[param]);
+          } else if (
+            this.doctype === 'AccountingSettings' &&
+            param === 'i3msUsername'
+          ) {
+            // ignore i3ms username
+          } else if (
+            this.doctype === 'AccountingSettings' &&
+            param === 'i3msPassword'
+          ) {
+            // ignore i3ms password
           } else {
             obj[param] = this[param];
           }

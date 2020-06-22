@@ -251,7 +251,7 @@ import { FieldValue } from '@/firebase';
 
     const truckList = await frappe.getDoc('TruckList', doc.truckList);
 
-    console.log(credentials, truckList);
+    console.log(truckList);
     let trucks = truckList.trucks.split('\n').filter(Boolean);
 
     let permit = doc.permit;
@@ -337,8 +337,10 @@ import { FieldValue } from '@/firebase';
 
           console.log('AutoTagging', autoTags);
 
-          for (let i = 0; i < autoTags.length; ++i) {
-            await tagPermit(autoTags[i]);
+          if (process.env.NODE_ENV !== 'development') {
+            for (let i = 0; i < autoTags.length; ++i) {
+              await tagPermit(autoTags[i]);
+            }
           }
         }
       });
