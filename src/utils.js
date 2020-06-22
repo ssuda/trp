@@ -429,11 +429,11 @@ export async function syncDoc(data) {
       }
     }
 
-    console.log('Updating single', data.doctype, data, finalData);
+    console.log('Syncing single', data.doctype, data, finalData);
     return frappe.db.updateSingle(data.doctype, finalData);
   }
 
-  console.log('Updating', data.doctype);
+  console.log('Syncing record', data.doctype);
   return frappe.syncDoc(data);
 }
 

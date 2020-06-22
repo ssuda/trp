@@ -144,7 +144,7 @@ export async function newPermits(credentials, sse) {
   }
 }
 
-export async function permitsDetails(args) {
+export async function permitsDetails(args, sse) {
   let permits = args.permits || [];
 
   console.log('permits details called', permits.length);
@@ -204,7 +204,7 @@ export async function permitsDetails(args) {
       if (permit.tag_url) {
         try {
           console.log('fetching permit', permit.permit_number);
-          const l = await permitDetails(permit, args.sender);
+          const l = await permitDetails(permit, sse);
           console.log('finished fetching permit', permit.permit_number);
           out.push(l);
         } catch (ex) {

@@ -186,6 +186,7 @@ export default {
         }
         return p;
       }, {});
+      this.companyName = frappe.AccountingSettings.companyName;
       this.companies['Create'] = () => this.createNewCompany();
       console.log('files', files, this.companies, this.companyName);
     }
