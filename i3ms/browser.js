@@ -3,27 +3,7 @@ const _ = require('lodash');
 const moment = require('moment');
 const findChrome = require('chrome-finder');
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-async function timeMe(num, txt) {
-  let time = moment().format('dddd MM/DD/YYYY HH:mm:ss, ');
-  console.log(time, txt);
-}
-
-async function promiseAny(...promises) {
-  return await Promise.race(
-    promises.map((p, i) => {
-      return new Promise(async (r, j) => {
-        try {
-          await p;
-          r(i + 1);
-        } catch (ex) {
-          j(ex);
-        }
-      });
-    })
-  );
-}
+const { delay, timeMe, promiseAny } = require('./utils');
 
 process.on('unhandledRejection', async (reason, p) => {
   console.error(
@@ -39,39 +19,38 @@ module.exports = function() {
   let browser;
   let page;
   let previousUrl;
+  let globalDisconnectHandler;
 
   async function createBrowser(headless) {
     console.log('creating/connecting browser in headless mode', headless);
     if (!browser) {
-      try {
-        browser = await puppeteer.launch({
-          headless: !!headless,
-          executablePath: findChrome(),
-          defaultViewport: {
-            width: 1200,
-            height: 800
-          },
-          timeout: 0,
-          args: [
-            '--disable-background-timer-throttling',
-            '--enable-automation',
-            '--disable-renderer-backgrounding',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-ipc-flooding-protection'
-          ]
-        });
-        console.log('browser created');
-        browser.on('error', () => page.reload());
-      } catch (ex) {
-        console.error(ex);
-        browser = await puppeteer.connect({
-          browserURL: 'http://localhost:9222',
-          defaultViewport: {
-            width: 1200,
-            height: 800
-          }
-        });
-      }
+      browser = await puppeteer.launch({
+        headless: !!headless,
+        executablePath: findChrome(),
+        defaultViewport: {
+          width: 1200,
+          height: 800
+        },
+        timeout: 0,
+        args: [
+          '--disable-background-timer-throttling',
+          '--enable-automation',
+          '--disable-renderer-backgrounding',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-ipc-flooding-protection'
+        ]
+      });
+      console.log('browser created');
+      browser.on('error', () => page.reload());
+      browser.on('disconnected', disconnectHandler);
+    }
+  }
+
+  function disconnectHandler(e) {
+    browser = null;
+    page = null;
+    if (globalDisconnectHandler) {
+      globalDisconnectHandler();
     }
   }
 
@@ -143,6 +122,9 @@ module.exports = function() {
   }
 
   async function browsePage(href) {
+    if (!browser || !page) {
+      return;
+    }
     console.log('browspage called', href);
     let numAttempts = 1;
     let success = true;
@@ -151,12 +133,20 @@ module.exports = function() {
 
     while (numAttempts < 80) {
       try {
+        if (!browser || !page) {
+          success = false;
+          break;
+        }
         await page.goto(href, { waitUntil: 'networkidle2' });
         success = true;
         break;
       } catch (ex) {
         console.error(ex);
         console.log('Retrying', numAttempts, href);
+        if (!browser || !page) {
+          success = false;
+          break;
+        }
         await delay(5000);
         numAttempts++;
         await page.reload();
@@ -376,6 +366,9 @@ module.exports = function() {
         }
       } catch (ex) {
         console.error(ex);
+        if (!browser || !page) {
+          break;
+        }
         await browsePage(href);
       }
     }
@@ -761,15 +754,26 @@ module.exports = function() {
 
   let credentials, globalHeadless;
 
-  async function browserInit(cred, headless, tologin) {
+  async function browserInit(cred, headless, tologin, cb) {
     credentials = cred;
+    globalDisconnectHandler = cb;
     await openBrowser(headless);
     if (tologin) {
       await i3msLogin();
     }
   }
 
+  function getBrowser() {
+    return browser;
+  }
+
+  function getPage() {
+    return page;
+  }
+
   return {
+    getBrowser,
+    getPage,
     browserInit,
     getDetails,
     permitVehicles,

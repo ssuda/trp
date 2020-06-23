@@ -170,12 +170,15 @@ export default {
     selectCompany(filepath) {
       console.log('switching to', filepath);
       config.set('lastSelectedFilePath', filepath);
-      frappe.events.trigger('reload-main-window');
+      frappe.events.trigger('relaunch-app');
     },
 
     createNewCompany() {
-      config.set('createNewCompany', true);
-      frappe.events.trigger('reload-main-window');
+      config.set('createNewCompany', {
+        fullname: frappe.AccountingSettings.fullname,
+        email: frappe.AccountingSettings.email
+      });
+      frappe.events.trigger('relaunch-app');
     },
 
     populateCompanies() {

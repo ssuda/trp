@@ -119,6 +119,10 @@ export default {
   },
   async mounted() {
     this.doc = await frappe.newDoc({ doctype: 'SetupWizard' });
+    if (frappe.newCompany) {
+      this.doc.set('fullname', frappe.newCompany.fullname);
+      this.doc.set('email', frappe.newCompany.email);
+    }
     this.doc.on('change', () => {
       this.valuesFilled = this.allValuesFilled();
     });
