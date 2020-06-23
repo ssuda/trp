@@ -7,7 +7,7 @@ export default async function setupCompany(setupWizardValues) {
     companyLogo,
     companyName,
     country,
-    name,
+    fullname,
     email,
     gstin,
     phoneNumber,
@@ -22,7 +22,7 @@ export default async function setupCompany(setupWizardValues) {
   await accountingSettings.update({
     companyName,
     country,
-    fullname: name,
+    fullname,
     email,
     gstin,
     bankName,

@@ -6,7 +6,7 @@ const browser = require('./browser');
 const i3ms = browser();
 const _ = require('lodash');
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const { delay } = require('./utils');
 
 export let busyFlag = {
   isBusy: false
@@ -105,6 +105,8 @@ export async function permitsDetails(args, sse, browser = i3ms) {
 
   console.log('Total number of permits', result.length);
   await result.reduce(async (p, r) => {
+    if (!browser.getBrowser()) return Promise.resolve();
+
     await p;
     if (/javascript/i.test(r['Permit No.']) || !r['Permit No.']) {
       return Promise.resolve();
@@ -226,7 +228,7 @@ export async function permitReport(args, sse, browser = i3ms) {
   }
 }
 
-async function successfullyTagged(permitNo, credentials, browser=i3ms) {
+async function successfullyTagged(permitNo, credentials, browser = i3ms) {
   if (credentials) {
     console.log(credentials);
     await browser.browserInit(credentials);
@@ -268,7 +270,6 @@ export async function permitDetails(permit, sse, browser = i3ms) {
   console.log('inside permit details', permit);
 
   if (!permit.quantity || !permit.transportedFrom || !permit.source) {
-
     if (taggingUrl && !vehicleDetails) {
       const u = new URL(taggingUrl);
       vehicleDetails =
@@ -333,7 +334,7 @@ export async function permitDetails(permit, sse, browser = i3ms) {
         .format('YYYY-MM-DD');
     }
   }
-  
+
   permit = {
     name: permitNumber,
     transportedFrom,
@@ -387,7 +388,6 @@ export async function permitDetails(permit, sse, browser = i3ms) {
       return trip.tp_date.getTime();
     }, 0);
 
-
     if (latestTrip) {
       const now = +new Date();
 
@@ -430,6 +430,8 @@ export async function tagVehicle(obj, vehicles, options, sse) {
   const failed = [];
 
   await vehicles.reduce(async (p, truck) => {
+    if (!obj.getBrowser()) return Promise.resolve();
+
     await p;
 
     sno++;

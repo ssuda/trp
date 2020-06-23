@@ -117,6 +117,7 @@ export default {
       let dbpath = ':memory:';
 
       if (config.get('createNewCompany', false)) {
+        frappe.newCompany = config.get('createNewCompany');
         config.set('createNewCompany', false);
       } else {
         const lastSelectedFilePath = config.get('lastSelectedFilePath', null);
@@ -175,7 +176,7 @@ export default {
 
         console.log('current user', user);
 
-        if (!config.get('lastSelectedFilePath', null)) {
+        if (!config.get('lastSelectedFilePath', null) && user && user.remote) {
           console.log(
             'company',
             user.remote.data(),

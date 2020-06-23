@@ -35,9 +35,9 @@ import { FieldValue } from '@/firebase';
   frappe.registerModels(models);
   frappe.fetch = window.fetch.bind();
 
-  if (process.env.NODE_ENV !== 'development') {
-    console.log = function() {};
-  }
+  // if (process.env.NODE_ENV !== 'development') {
+  //   console.log = function() {};
+  // }
 
   async function savePermit(permit, args) {
     console.log('Got result from i3ms', permit);
@@ -120,6 +120,10 @@ import { FieldValue } from '@/firebase';
 
   frappe.events.on('reload-main-window', () => {
     ipcRenderer.send('reload-main-window');
+  });
+
+  frappe.events.on('relaunch-app', () => {
+    ipcRenderer.send('relaunch-app');
   });
 
   frappe.events.on('open-browser', args => {

@@ -111,32 +111,34 @@ export default {
             .doc(gstin)
             .get();
 
-          let now = DateTime.local();
+          if (user.remote.get('billingPeriodEnd')) {
+            let now = DateTime.local();
 
-          let end = DateTime.fromJSDate(
-            user.remote.get('billingPeriodEnd').toDate()
-          );
+            let end = DateTime.fromJSDate(
+              user.remote.get('billingPeriodEnd').toDate()
+            );
 
-          let start = DateTime.fromJSDate(
-            user.remote.get('billingPeriodStart').toDate()
-          );
+            let start = DateTime.fromJSDate(
+              user.remote.get('billingPeriodStart').toDate()
+            );
 
-          if (
-            now.startOf('day') > end.startOf('day') &&
-            !user.remote.get('billingTagged')
-          ) {
-            user.remote.ref.update({
-              billingTagged: user.remote.get('tagged'),
-              tagged: 0
-            });
-          } else if (
-            now.startOf('day') >= start.startOf('day') &&
-            !user.remote.get('trailEnded')
-          ) {
-            user.remote.ref.update({
-              tagged: 0,
-              trailEnded: true
-            });
+            if (
+              now.startOf('day') > end.startOf('day') &&
+              !user.remote.get('billingTagged')
+            ) {
+              user.remote.ref.update({
+                billingTagged: user.remote.get('tagged'),
+                tagged: 0
+              });
+            } else if (
+              now.startOf('day') >= start.startOf('day') &&
+              !user.remote.get('trailEnded')
+            ) {
+              user.remote.ref.update({
+                tagged: 0,
+                trailEnded: true
+              });
+            }
           }
         }
       } catch (ex) {

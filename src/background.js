@@ -47,44 +47,95 @@ async function processMessage(message, cb) {
 
   busyFlag.isBusy = true;
 
+  let cancelPromiseResolve;
+
+  const cancelPromise = new Promise(
+    (resolve, reject) => (cancelPromiseResolve = resolve)
+  );
+
+  function disconnectHandler() {
+    cancelPromiseResolve();
+  }
+
   switch (type) {
     case 'permit-report':
       {
         console.log('permit-report', args.startDate, args.endDate);
-        await browserInit(args.credentials, !args.showBrowser);
-        const r = await permitReport(args, event.sender);
-        console.log('sending permit-report results to browser', r.trips);
-        event.sender.send('permit-report-results', r);
+        await browserInit(
+          args.credentials,
+          !args.showBrowser,
+          false,
+          disconnectHandler
+        );
+        const r = await Promise.race([
+          cancelPromise,
+          permitReport(args, event.sender)
+        ]);
+        if (r) {
+          console.log('sending permit-report results to browser', r.trips);
+          event.sender.send('permit-report-results', r);
+        }
       }
       break;
 
     case 'tag-vehicles':
       {
         console.log('tag-vehicles', args);
-        await browserInit(args.credentials, !args.showBrowser);
-        const r = await tagVehicles(args, event.sender);
-        console.log('sending tag-vehicles results to browser', r);
-        event.sender.send('tag-results', r);
+        await browserInit(
+          args.credentials,
+          !args.showBrowser,
+          false,
+          disconnectHandler
+        );
+        const r = await Promise.race([
+          cancelPromise,
+          tagVehicles(args, event.sender)
+        ]);
+        if (r) {
+          console.log('sending tag-vehicles results to browser', r);
+          event.sender.send('tag-results', r);
+        }
       }
       break;
 
     case 'release-vehicles':
       {
         console.log('release-vehicles', args);
-        await browserInit(args.credentials, !args.showBrowser);
-        const r = await releaseVehicles(args, event.sender);
-        console.log('sending release-vehicles results to browser', r);
-        event.sender.send('release-vehicles-results', r);
+        await browserInit(
+          args.credentials,
+          !args.showBrowser,
+          false,
+          disconnectHandler
+        );
+        const r = await Promise.race([
+          cancelPromise,
+          releaseVehicles(args, event.sender)
+        ]);
+        if (r) {
+          console.log('sending release-vehicles results to browser', r);
+          event.sender.send('release-vehicles-results', r);
+        }
       }
       break;
 
     case 'permit-details':
       {
         console.log('permit-details', args);
-        await browserInit(args.credentials, !args.showBrowser);
-        const r = await permitDetails(args, event.sender);
-        console.log('sending permit-details results to browser', r);
-        event.sender.send('permit-details-results', r);
+        await browserInit(
+          args.credentials,
+          !args.showBrowser,
+          false,
+          disconnectHandler
+        );
+        const r = await Promise.race([
+          cancelPromise,
+          permitDetails(args, event.sender)
+        ]);
+
+        if (r) {
+          console.log('sending permit-details results to browser', r);
+          event.sender.send('permit-details-results', r);
+        }
       }
       break;
 
@@ -94,16 +145,26 @@ async function processMessage(message, cb) {
 
         if (args.refresh) {
           for (let permit of args.permits) {
-            await browserInit(permit.credentials, !args.showBrowser);
+            await browserInit(
+              permit.credentials,
+              !args.showBrowser,
+              false,
+              disconnectHandler
+            );
             await permitDetails(permit, event.sender);
           }
           return event.sender.send('permits-details-results');
         }
 
-        await browserInit(args.credentials, false);
-        const r = await permitsDetails(args, event.sender);
-        console.log('sending permits-details results to browser', r);
-        event.sender.send('permits-details-results', r);
+        await browserInit(args.credentials, false, false, disconnectHandler);
+        const r = await Promise.race([
+          cancelPromise,
+          permitsDetails(args, event.sender)
+        ]);
+        if (r) {
+          console.log('sending permits-details results to browser', r);
+          event.sender.send('permits-details-results', r);
+        }
       }
       break;
   }
@@ -218,6 +279,11 @@ ipcMain.on('auto-tagging', (event, args) => {
 
 ipcMain.on('refresh-permits', (event, args) => {
   refreshPermits(args, event.sender);
+});
+
+ipcMain.on('relaunch-app', (event, args) => {
+  app.relaunch({ args: process.argv.slice(1).concat(['--relaunch']) });
+  app.exit(0);
 });
 
 //openBrowser(true);
