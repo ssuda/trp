@@ -80,7 +80,7 @@ async function tagReleaseObj(permit, trucks) {
     }
   }
 
-  const permit = pickPermitFields(permit);
+  permit = pickPermitFields(permit);
 
   return {
     credentials,
@@ -114,7 +114,7 @@ export async function tagRelease(doc) {
 
   if (obj) {
     frappe.events.trigger(doc.type === 'release' ? 'release-vehicles' : 'tag-vehicles', obj);
-    frappe.events.once(doc.type === 'release' ? 'release-vehicles-results'  : 'tag-results', () => {
+    frappe.events.once(doc.type === 'release' ? 'release-vehicles-results'  : 'tag-results', async () => {
       console.log('PermitRequest Finished', doc);
       //delete the document
       await doc.ref.delete();
