@@ -148,10 +148,17 @@ async function syncFromFirebase() {
       await processQuery(query, model);
     }
 
-    if (
-      !alreadySubscribed &&
-      (frappe.globalConfig.realtimeSync || model === 'PermitRequest')
-    ) {
+    if (!alreadySubscribed && model == 'PermitRequest') {
+      //subscribe to realtime changes
+      firestore
+        .collection(model)
+        .where('gstin', '==', gstin)
+        .onSnapshot(function(querySnapshot) {
+          processRecord(querySnapshot.docs, model);
+        });
+    }
+
+    if (!alreadySubscribed && frappe.globalConfig.realtimeSync) {
       alreadySubscribed = true;
       //subscribe to realtime changes
       firestore

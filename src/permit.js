@@ -59,8 +59,6 @@ export async function refreshPermit(permit, cb) {
   frappe.events.once('permit-details-results', cb);
 }
 
-
-
 async function tagReleaseObj(permit, trucks) {
   if (!permit) {
     return;
@@ -71,10 +69,10 @@ async function tagReleaseObj(permit, trucks) {
     password: frappe.AccountingSettings.i3msPassword
   };
 
-  if (typeof(permit) === 'string') {
+  if (typeof permit === 'string') {
     try {
       permit = await frappe.getDoc('Permit', permit);
-    } catch(ex) {
+    } catch (ex) {
       console.error(ex);
       return;
     }
@@ -108,18 +106,21 @@ export async function releaseVehicles(permit, trucks, cb) {
 }
 
 export async function tagRelease(doc) {
-
   let data = doc.data();
   let obj = tagReleaseObj(data.permit, [data.truckNo]);
 
   if (obj) {
-    frappe.events.trigger(doc.type === 'release' ? 'release-vehicles' : 'tag-vehicles', obj);
-    frappe.events.once(doc.type === 'release' ? 'release-vehicles-results'  : 'tag-results', async () => {
-      console.log('PermitRequest Finished', doc);
-      //delete the document
-      await doc.ref.delete();
-    });
+    frappe.events.trigger(
+      doc.type === 'release' ? 'release-vehicles' : 'tag-vehicles',
+      obj
+    );
+    frappe.events.once(
+      doc.type === 'release' ? 'release-vehicles-results' : 'tag-results',
+      async () => {
+        console.log('PermitRequest Finished', doc);
+        //delete the document
+        await doc.ref.delete();
+      }
+    );
   }
 }
-
-
