@@ -302,6 +302,7 @@ export default {
     const billingStart = DateTime.fromJSDate(
       user.billingPeriodStart.toDate()
     ).plus({ months: 1 });
+
     const billingEnd = DateTime.fromJSDate(
       user.billingPeriodEnd.toDate()
     ).plus({ months: 1 });
