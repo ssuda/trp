@@ -3,7 +3,7 @@ const _ = require('lodash');
 const moment = require('moment');
 const findChrome = require('chrome-finder');
 
-const { delay, timeMe, promiseAny } = require('./utils');
+const { delay, timeMe, promiseAny, serialFromTP } = require('./utils');
 
 process.on('unhandledRejection', async (reason, p) => {
   console.error(
@@ -685,6 +685,253 @@ module.exports = function() {
     return rows;
   }
 
+  async function receiveConfirm(href, permitNo, selector) {
+    await browsePage(href);
+    //await page.waitForSelector('#txtPermit');
+    await page.waitForSelector('#ddlUserType');
+
+    if (permitNo[0] == 'L') {
+      await page.select('#ddlUserType', '1');
+    } else {
+      await page.select('#ddlUserType', '2');
+    }
+    await page.type('#txtPermit', permitNo);
+
+    await page.click('#btnSearch');
+    try {
+      while (true) {
+        console.log('Waiting for checkbox');
+        const r = await promiseAny(
+          page.waitForSelector(
+            '#grdRecvPass > tbody > tr:nth-child(1) > th:nth-child(1) > input[type=checkbox]'
+          ),
+          page.waitForXPath(
+            '//*[@id="grdRecvPass"]/tbody/tr/td[contains(text(), "No Record")]'
+          )
+        );
+
+        console.log('return value', r);
+
+        if (r == 2) {
+          break;
+        }
+
+        //await waitForPaging('#lbtnAll');
+        await page.click(
+          '#grdRecvPass > tbody > tr:nth-child(1) > th:nth-child(1) > input[type=checkbox]'
+        );
+        await page.click('#btnProceed');
+        //await page.waitForNavigation({ waitUntil: 'networkidle0' });
+        await delay(10000);
+        const y = await page.$('#lblPaging');
+        console.log('paging', y);
+        if (!y) {
+          break;
+        }
+
+        const x = await page.$eval('#lblPaging', el => el.textContent);
+        console.log('paging content', x);
+
+        if (!x) {
+          break;
+        }
+      }
+    } catch (ex) {
+      console.error(ex);
+    }
+  }
+
+  async function receiveMineral(href, permitNo, selector, vehicles) {
+    if (!vehicles || !_.isObject(vehicles)) {
+      console.log('vehicles not passed');
+      return;
+    }
+
+    try {
+      await browsePage(href);
+
+      console.log('wait for selector');
+
+      await page.waitForSelector('#ddlUserType');
+
+      if (permitNo[0] == 'L') {
+        await page.select('#ddlUserType', '1');
+      } else {
+        await page.select('#ddlUserType', '2');
+      }
+
+      //await page.waitForNavigation({ waitUntil: "networkidle0" });
+
+      await page.focus('#txtPermit');
+
+      await page.type('#txtPermit', permitNo);
+
+      //await page.$eval('#txtPermit', (el, p) => el.value = p, permitNo);
+
+      //await page.waitForNavigation({ waitUntil: "networkidle0" });
+
+      //await delay(2000);
+
+      await page.$eval('#txtPermit', (el, p) => (el.value = p), permitNo);
+
+      await delay(5000);
+
+      await page.$eval('#txtPermit', (el, p) => (el.value = p), permitNo);
+
+      //await page.type('#txtPermit', permitNo);
+      await page.waitForSelector('#btnSearch');
+      await page.click('#btnSearch');
+
+      //await page.waitForSelector('#ddlStack');
+
+      const ret = await promiseAny(
+        page.waitForSelector('#ddlStack > option:nth-child(2)'),
+        page.waitForSelector('.ajax__validatorcallout_error_message_cell')
+      );
+
+      console.log('after selector', ret);
+
+      if (ret == 2) {
+        await page.$eval('#txtPermit', (el, p) => (el.value = p), permitNo);
+        //await page.type('#txtPermit', permitNo);
+        await page.click('#btnSearch');
+      }
+      await page.waitForSelector('#ddlStack > option:nth-child(2)');
+
+      let val = await page.$eval(
+        '#ddlStack > option:nth-child(2)',
+        el => el.value
+      );
+
+      await page.select('#ddlStack', val);
+
+      //await page.waitForNavigation({ waitUntil: "networkidle0" });
+
+      await page.waitForSelector('#ddlNature > option:nth-child(2)');
+
+      val = await page.$eval(
+        '#ddlNature > option:nth-child(2)',
+        el => el.value
+      );
+
+      await page.select('#ddlNature', val);
+
+      await page.waitForSelector('#ddlGrade > option:nth-child(2)');
+
+      val = await page.$eval('#ddlGrade > option:nth-child(2)', el => el.value);
+
+      await page.select('#ddlGrade', val);
+
+      await page.click('#btnfind');
+
+      console.log('waiting for btnAll');
+
+      await page.waitForSelector('#grdRecvPass > tbody > tr > td');
+      //await page.waitForSelector('#lbtnAll');
+      const btn = await page.$('#lbtnAll');
+
+      if (btn) {
+        // await page.click('#lbtnAll');
+
+        await waitForPaging('#lbtnAll');
+
+        // await page.waitForFunction('!document.querySelector(".paging")');
+
+        selector || (selector = '#grdRecvPass');
+
+        if (vehicles) {
+          await page.waitForSelector('#btnProceed');
+          let rows = await extractTable(selector, true);
+          let selected = {};
+
+          do {
+            //exclude not checked
+            rows = _.filter(
+              rows,
+              row => !/not checked/i.test(row['Check Date'])
+            );
+
+            const chunks = _.chunk(rows, 15);
+
+            await chunks.reduce(async (prev, chunk) => {
+              await prev;
+              await chunk.reduce(async (p, row) => {
+                await p;
+
+                if (vehicles[row['Pass No']]) {
+                  await page.click('#' + row.select_box);
+                  selected[row['Pass No']] = true;
+                  console.log(row['Received Date']);
+                  console.log(row['Pass Date']);
+                  const d = moment(vehicles[row['Pass No']]).format(
+                    'MM/DD/YYYY hh:mm A'
+                  );
+                  console.log(d);
+                  await page.$eval('#' + row['Received Date'], (el, p) =>
+                    $(el).replaceWith($(el).clone())
+                  );
+                  await page.$eval(
+                    '#' + row['Received Date'],
+                    (el, p) => (el.value = p),
+                    d
+                  );
+                }
+
+                return Promise.resolve();
+              }, Promise.resolve());
+
+              console.log('Proceeding');
+              await page.click('#btnProceed');
+              await page.waitForSelector(selector);
+              await delay(10000);
+              rows = await extractTable(selector);
+              return Promise.resolve();
+            }, Promise.resolve());
+
+            _.each(rows, row => {
+              if (selected[row['Pass No']]) {
+                delete selected[row['Pass No']];
+              }
+            });
+
+            _.each(selected, (v, k) => {
+              if (vehicles[k]) {
+                vehicles[k] = 'updated';
+              }
+            });
+
+            //find sequence
+            const tps = _.map(rows, row => serialFromTP(row['Pass No']));
+
+            _.each(vehicles, (v, k) => {
+              const ser = serialFromTP(k);
+              console.log(ser, tps[tps.length - 1], tps.includes(ser));
+              if (!tps.includes(ser) && ser < tps[tps.length - 1]) {
+                console.log('Updating tp', k, ser);
+                vehicles[k] = 'updated';
+              }
+            });
+          } while (dlgMessage == 'Are you sure to update the record?');
+        }
+      } else {
+        //no more records
+        const val = await page.$x(
+          '//*[@id="grdRecvPass"]/tbody/tr/td[contains(text(), "No Record")]'
+        );
+        if (_.isObject(vehicles) && val) {
+          console.log('Updating all');
+          _.each(vehicles, (v, k) => {
+            vehicles[k] = 'updated';
+          });
+        }
+      }
+
+      return [];
+    } catch (ex) {
+      return receiveMineral(href, permitNo, selector, vehicles);
+    }
+  }
+
   async function disconnect() {
     if (browser) {
       await browser.close();
@@ -787,6 +1034,8 @@ module.exports = function() {
     tagVehicle,
     tagInit,
     disconnect,
+    receiveConfirm,
+    receiveMineral,
     openBrowser
   };
 };
