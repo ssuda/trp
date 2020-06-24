@@ -5,11 +5,12 @@ const { machineIdSync } = require('node-machine-id');
 const { syncDoc } = require('@/utils');
 
 const { tagRelease } = require('@/permit');
+const { DateTime } = require('luxon');
 
 let deviceId = machineIdSync({ original: true });
 
 async function processRecord(docs, model) {
-  console.log('Syncing', model);
+  console.log('Syncing', model, docs.length);
 
   await frappe.db.sql('PRAGMA foreign_keys = OFF');
   for (let doc of docs) {
@@ -108,7 +109,13 @@ async function syncFromFirebase() {
   const timestampRef = firestore.collection('timestamp').doc('timestamp');
   await timestampRef.set({ timestamp: FieldValue.serverTimestamp() });
   let timestamp = await timestampRef.get();
-  timestamp = timestamp.get('timestamp').toDate();
+  timestamp = timestamp.get('timestamp');
+
+  if (timestamp) {
+    timestamp = timestamp.toDate();
+  } else {
+    timestamp = DateTime.local().toJSDate();
+  }
 
   console.log(gstin, lastSnapshot, timestamp);
 
@@ -127,25 +134,26 @@ async function syncFromFirebase() {
     }
 
     console.log(model, gstin);
+    if (model != 'PermitRequest') {
+      let query = firestore
+        .collection(model)
+        .orderBy('modified')
+        .where('modified', '<', timestamp);
 
-    let query = firestore
-      .collection(model)
-      .orderBy('modified')
-      .where('modified', '<', timestamp);
+      if (model === 'SpinBiUser') {
+        query = query.where('gstins', 'array-contains', gstin);
+      } else {
+        query = query.where('gstin', '==', gstin);
+      }
 
-    if (model === 'SpinBiUser') {
-      query = query.where('gstins', 'array-contains', gstin);
-    } else {
-      query = query.where('gstin', '==', gstin);
-    }
-
-    if (lastSnapshot) {
-      await processQuery(
-        query.where('modified', '>=', new Date(lastSnapshot)),
-        model
-      );
-    } else {
-      await processQuery(query, model);
+      if (lastSnapshot) {
+        await processQuery(
+          query.where('modified', '>=', new Date(lastSnapshot)),
+          model
+        );
+      } else {
+        await processQuery(query, model);
+      }
     }
 
     if (!alreadySubscribed && model == 'PermitRequest') {
@@ -156,9 +164,7 @@ async function syncFromFirebase() {
         .onSnapshot(function(querySnapshot) {
           processRecord(querySnapshot.docs, model);
         });
-    }
-
-    if (!alreadySubscribed && frappe.globalConfig.realtimeSync) {
+    } else if (!alreadySubscribed && frappe.globalConfig.realtimeSync) {
       alreadySubscribed = true;
       //subscribe to realtime changes
       firestore

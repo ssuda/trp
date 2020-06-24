@@ -161,6 +161,7 @@ import { FieldValue } from '@/firebase';
   });
 
   frappe.events.on('tag-vehicles', permit => {
+    console.log('received tagvehicles', permit);
     ipcRenderer.send('tag-vehicles', permit);
 
     ipcRenderer.once('tag-results', function(e, response) {
