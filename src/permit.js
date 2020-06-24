@@ -107,7 +107,9 @@ export async function releaseVehicles(permit, trucks, cb) {
 
 export async function tagRelease(doc) {
   let data = doc.data();
-  let obj = tagReleaseObj(data.permit, [data.truckNo]);
+  let obj = await tagReleaseObj(data.permit, [data.truckNo]);
+
+  console.log('received tagrelease', data, obj);
 
   if (obj) {
     frappe.events.trigger(
