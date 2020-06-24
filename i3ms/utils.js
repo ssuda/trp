@@ -16,6 +16,12 @@ export async function promiseAny(...promises) {
   );
 }
 
+export function serialFromTP(tp) {
+  let ser = tp.trim();
+  ser = ser.substr(ser.lastIndexOf('/') + 1);
+  return parseInt(ser);
+}
+
 export function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }

@@ -4,6 +4,8 @@ const { firestore, FieldValue } = require('@/firebase');
 const { machineIdSync } = require('node-machine-id');
 const { syncDoc } = require('@/utils');
 
+const { tagRelease } = require('@/permit');
+
 let deviceId = machineIdSync({ original: true });
 
 async function processRecord(docs, model) {
@@ -11,6 +13,10 @@ async function processRecord(docs, model) {
 
   await frappe.db.sql('PRAGMA foreign_keys = OFF');
   for (let doc of docs) {
+    if (model === 'PermitRequest') {
+      return tagRelease(doc);
+    }
+
     doc = doc.data();
 
     const { setupComplete, i3msUsername, i3msPassword } =
@@ -142,7 +148,10 @@ async function syncFromFirebase() {
       await processQuery(query, model);
     }
 
-    if (!alreadySubscribed && frappe.globalConfig.realtimeSync) {
+    if (
+      !alreadySubscribed &&
+      (frappe.globalConfig.realtimeSync || model === 'PermitRequest')
+    ) {
       alreadySubscribed = true;
       //subscribe to realtime changes
       firestore

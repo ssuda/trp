@@ -28,6 +28,7 @@
 <script>
 import FormLayout from 'frappejs/ui/components/Form/FormLayout';
 import { Sketch } from 'vue-color';
+import frappe from 'frappejs';
 
 export default {
   name: 'InvoiceCustomizer',

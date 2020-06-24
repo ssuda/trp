@@ -58,3 +58,68 @@ export async function refreshPermit(permit, cb) {
   cb = cb || (() => {});
   frappe.events.once('permit-details-results', cb);
 }
+
+
+
+async function tagReleaseObj(permit, trucks) {
+  if (!permit) {
+    return;
+  }
+
+  const credentials = {
+    username: frappe.AccountingSettings.i3msUsername,
+    password: frappe.AccountingSettings.i3msPassword
+  };
+
+  if (typeof(permit) === 'string') {
+    try {
+      permit = await frappe.getDoc('Permit', permit);
+    } catch(ex) {
+      console.error(ex);
+      return;
+    }
+  }
+
+  const permit = pickPermitFields(permit);
+
+  return {
+    credentials,
+    trucks,
+    ...permit
+  };
+}
+
+export async function tagVehicles(permit, trucks, cb) {
+  let obj = tagReleaseObj(permit, trucks);
+
+  if (obj) {
+    frappe.events.trigger('tag-vehicles', obj);
+    frappe.events.once('tag-results', cb);
+  }
+}
+
+export async function releaseVehicles(permit, trucks, cb) {
+  let obj = tagReleaseObj(permit, trucks);
+
+  if (obj) {
+    frappe.events.trigger('release-vehicles', obj);
+    frappe.events.once('release-vehicles-results', cb);
+  }
+}
+
+export async function tagRelease(doc) {
+
+  let data = doc.data();
+  let obj = tagReleaseObj(data.permit, [data.truckNo]);
+
+  if (obj) {
+    frappe.events.trigger(doc.type === 'release' ? 'release-vehicles' : 'tag-vehicles', obj);
+    frappe.events.once(doc.type === 'release' ? 'release-vehicles-results'  : 'tag-results', () => {
+      console.log('PermitRequest Finished', doc);
+      //delete the document
+      await doc.ref.delete();
+    });
+  }
+}
+
+
