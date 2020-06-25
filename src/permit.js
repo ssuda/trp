@@ -114,11 +114,11 @@ export async function tagRelease(doc) {
 
   if (obj) {
     frappe.events.trigger(
-      doc.type === 'release' ? 'release-vehicles' : 'tag-vehicles',
+      data.type === 'release' ? 'release-vehicles' : 'tag-vehicles',
       obj
     );
     frappe.events.once(
-      doc.type === 'release' ? 'release-vehicles-results' : 'tag-results',
+      data.type === 'release' ? 'release-vehicles-results' : 'tag-results',
       async () => {
         console.log('PermitRequest Finished', doc);
         //delete the document
