@@ -83,6 +83,7 @@ async function tagReleaseObj(permit, trucks) {
   return {
     credentials,
     trucks,
+    showBrowser: true,
     ...permit
   };
 }
