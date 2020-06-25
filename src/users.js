@@ -98,7 +98,7 @@ export default {
 
           console.log('spinbiuser', user.local);
 
-          if (!gstin) {
+          if (!gstin && user.local) {
             gstin = user.local.gstin;
           }
         }
