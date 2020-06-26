@@ -59,64 +59,64 @@ const config = {
       ],
       icon: getIcon('truck', '24', '5')
     },
-    {
-      title: _('Sales'),
-      icon: getIcon('sales'),
-      action() {
-        router.push('/list/SalesInvoice');
-      },
-      items: [
-        {
-          label: _('Invoices'),
-          route: '/list/SalesInvoice',
-          doctype: 'SalesInvoice'
-        },
-        {
-          label: _('Customers'),
-          route: '/list/Customer',
-          doctype: 'Customer'
-        },
-        {
-          label: _('Items'),
-          route: '/list/Item',
-          doctype: 'Item'
-        },
-        {
-          label: _('Journal Entry'),
-          route: '/list/JournalEntry',
-          doctype: 'JournalEntry'
-        }
-      ]
-    },
-    {
-      title: _('Purchases'),
-      icon: getIcon('purchase'),
-      action() {
-        router.push('/list/PurchaseInvoice');
-      },
-      items: [
-        {
-          label: _('Bills'),
-          route: '/list/PurchaseInvoice',
-          doctype: 'PurchaseInvoice'
-        },
-        {
-          label: _('Suppliers'),
-          route: '/list/Supplier',
-          doctype: 'Supplier'
-        },
-        {
-          label: _('Items'),
-          route: '/list/Item',
-          doctype: 'Item'
-        },
-        {
-          label: _('Journal Entry'),
-          route: '/list/JournalEntry',
-          doctype: 'JournalEntry'
-        }
-      ]
-    },
+    // {
+    //   title: _('Sales'),
+    //   icon: getIcon('sales'),
+    //   action() {
+    //     router.push('/list/SalesInvoice');
+    //   },
+    //   items: [
+    //     {
+    //       label: _('Invoices'),
+    //       route: '/list/SalesInvoice',
+    //       doctype: 'SalesInvoice'
+    //     },
+    //     {
+    //       label: _('Customers'),
+    //       route: '/list/Customer',
+    //       doctype: 'Customer'
+    //     },
+    //     {
+    //       label: _('Items'),
+    //       route: '/list/Item',
+    //       doctype: 'Item'
+    //     },
+    //     {
+    //       label: _('Journal Entry'),
+    //       route: '/list/JournalEntry',
+    //       doctype: 'JournalEntry'
+    //     }
+    //   ]
+    // },
+    // {
+    //   title: _('Purchases'),
+    //   icon: getIcon('purchase'),
+    //   action() {
+    //     router.push('/list/PurchaseInvoice');
+    //   },
+    //   items: [
+    //     {
+    //       label: _('Bills'),
+    //       route: '/list/PurchaseInvoice',
+    //       doctype: 'PurchaseInvoice'
+    //     },
+    //     {
+    //       label: _('Suppliers'),
+    //       route: '/list/Supplier',
+    //       doctype: 'Supplier'
+    //     },
+    //     {
+    //       label: _('Items'),
+    //       route: '/list/Item',
+    //       doctype: 'Item'
+    //     },
+    //     {
+    //       label: _('Journal Entry'),
+    //       route: '/list/JournalEntry',
+    //       doctype: 'JournalEntry'
+    //     }
+    //   ]
+    // },
     {
       title: _('Reports'),
       icon: getIcon('reports'),
@@ -127,23 +127,23 @@ const config = {
         {
           label: _('Trip Report'),
           route: '/report/trip-report'
-        },
-        {
-          label: _('General Ledger'),
-          route: '/report/general-ledger'
-        },
-        {
-          label: _('Profit And Loss'),
-          route: '/report/profit-and-loss'
-        },
-        {
-          label: _('Balance Sheet'),
-          route: '/report/balance-sheet'
-        },
-        {
-          label: _('Trial Balance'),
-          route: '/report/trial-balance'
         }
+        // {
+        //   label: _('General Ledger'),
+        //   route: '/report/general-ledger'
+        // },
+        // {
+        //   label: _('Profit And Loss'),
+        //   route: '/report/profit-and-loss'
+        // },
+        // {
+        //   label: _('Balance Sheet'),
+        //   route: '/report/balance-sheet'
+        // },
+        // {
+        //   label: _('Trial Balance'),
+        //   route: '/report/trial-balance'
+        // }
       ]
     },
     {
@@ -156,21 +156,21 @@ const config = {
           doctype: 'SpinBiUser',
           condition: () => frappe.currentUser.role === 'Administrator'
         },
-        {
-          label: _('Chart of Accounts'),
-          route: '/chart-of-accounts'
-        },
-        {
-          label: _('Taxes'),
-          route: '/list/Tax',
-          doctype: 'Tax'
-        },
-        {
-          label: _('Settings'),
-          action() {
-            openSettings();
-          }
-        },
+        // {
+        //   label: _('Chart of Accounts'),
+        //   route: '/chart-of-accounts'
+        // },
+        // {
+        //   label: _('Taxes'),
+        //   route: '/list/Tax',
+        //   doctype: 'Tax'
+        // },
+        // {
+        //   label: _('Settings'),
+        //   action() {
+        //     openSettings();
+        //   }
+        // },
         {
           label: _('Support & Referal'),
           route: '/customer-care'
