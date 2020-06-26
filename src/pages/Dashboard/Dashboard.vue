@@ -9,7 +9,7 @@
     <div class="px-8">
       <div class="my-10 border-t" />
       <TripStats />
-      <div class="border-t" />
+      <!-- <div class="border-t" />
       <Cashflow />
       <div class="my-10 border-t" />
       <UnpaidInvoices />
@@ -21,7 +21,7 @@
         <div class="w-1/2 px-4">
           <Expenses />
         </div>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
