@@ -16,12 +16,7 @@
       >
         {{ _('Forgot Password?') }}
       </button>
-      <Button
-        @click="submit"
-        type="primary"
-        class="text-sm text-white"
-        :disabled="!valuesFilled || loading"
-      >
+      <Button @click="submit" type="primary" class="text-sm text-white">
         {{ buttonText }}
       </Button>
     </div>
@@ -35,11 +30,7 @@ import Button from '@/components/Button';
 import Popover from '@/components/Popover';
 import Users from '@/users';
 
-import {
-  getErrorMessage,
-  handleErrorWithDialog,
-  showMessageDialog
-} from '@/utils';
+import { handleErrorWithDialog, showMessageDialog } from '@/utils';
 
 export default {
   name: 'LoginRegister',
@@ -78,6 +69,15 @@ export default {
           type: 'error',
           group: 'trp',
           title: this._('Please enter email')
+        });
+        return;
+      }
+
+      if (!this.doc.password) {
+        this.$notify({
+          type: 'error',
+          group: 'trp',
+          title: this._('Please enter password')
         });
         return;
       }
