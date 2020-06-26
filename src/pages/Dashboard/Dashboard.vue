@@ -27,12 +27,12 @@
 </template>
 
 <script>
-import PageHeader from '@/components/PageHeader';
-import SearchBar from '@/components/SearchBar';
-import Cashflow from './Cashflow';
-import UnpaidInvoices from './UnpaidInvoices';
-import ProfitAndLoss from './ProfitAndLoss';
-import Expenses from './Expenses';
+// import PageHeader from '@/components/PageHeader';
+// import SearchBar from '@/components/SearchBar';
+// import Cashflow from './Cashflow';
+// import UnpaidInvoices from './UnpaidInvoices';
+// import ProfitAndLoss from './ProfitAndLoss';
+// import Expenses from './Expenses';
 import TripStats from './TripStats';
 
 import frappe from 'frappejs';
@@ -40,12 +40,12 @@ import frappe from 'frappejs';
 export default {
   name: 'Dashboard',
   components: {
-    PageHeader,
-    SearchBar,
-    Cashflow,
-    UnpaidInvoices,
-    ProfitAndLoss,
-    Expenses,
+    // PageHeader,
+    // SearchBar,
+    // Cashflow,
+    // UnpaidInvoices,
+    // ProfitAndLoss,
+    // Expenses,
     TripStats
   },
 

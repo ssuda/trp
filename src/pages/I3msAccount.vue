@@ -40,6 +40,12 @@
               </div>
             </div>
 
+            <div class="mt-8 window-no-drag">
+              <Button type="primary" class="text-sm text-white">
+                Save
+              </Button>
+            </div>
+
             <div class="mt-4 text-xl text-gray-700 font-semibold">
               <span v-if="statusText" class="ml-2 text-base text-gray-600">{{
                 statusText

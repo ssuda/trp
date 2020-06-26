@@ -72,7 +72,7 @@
               </div>
             </div>
           </div>
-          <div class="flex justify-end px-8 mt-5 window-no-drag">
+          <div class="flex px-6 mt-10 window-no-drag">
             <Button
               @click="onClick"
               type="primary"
@@ -84,7 +84,7 @@
           </div>
 
           <div
-            class="flex text-sm px-8 mt-5 window-no-drag"
+            class="flex text-sm px-6 mt-5 window-no-drag"
             v-if="doc.action === 'tagging'"
           >
             <p>Total: {{ total }}</p>

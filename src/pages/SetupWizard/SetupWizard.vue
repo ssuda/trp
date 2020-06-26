@@ -23,7 +23,7 @@
             "
             :autofocus="true"
           />
-          <Popover placement="auto" :show-popup="Boolean(emailError)">
+          <!-- <Popover placement="auto" :show-popup="Boolean(emailError)">
             <template slot="target">
               <FormControl
                 :df="meta.getField('email')"
@@ -41,7 +41,7 @@
                 {{ emailError }}
               </div>
             </template>
-          </Popover>
+          </Popover> -->
         </div>
       </div>
       <TwoColumnForm :fields="fields" :doc="doc" />

@@ -185,6 +185,7 @@ module.exports = {
     }
   ],
   quickEditFields: [
+    'email',
     'fullname',
     'password',
     'gstin',
