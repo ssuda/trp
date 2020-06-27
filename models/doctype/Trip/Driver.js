@@ -1,4 +1,3 @@
-
 const { _ } = require('frappejs/utils');
 
 module.exports = {
@@ -15,7 +14,7 @@ module.exports = {
       fieldname: 'fullname',
       label: 'Driver Name',
       fieldtype: 'Data',
-      placeholder: 'John Doe',
+      placeholder: 'John Doe'
     },
     {
       fieldname: 'license',
@@ -34,9 +33,5 @@ module.exports = {
       }
     }
   ],
-  quickEditFields: [
-    'fullname',
-    'license',
-    'phoneNumber',
-  ]
+  quickEditFields: ['fullname', 'license', 'phoneNumber']
 };

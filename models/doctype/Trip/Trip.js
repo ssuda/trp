@@ -130,14 +130,14 @@ module.exports = {
       fieldname: 'driverPhone',
       label: 'Driver Phone',
       fieldtype: 'Data',
-      formula: doc => doc.driver.phoneNumber,
-      readOnly: true,
+      formula: doc => doc.driver && doc.driver.phoneNumber,
+      readOnly: true
     },
     {
       fieldname: 'driverLicense',
       label: 'Driver License',
       fieldtype: 'Data',
-      formula: doc => doc.driver.license,
+      formula: doc => doc.driver && doc.driver.license,
       readOnly: true
     },
     {
@@ -152,7 +152,7 @@ module.exports = {
       label: 'Ewaybill No',
       fieldtype: 'Data',
       hidden: doc => doc.type != 'I3MS'
-    },
+    }
   ],
 
   quickEditFields: [
@@ -169,6 +169,6 @@ module.exports = {
     'discount',
     'advance',
     'fuel',
-    'fuelPump',
+    'fuelPump'
   ]
 };
