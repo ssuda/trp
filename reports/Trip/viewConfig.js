@@ -130,6 +130,20 @@ const viewConfig = {
       placeholder: 'Customer',
       label: 'Customer',
       fieldname: 'customer'
+    },
+    {
+      fieldtype: 'Data',
+      size: 'small',
+      placeholder: 'Mine',
+      label: 'Mine',
+      fieldname: 'transportedFrom'
+    },
+    {
+      fieldtype: 'Data',
+      size: 'small',
+      placeholder: 'Destination',
+      label: 'Destination',
+      fieldname: 'destination'
     }
   ],
   method: 'trip-report',
@@ -150,15 +164,25 @@ const viewConfig = {
   ],
   getColumns() {
     return [
+      // {
+      //   label: 'Customer',
+      //   fieldtype: 'Link',
+      //   fieldname: 'customer'
+      // },
+      // {
+      //   label: 'Truck Owner',
+      //   fieldtype: 'Link',
+      //   fieldname: 'truckOwner'
+      // },
       {
-        label: 'Customer',
+        label: 'Mine',
         fieldtype: 'Link',
-        fieldname: 'customer'
+        fieldname: 'transportedFrom'
       },
       {
-        label: 'Truck Owner',
+        label: 'Destination',
         fieldtype: 'Link',
-        fieldname: 'truckOwner'
+        fieldname: 'destination'
       },
       {
         label: 'Periodicity',
@@ -179,12 +203,12 @@ const viewConfig = {
         label: 'Loaded',
         fieldtype: 'Float',
         fieldname: 'loadQty'
-      },
-      {
-        label: 'Unloaded',
-        fieldtype: 'Float',
-        fieldname: 'unloadQty'
       }
+      // {
+      //   label: 'Unloaded',
+      //   fieldtype: 'Float',
+      //   fieldname: 'unloadQty'
+      // }
     ];
   }
 };

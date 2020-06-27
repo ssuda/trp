@@ -127,6 +127,10 @@ const config = {
         {
           label: _('Trip Report'),
           route: '/report/trip-report'
+        },
+        {
+          label: _('Tag Report'),
+          route: '/report/tag-report'
         }
         // {
         //   label: _('General Ledger'),

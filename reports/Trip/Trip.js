@@ -70,14 +70,15 @@ class Trip {
       groupNumber++;
     }
 
+    trips = trips.select('Permit.transportedFrom as transportedFrom');
+    groupNumber++;
+    trips = trips.select('Permit.destination as destination');
+    groupNumber++;
+
     if (params.i3msReturns) {
       trips = trips.select('permit');
       groupNumber++;
-      trips = trips.select('Permit.transportedFrom as transportedFrom');
-      groupNumber++;
       trips = trips.select('Permit.source as source');
-      groupNumber++;
-      trips = trips.select('Permit.destination as destination');
       groupNumber++;
       trips = trips.select('Permit.material as material');
       groupNumber++;
@@ -99,9 +100,9 @@ class Trip {
       .sum('loadQty as loadQty')
       .sum('unloadQty as unloadQty');
 
-    if (params.customer || params.type || params.i3msReturns) {
-      trips = trips.join('Permit', 'Permit.name', 'Trip.permit');
-    }
+    //if (params.customer || params.type || params.i3msReturns) {
+    trips = trips.join('Permit', 'Permit.name', 'Trip.permit');
+    //}
 
     if (params.truckOwner) {
       trips = trips.join('Truck', 'Truck.name', 'Trip.truck');
@@ -121,6 +122,14 @@ class Trip {
 
     if (params.customer) {
       trips = trips.where('Permit.customer', params.customer);
+    }
+
+    if (params.transportedFrom) {
+      trips = trips.where('Permit.transportedFrom', params.transportedFrom);
+    }
+
+    if (params.destination) {
+      trips = trips.where('Permit.destination', params.destination);
     }
 
     if (params.type) {
@@ -166,6 +175,11 @@ class Trip {
       loaded += +entry.loadQty;
       entry.unloadQty = entry.unloadQty || 0;
       unloaded += entry.unloadQty;
+
+      entry.transportedFrom = entry.transportedFrom.toLowerCase();
+      entry.destination = entry.destination
+        .substring(0, entry.destination.indexOf(','))
+        .toLowerCase();
 
       if (!params.dashboard && !params.i3msReturns) {
         entry.numPermits = numberFormat.formatNumber(entry.numPermits, '#,###');

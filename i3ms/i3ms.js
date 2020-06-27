@@ -54,7 +54,7 @@ export async function refreshPermits(args, sse) {
   });
 
   while (true) {
-    await delay(process.env.NODE_ENV === 'development' ? 60000 : 3600000);
+    await delay(process.env.NODE_ENV === 'development' ? 600000 : 3600000);
 
     console.log('Calling refresh permits');
     while (busyFlag.isBusy) {
@@ -517,38 +517,41 @@ async function openTabs(taggingUrl, chunks, options, sse) {
       })
     );
 
+    if (!options.name) {
+      return permitDetails(
+        {
+          taggingUrl: taggingUrl
+        },
+        sse
+      );
+    }
+
+    const tagged = successfullyTagged(options.name, null, tabs[0]);
+
     for (let i = 0; i < numTabs; ++i) {
       await tabs[i].disconnect();
     }
+
+    return tagged;
   } catch (ex) {
     console.error(ex);
   }
 }
 
 export async function tagVehicles(options, sse) {
-  const { taggingUrl, name: permitNumber, trucks } = options;
+  const { taggingUrl, trucks } = options;
   let chunks = _.chunk(
     trucks,
     Math.ceil(trucks.length / (+options.numBrowsers || 4))
   );
-  let chunk = chunks[0];
+
   try {
     if (trucks.length) {
-      await openTabs(taggingUrl, chunks, options, sse);
+      return openTabs(taggingUrl, chunks, options, sse);
     }
   } catch (ex) {
     console.error(ex);
   }
-
-  if (!permitNumber) {
-    return permitDetails(
-      {
-        taggingUrl: taggingUrl
-      },
-      sse
-    );
-  }
-  return successfullyTagged(permitNumber);
 }
 
 export async function releaseVehicles(options, sse) {

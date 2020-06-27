@@ -27,8 +27,8 @@
 </template>
 
 <script>
-// import PageHeader from '@/components/PageHeader';
-// import SearchBar from '@/components/SearchBar';
+import PageHeader from '@/components/PageHeader';
+import SearchBar from '@/components/SearchBar';
 // import Cashflow from './Cashflow';
 // import UnpaidInvoices from './UnpaidInvoices';
 // import ProfitAndLoss from './ProfitAndLoss';
@@ -40,8 +40,8 @@ import frappe from 'frappejs';
 export default {
   name: 'Dashboard',
   components: {
-    // PageHeader,
-    // SearchBar,
+    PageHeader,
+    SearchBar,
     // Cashflow,
     // UnpaidInvoices,
     // ProfitAndLoss,
