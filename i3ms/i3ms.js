@@ -499,7 +499,7 @@ async function tagFromTab(taggingUrl, chunk, options, sse) {
 async function openTabs(taggingUrl, chunks, options, sse) {
   try {
     let tabs = [];
-    let numTabs = (+options.numBrowsers || 4) - 1;
+    let numTabs = +options.numBrowsers || 4;
 
     let arr = [];
 
@@ -534,12 +534,7 @@ export async function tagVehicles(options, sse) {
   let chunk = chunks[0];
   try {
     if (trucks.length) {
-      //await i3ms.tagInit(taggingUrl);
-      i3ms.tabNo = 0;
-      await Promise.all([
-        openTabs(taggingUrl, chunks.slice(1), options, sse),
-        tabTagging(taggingUrl, i3ms, chunk, options, sse)
-      ]);
+      await openTabs(taggingUrl, chunks, options, sse);
     }
   } catch (ex) {
     console.error(ex);
