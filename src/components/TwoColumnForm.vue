@@ -1,5 +1,5 @@
 <template>
-  <div class="text-sm" :class="{ 'border-t': !noBorder }">
+  <div class="text-sm overflow-auto" :class="{ 'border-t': !noBorder }">
     <template v-for="df in formFields">
       <FormControl
         :key="df.fieldname"

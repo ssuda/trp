@@ -4,7 +4,6 @@ const numberFormat = require('frappejs/utils/numberFormat.js');
 const { DateTime } = require('luxon');
 
 class Tag {
-
   async run(params) {
     console.log(params);
 
@@ -32,9 +31,7 @@ class Tag {
       groupNumber++;
     }
 
-    permits = permits
-      .count('name as numPermits')
-      .sum('numTagged as numTagged');
+    permits = permits.count('name as numPermits').sum('numTagged as numTagged');
 
     if (groupNumber) {
       let s = Array.apply(0, Array(groupNumber))
@@ -43,7 +40,6 @@ class Tag {
       permits = permits.groupByRaw(s);
       permits = permits.orderByRaw('1 desc');
     }
-
 
     if (params.permit) {
       permits = permits.where('Permit.name', params.permit);
