@@ -501,6 +501,8 @@ async function openTabs(taggingUrl, chunks, options, sse) {
     let tabs = [];
     let numTabs = +options.numBrowsers || 4;
 
+    numTabs = chunks.length > numTabs ? numTabs : chunks.length;
+
     let arr = [];
 
     for (let i = 0; i < numTabs; ++i) {
@@ -517,9 +519,21 @@ async function openTabs(taggingUrl, chunks, options, sse) {
       })
     );
 
+    if (!permitNumber) {
+      return permitDetails(
+        {
+          taggingUrl: taggingUrl
+        },
+        sse
+      );
+    }
+    const tagged = await successfullyTagged(permitNumber);
+
     for (let i = 0; i < numTabs; ++i) {
       await tabs[i].disconnect();
     }
+
+    return tagged;
   } catch (ex) {
     console.error(ex);
   }
@@ -531,7 +545,6 @@ export async function tagVehicles(options, sse) {
     trucks,
     Math.ceil(trucks.length / (+options.numBrowsers || 4))
   );
-  let chunk = chunks[0];
   try {
     if (trucks.length) {
       await openTabs(taggingUrl, chunks, options, sse);
@@ -539,16 +552,6 @@ export async function tagVehicles(options, sse) {
   } catch (ex) {
     console.error(ex);
   }
-
-  if (!permitNumber) {
-    return permitDetails(
-      {
-        taggingUrl: taggingUrl
-      },
-      sse
-    );
-  }
-  return successfullyTagged(permitNumber);
 }
 
 export async function releaseVehicles(options, sse) {
