@@ -491,7 +491,7 @@ async function tabTagging(taggingUrl, tab, chunk, options, sse) {
 
 async function tagFromTab(taggingUrl, chunk, options, sse) {
   const tab = browser();
-  await tab.browserInit(options.credentials, !options.showBrowser, true);
+  await tab.browserInit(options.credentials, true, true);
   await tabTagging(taggingUrl, tab, chunk, options, sse);
   return tab;
 }
@@ -581,8 +581,14 @@ export async function releaseVehicles(options, sse) {
   }
 }
 
-export async function browserInit(cred, headless, tologin) {
-  return i3ms.browserInit(cred, headless, tologin);
+export async function browserInit(
+  cred,
+  headless,
+  tologin,
+  cb,
+  returnCompanyName
+) {
+  return i3ms.browserInit(cred, headless, tologin, cb, returnCompanyName);
 }
 
 export async function disconnect() {
