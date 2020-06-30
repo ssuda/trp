@@ -519,7 +519,7 @@ async function openTabs(taggingUrl, chunks, options, sse) {
       })
     );
 
-    if (!permitNumber) {
+    if (!options.name) {
       return permitDetails(
         {
           taggingUrl: taggingUrl
@@ -527,7 +527,7 @@ async function openTabs(taggingUrl, chunks, options, sse) {
         sse
       );
     }
-    const tagged = await successfullyTagged(permitNumber);
+    const tagged = await successfullyTagged(options.name, null, tabs[0]);
 
     for (let i = 0; i < numTabs; ++i) {
       await tabs[i].disconnect();
@@ -547,7 +547,7 @@ export async function tagVehicles(options, sse) {
   );
   try {
     if (trucks.length) {
-      await openTabs(taggingUrl, chunks, options, sse);
+      return openTabs(taggingUrl, chunks, options, sse);
     }
   } catch (ex) {
     console.error(ex);

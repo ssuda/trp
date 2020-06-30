@@ -355,7 +355,7 @@ module.exports = function() {
             for (let truckNo of trucks) {
               console.log('releasing trucks', truckNo);
               await page.select('#lstFrom', truckNo);
-              await delay(2000);
+              //await delay(2000);
               await page.click('#btnAdd');
             }
             await page.click('#btnRelease');
