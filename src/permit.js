@@ -12,7 +12,8 @@ export function pickPermitFields(permit) {
     vehicleDetails,
     material,
     destination,
-    endDate
+    endDate,
+    tagged
   }) => ({
     name,
     transportedFrom,
@@ -23,7 +24,8 @@ export function pickPermitFields(permit) {
     vehicleDetails,
     material,
     destination,
-    endDate
+    endDate,
+    tagged
   }))(permit);
 }
 
