@@ -126,6 +126,12 @@ import { FieldValue } from '@/firebase';
     ipcRenderer.send('relaunch-app');
   });
 
+  ipcRenderer.on('i3ms-company-name', (e, name) => {
+    frappe.AccountingSettings.update({
+      i3msCompanyName: name
+    });
+  });
+
   frappe.events.on('open-browser', args => {
     console.log('open browser called');
     ipcRenderer.send('open-browser', args);

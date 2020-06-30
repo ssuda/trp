@@ -24,14 +24,14 @@
             </h1>
             <div class="flex justify-between mt-2">
               <div class="w-1/3">
-                <FormControl
+                <!-- <FormControl
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('showBrowser')"
                   :value="doc.showBrowser"
                   :showLabel="true"
                   @change="value => doc.set('showBrowser', value)"
-                />
+                /> -->
 
                 <FormControl
                   class="mt-4 text-base"

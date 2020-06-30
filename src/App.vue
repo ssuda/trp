@@ -352,7 +352,8 @@ export default {
 
         frappe.events.trigger('open-browser', {
           credentials,
-          showBrowser: true
+          showBrowser: true,
+          returnCompanyName: true
         });
 
         //fetch permits

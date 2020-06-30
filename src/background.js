@@ -257,7 +257,17 @@ ipcMain.on('check-for-updates', () => {
 ipcMain.on('open-browser', async (event, args) => {
   console.log('open browser called');
   await disconnect();
-  await browserInit(args.credentials, !args.showBrowser, true);
+  const r = await browserInit(
+    args.credentials,
+    !args.showBrowser,
+    true,
+    null,
+    args.returnCompanyName
+  );
+
+  if (args.returnCompanyName && r) {
+    event.sender.send('i3ms-company-name', r);
+  }
 });
 
 ipcMain.on('close-browser', async () => {

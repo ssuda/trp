@@ -130,6 +130,12 @@ module.exports = {
       placeholder: 'I3MS Password'
     },
     {
+      fieldname: 'i3msCompanyName',
+      label: 'I3MS Company Name',
+      fieldtype: 'Data',
+      placeholder: 'I3MS Company Name'
+    },
+    {
       fieldname: 'lastSnapshot',
       label: 'Snapshot',
       fieldtype: 'Date',
