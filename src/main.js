@@ -6,7 +6,7 @@ import FeatherIcon from 'frappejs/ui/components/FeatherIcon';
 import outsideClickDirective from 'frappejs/ui/plugins/outsideClickDirective';
 import models from '../models';
 import { ipcRenderer } from 'electron';
-//import { syncDoc } from '@/utils';
+import { firestore } from '@/firebase';
 
 // vue imports
 import Vue from 'vue';
@@ -209,9 +209,21 @@ import { FieldValue } from '@/firebase';
 
       batchSize++;
       if (batchSize >= 10) {
-        await frappe.currentUser.remote.ref.update({
-          tagged: FieldValue.increment(batchSize)
-        });
+        if (!frappe.currentUser.remote) {
+          try {
+            frappe.currentUser.remote = await firestore
+              .collection('customers')
+              .doc(frappe.AccountingSettings.gstin)
+              .get();
+          } catch (ex) {}
+        }
+
+        if (!frappe.currentUser.remote) {
+          await frappe.currentUser.remote.ref.update({
+            tagged: FieldValue.increment(batchSize)
+          });
+        }
+
         batchSize = 0;
         frappe.syncDoc({
           doctype: 'Permit',
