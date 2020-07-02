@@ -15,7 +15,8 @@ const graphqlUrl =
 
 const httpLink = new HttpLink({
   // You should use an absolute URL here
-  uri: process.env.NODE_ENV == 'development' ? 'http://' : 'https://' + graphqlUrl,
+  uri:
+    process.env.NODE_ENV == 'development' ? 'http://' : 'https://' + graphqlUrl,
   headers: {
     'x-hasura-admin-secret': 'gkM7JbE3jZmdu9tKCVgWakkqMfk7WK5A'
   }
@@ -23,7 +24,7 @@ const httpLink = new HttpLink({
 
 // Create the subscription websocket link
 const wsLink = new WebSocketLink({
-  uri:   process.env.NODE_ENV == 'development' ? 'ws://' : 'wss://'  + graphqlUrl,
+  uri: process.env.NODE_ENV == 'development' ? 'ws://' : 'wss://' + graphqlUrl,
   options: {
     reconnect: true,
     connectionParams: {
