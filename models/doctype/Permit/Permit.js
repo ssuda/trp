@@ -82,6 +82,11 @@ module.exports = {
       fieldtype: 'Data'
     },
     {
+      fieldname: 'circle',
+      label: 'Circle',
+      fieldtype: 'Data'
+    },
+    {
       fieldname: 'transportedFrom',
       label: 'Transported From',
       fieldtype: 'Data',

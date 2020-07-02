@@ -263,13 +263,22 @@ export async function permitDetails(permit, sse, browser = i3ms) {
     noTrips,
     noTagged,
     quantity,
+    material,
+    destination,
     validate,
     transportedFrom
   } = permit;
 
   console.log('inside permit details', permit);
 
-  if (!permit.quantity || !permit.transportedFrom || !permit.source) {
+  if (
+    !quantity ||
+    !source ||
+    !material ||
+    !destination ||
+    !transportedFrom ||
+    !taggingUrl
+  ) {
     if (taggingUrl && !vehicleDetails) {
       const u = new URL(taggingUrl);
       vehicleDetails =

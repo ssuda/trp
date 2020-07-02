@@ -22,6 +22,7 @@ import _ from 'lodash';
 import BaseDocument from '@/basedocument';
 import Document from 'frappejs/model/document';
 import { FieldValue } from '@/firebase';
+import { normalizeCompanyName } from './utils';
 
 (async () => {
   frappe.isServer = true;
@@ -128,7 +129,7 @@ import { FieldValue } from '@/firebase';
 
   ipcRenderer.on('i3ms-company-name', (e, name) => {
     frappe.AccountingSettings.update({
-      i3msCompanyName: name
+      i3msCompanyName: normalizeCompanyName(name)
     });
   });
 
