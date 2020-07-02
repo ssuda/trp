@@ -279,7 +279,8 @@ ipcMain.on('open-settings-window', (event, tab) => {
   createSettingsWindow(tab);
 });
 
-ipcMain.on('reload-main-window', () => {
+ipcMain.on('reload-main-window', async () => {
+  await disconnect();
   mainWindow.reload();
 });
 
