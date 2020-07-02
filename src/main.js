@@ -128,9 +128,13 @@ import { normalizeCompanyName } from './utils';
   });
 
   ipcRenderer.on('i3ms-company-name', (e, name) => {
+    const i3msCompanyName = normalizeCompanyName(name);
+
     frappe.AccountingSettings.update({
-      i3msCompanyName: normalizeCompanyName(name)
+      i3msCompanyName
     });
+
+    frappe.events.trigger('i3ms-company-name', i3msCompanyName);
   });
 
   frappe.events.on('open-browser', args => {

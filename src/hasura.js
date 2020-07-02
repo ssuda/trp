@@ -8,7 +8,10 @@ import { getMainDefinition } from 'apollo-utilities';
 import gql from 'graphql-tag';
 
 //TODO: change this
-const graphqlUrl = 'localhost:8080/v1/graphql';
+const graphqlUrl =
+  process.env.NODE_ENV == 'development'
+    ? 'localhost:8080/v1/graphql'
+    : 'https://www.spinbi.com/v1/graphql';
 
 const httpLink = new HttpLink({
   // You should use an absolute URL here
@@ -68,6 +71,24 @@ export function listQuery(table, returning) {
           }
         }
     }`;
+}
+
+export function readQueryFunction(fn, table, returning, subscribe) {
+  const query = fn;
+  const t = subscribe ? 'subscription' : 'query';
+
+  const q = gql`${t} ${fn}($where: ${table}_bool_exp,
+        $args: ${fn}_args!,
+        $limit: Int, $offset: Int, $order_by: [${table}_order_by!],
+        $distinct_on: [${table}_select_column!]) {
+      ${query}(where: $where, args: $args, limit: $limit, offset: $offset, order_by: $order_by, distinct_on: $distinct_on) {
+        ${returning}
+      }
+    }
+    `;
+
+  console.log(q);
+  return q;
 }
 
 export function readQuery(table, returning, subscribe) {

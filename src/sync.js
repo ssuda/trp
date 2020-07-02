@@ -1,13 +1,12 @@
 const frappe = require('frappejs');
 const { firestore, FieldValue } = require('@/firebase');
-//const { DateTime } = require('luxon');
 const { machineIdSync } = require('node-machine-id');
 const { syncDoc } = require('@/utils');
 
 const { tagRelease } = require('@/permit');
 const { DateTime } = require('luxon');
 
-const { apolloClient, readQuery } = require('@/hasura');
+const { readTP } = require('@/i3ms-sync');
 
 let deviceId = machineIdSync({ original: true });
 
@@ -16,109 +15,62 @@ async function readLatestTP(lastSnapshot) {
 
   if (frappe.AccountingSettings.i3msFirstTimeSync) {
     time = time.minus({ months: 1 }).startOf('month');
-    await accountingSettings.update({
+    await frappe.AccountingSettings.update({
       i3msFirstTimeSync: 0
     });
   } else {
     time = time.minus({ hours: 1 });
   }
-  const companyName = `%${frappe.AccountingSettings.i3msCompanyName}%`;
 
-  console.log('Trying to get data from hasura', companyName);
-
-  console.log(
-    readQuery(
-      'tp',
-      `
-      TPNo
-      Weight
-      StartDate
-      Permit
-      VehicleNo
-      Mineral
-      LicenseeName
-      Destination
-      Source
-      Circle
-      `
-    ).toString()
-  );
-
-  const response = await apolloClient.query({
-    // Query
-    query: readQuery(
-      'tp',
-      `
-      TPNo
-      Weight
-      StartDate
-      Permit
-      VehicleNo
-      Mineral
-      LicenseeName
-      Destination
-      Source
-      Circle
-    `
-    ),
-
-    variables: {
-      where: {
-        // StartDate: {
-        //   _gte: time
-        // },
-        Transporter: {
-          _ilike: companyName
-        }
-      }
+  const rows = await readTP({
+    StartDate: {
+      _gte: time
     }
   });
 
-  console.log('response from hasura', response);
+  console.log('response from hasura');
 
   const failed = [];
-  if (response && response.data) {
-    console.log('number of records from hasura', response.data.tp.length);
+  console.log('number of records from hasura', rows.length);
 
-    for (let doc of response.data.tp) {
+  for (let doc of rows) {
+    await syncDoc({
+      doctype: 'Permit',
+      name: doc.Permit,
+      type: 'I3MS',
+      destination: doc.Destination,
+      material: doc.Mineral,
+      source: doc.LicenseeName,
+      transportedFrom: doc.Source,
+      circle: doc.Circle,
+      _turnOffSync: true
+    });
+
+    try {
       await syncDoc({
-        doctype: 'Permit',
-        name: doc.Permit,
-        type: 'I3MS',
-        destination: doc.Destination,
-        material: doc.Mineral,
-        source: doc.LicenseeName,
-        transportedFrom: doc.Source,
-        circle: doc.Circle,
-        _turnOffSync: true
+        doctype: 'Trip',
+        permit: doc.Permit,
+        name: doc.TPNo,
+        truck: doc.VehicleNo,
+        tpNumber: doc.TPNo,
+        startDate: doc.StartDate,
+        loadQty: doc.Weight
       });
-
-      try {
-        await syncDoc({
-          doctype: 'Trip',
-          permit: doc.Permit,
-          name: doc.TPNo,
-          truck: doc.VehicleNo,
-          tpNumber: doc.TPNo,
-          startDate: doc.StartDate,
-          loadQty: doc.Weight
-        });
-      } catch (ex) {
-        failed.push({
-          doctype: 'Trip',
-          permit: doc.Permit,
-          name: doc.TPNo,
-          truck: doc.VehicleNo,
-          tpNumber: doc.TPNo,
-          startDate: doc.StartDate,
-          loadQty: doc.Weight
-        });
-      }
+    } catch (ex) {
+      failed.push({
+        doctype: 'Trip',
+        permit: doc.Permit,
+        name: doc.TPNo,
+        truck: doc.VehicleNo,
+        tpNumber: doc.TPNo,
+        startDate: doc.StartDate,
+        loadQty: doc.Weight
+      });
     }
+  }
 
-    for (let doc of failed) {
-      await syncDoc(doc);
-    }
+  for (let doc of failed) {
+    await syncDoc(doc);
   }
 }
 
@@ -230,7 +182,7 @@ async function syncFromFirebase() {
     timestamp = DateTime.local().toJSDate();
   }
 
-  readLatestTP(lastSnapshot);
+  //readLatestTP(lastSnapshot);
 
   console.log(gstin, lastSnapshot, timestamp);
 

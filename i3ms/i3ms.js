@@ -54,7 +54,7 @@ export async function refreshPermits(args, sse) {
   });
 
   while (true) {
-    await delay(process.env.NODE_ENV === 'development' ? 60000 : 3600000);
+    await delay(process.env.NODE_ENV === 'development' ? 600000 : 3600000);
 
     console.log('Calling refresh permits');
     while (busyFlag.isBusy) {
@@ -271,14 +271,7 @@ export async function permitDetails(permit, sse, browser = i3ms) {
 
   console.log('inside permit details', permit);
 
-  if (
-    !quantity ||
-    !source ||
-    !material ||
-    !destination ||
-    !transportedFrom ||
-    !taggingUrl
-  ) {
+  if (!quantity || !destination || !transportedFrom || !taggingUrl) {
     if (taggingUrl && !vehicleDetails) {
       const u = new URL(taggingUrl);
       vehicleDetails =

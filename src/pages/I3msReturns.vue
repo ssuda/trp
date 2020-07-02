@@ -49,6 +49,7 @@ import { exportData } from '@/utils';
 import { twoMonthsOldPermits } from '@/permit';
 
 import { handleErrorWithDialog } from '@/utils';
+import { readTPByPermit } from '@/i3ms-sync';
 
 export default {
   name: 'PermitActionForm',
@@ -68,7 +69,7 @@ export default {
   },
   computed: {
     buttonText() {
-      return this.loading ? this._(`Refreshing...`) : this._('Next');
+      return this.loading ? this._(`Loading...`) : this._('Next');
     }
   },
 
@@ -82,74 +83,102 @@ export default {
         .minus({ months: 1 })
         .startOf('month')
         .toISO();
+
       let endDate = DateTime.local()
         .minus({ months: 1 })
         .endOf('month')
         .toISO();
 
-      const credentials = {
-        username: frappe.AccountingSettings.i3msUsername,
-        password: frappe.AccountingSettings.i3msPassword
-      };
+      // const credentials = {
+      //   username: frappe.AccountingSettings.i3msUsername,
+      //   password: frappe.AccountingSettings.i3msPassword
+      // };
 
-      const permits = await twoMonthsOldPermits();
+      // const permits = await twoMonthsOldPermits();
 
-      frappe.events.trigger('permits-details', {
-        credentials,
-        permits,
-        showBrowser: true,
-        i3msReturns: true
-      });
+      // frappe.events.trigger('permits-details', {
+      //   credentials,
+      //   permits,
+      //   showBrowser: true,
+      //   i3msReturns: true
+      // });
 
-      frappe.events.once('permits-details-results', async () => {
-        this.loading = false;
+      // frappe.events.once('permits-details-results', async () => {
+      //   this.loading = false;
 
-        try {
-          let rows = await new Trip().run({
-            fromDate: startDate,
-            toDate: endDate,
-            periodicity: 'day',
-            i3msReturns: true
-          });
+      try {
+        // let rows = await new Trip().run({
+        //   fromDate: startDate,
+        //   toDate: endDate,
+        //   periodicity: 'day',
+        //   i3msReturns: true
+        // });
 
-          rows = rows.map(row => {
-            return [
-              row.periodicity,
-              '',
-              row.transportedFrom,
-              row.permit,
-              '',
-              row.material,
-              row.loadQty,
-              (row.destination || '').replace(/,.*$/, '').toUpperCase(),
-              row.source.replace(/\(.*$/, '')
-            ];
-          });
+        // rows = rows.map(row => {
+        //   return [
+        //     row.periodicity,
+        //     '',
+        //     row.transportedFrom,
+        //     row.permit,
+        //     '',
+        //     row.material,
+        //     row.loadQty,
+        //     (row.destination || '').replace(/,.*$/, '').toUpperCase(),
+        //     row.source.replace(/\(.*$/, '')
+        //   ];
+        // });
 
-          const columns = [
-            'Date',
-            'Name of the Lessee/Licensee',
-            'Name of the Mines/Plant',
-            'Permission no.',
-            'Place',
-            'Materials',
-            'Despatched qty from mines/plant',
-            'Destination',
-            'Contract/Order issued by the lessees/end user industries'
+        let rows = await readTPByPermit({
+          StartDate: {
+            _gte: startDate,
+            _lte: endDate
+          }
+        });
+
+        rows = rows.map(row => {
+          return [
+            DateTime.fromISO(row.Date).toFormat('dd-MM-yyyy'),
+            row.LicenseeName,
+            row.Source,
+            row.Permit,
+            row.Source.lastIndexOf('(') != -1
+              ? row.Source.substring(
+                  row.Source.lastIndexOf('(') + 1,
+                  row.Source.lastIndexOf(')')
+                )
+              : '',
+            row.Material,
+            row.Load,
+            (row.Destination || '').replace(/,.*$/, '').toUpperCase(),
+            row.LicenseeName.replace(/\(.*$/, '')
           ];
-          exportData(
-            `I3MS ${DateTime.local()
-              .minus({ months: 1 })
-              .toFormat('LLL yyyy')} Returns`,
-            columns,
-            rows,
-            true
-          );
-        } catch (ex) {
-          console.error(ex);
-        }
-        this.message = 'Success';
-      });
+        });
+
+        const columns = [
+          'Date',
+          'Name of the Lessee/Licensee',
+          'Name of the Mines/Plant',
+          'Permission no.',
+          'Place',
+          'Materials',
+          'Despatched qty from mines/plant',
+          'Destination',
+          'Contract/Order issued by the lessees/end user industries'
+        ];
+        exportData(
+          `I3MS ${DateTime.local()
+            .minus({ months: 1 })
+            .toFormat('LLL yyyy')} Returns`,
+          columns,
+          rows,
+          true
+        );
+      } catch (ex) {
+        console.error(ex);
+      }
+      this.loading = false;
+      this.message = 'Success';
+      //});
     },
 
     handleError(e) {
