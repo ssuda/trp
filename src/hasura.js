@@ -11,11 +11,11 @@ import gql from 'graphql-tag';
 const graphqlUrl =
   process.env.NODE_ENV == 'development'
     ? 'localhost:8080/v1/graphql'
-    : 'https://www.spinbi.com/v1/graphql';
+    : 'www.spinbi.com/v1/graphql';
 
 const httpLink = new HttpLink({
   // You should use an absolute URL here
-  uri: `http://${graphqlUrl}`,
+  uri: process.env.NODE_ENV == 'development' ? 'http://' : 'https://' + graphqlUrl,
   headers: {
     'x-hasura-admin-secret': 'gkM7JbE3jZmdu9tKCVgWakkqMfk7WK5A'
   }
@@ -23,7 +23,7 @@ const httpLink = new HttpLink({
 
 // Create the subscription websocket link
 const wsLink = new WebSocketLink({
-  uri: `ws://${graphqlUrl}`,
+  uri:   process.env.NODE_ENV == 'development' ? 'ws://' : 'wss://'  + graphqlUrl,
   options: {
     reconnect: true,
     connectionParams: {
