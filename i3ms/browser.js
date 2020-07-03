@@ -592,7 +592,10 @@ module.exports = function() {
 
         console.log('Retrying in loop');
         await Promise.all([
-          page.waitForNavigation({ timeout: 120000 }), // The promise resolves after navigation has finished
+          page.waitForNavigation({
+            timeout: 120000,
+            waitUntil: 'networkidle0'
+          }), // The promise resolves after navigation has finished
           page.click('#btnsearch') // Clicking the link will indirectly cause a navigation
         ]);
 
@@ -624,7 +627,7 @@ module.exports = function() {
         console.error(ex);
       }
 
-      await delay(10000);
+      //await delay(10000);
 
       const result = await extractRowDetails('#tabdata');
 
