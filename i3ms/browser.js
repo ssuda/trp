@@ -25,7 +25,7 @@ module.exports = function() {
     console.log('creating/connecting browser in headless mode', headless);
     if (!browser) {
       browser = await puppeteer.launch({
-        headless: true,
+        headless: !!headless,
         executablePath: findChrome(),
         defaultViewport: {
           width: 1200,
@@ -999,25 +999,34 @@ module.exports = function() {
     console.log(rows);
   }
 
+  async function companyName() {
+    return page.$eval('.welcome', el =>
+      el.childNodes[0].textContent
+        .trim()
+        .replace(/^Wel *come/i, '')
+        .trim()
+    );
+  }
+
   let credentials, globalHeadless;
 
   async function browserInit(cred, headless, tologin, cb, returnCompany) {
-    credentials = cred;
+    if (cred) {
+      credentials = cred;
+    }
+
     if (cb) {
       globalDisconnectHandler = cb;
     }
+
     await openBrowser(headless);
+
     if (tologin) {
       await i3msLogin();
     }
 
     if (returnCompany) {
-      return page.$eval('.welcome', el =>
-        el.childNodes[0].textContent
-          .trim()
-          .replace(/^Wel *come/i, '')
-          .trim()
-      );
+      return companyName();
     }
   }
 
@@ -1032,6 +1041,7 @@ module.exports = function() {
   return {
     getBrowser,
     getPage,
+    companyName,
     browserInit,
     getDetails,
     permitVehicles,

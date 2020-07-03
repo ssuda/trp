@@ -90,6 +90,7 @@
             <p>Total: {{ total }}</p>
             <p class="ml-8">Success: {{ success }}</p>
             <p class="ml-8">Failed: {{ failed }}</p>
+            <p class="ml-8">Duration: {{ duration }}</p>
           </div>
           <div
             class="px-8 mt-5 font-medium text-green-600"
@@ -104,7 +105,7 @@
 </template>
 <script>
 import frappe from 'frappejs';
-const { DateTime } = require('luxon');
+const { DateTime, Interval } = require('luxon');
 import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import FormControl from '@/components/Controls/FormControl';
@@ -134,6 +135,7 @@ export default {
       loading: false,
       failed: 0,
       total: 0,
+      duration: '',
       message: ''
     };
   },
@@ -204,6 +206,8 @@ export default {
           this.$router.back();
         });
       } else if (this.doc.action === 'tagging') {
+        const startTimer = DateTime.local();
+
         if (!this.doc.truckList && !this.doc.trucks) {
           showMessageDialog({ message: this._('Please provide trucks') });
           this.loading = false;
@@ -290,6 +294,13 @@ export default {
         }
 
         if (trucks.length) {
+          let timerInterval = setInterval(() => {
+            const endTimer = DateTime.local();
+            duarion = Interval.fromDateTimes(startTimer, endTimer).toFormat(
+              "HH 'hours' mm 'minutes' ss 'seconds'"
+            );
+          }, 1000);
+
           this.loading = true;
           frappe.events.trigger('tag-vehicles', obj);
 
@@ -310,6 +321,7 @@ export default {
           frappe.events.on('failed', failedCb);
 
           frappe.events.once('tag-results', async () => {
+            clearInterval(timerInterval);
             this.loading = false;
             frappe.events.off('total', totalCb);
             frappe.events.off('failed', failedCb);

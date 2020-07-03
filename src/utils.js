@@ -415,6 +415,7 @@ export function getActionsForDocument(doc) {
 export function normalizeCompanyName(name) {
   return name
     .trim()
+    .replace(/a unit of.*$/i, '')
     .replace(/&amp;/i, '&')
     .replace(/&amp;/i, '&')
     .replace(/ & /i, ' AND ')
