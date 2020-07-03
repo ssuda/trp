@@ -54,7 +54,9 @@ export async function refreshPermits(args, sse) {
   });
 
   while (true) {
-    await delay(process.env.NODE_ENV === 'development' ? 600000 : 3600000);
+    if (permits.length) {
+      await delay(process.env.NODE_ENV === 'development' ? 600000 : 3600000);
+    }
 
     console.log('Calling refresh permits');
     while (busyFlag.isBusy) {
@@ -62,7 +64,7 @@ export async function refreshPermits(args, sse) {
     }
 
     try {
-      await permitsDetails({}, sse, hiddenBrowser);
+      permits = await permitsDetails({}, sse, hiddenBrowser);
     } catch (ex) {
       console.error(ex);
     }
@@ -231,7 +233,7 @@ export async function permitReport(args, sse, browser = i3ms) {
 async function successfullyTagged(permitNo, credentials, browser = i3ms) {
   if (credentials) {
     console.log(credentials);
-    await browser.browserInit(credentials);
+    await browser.browserInit(credentials, true);
   }
 
   console.log('permitno', permitNo);
@@ -493,7 +495,7 @@ async function tabTagging(taggingUrl, tab, chunk, options, sse) {
 
 async function tagFromTab(taggingUrl, chunk, options, sse) {
   const tab = browser();
-  await tab.browserInit(options.credentials, true, true);
+  await tab.browserInit(options.credentials, false, true);
   await tabTagging(taggingUrl, tab, chunk, options, sse);
   return tab;
 }
@@ -590,9 +592,13 @@ export async function browserInit(
   cb,
   returnCompanyName
 ) {
-  return i3ms.browserInit(cred, headless, tologin, cb, returnCompanyName);
+  return i3ms.browserInit(cred, true, tologin, cb, returnCompanyName);
 }
 
 export async function disconnect() {
   return i3ms.disconnect();
+}
+
+export async function companyName() {
+  return i3ms.companyName();
 }

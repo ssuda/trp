@@ -142,14 +142,13 @@ import { normalizeCompanyName } from './utils';
     ipcRenderer.send('open-browser', args);
   });
 
-  ipcRenderer.on('permit-details-results', (e, permit) => {
-    if (permit) {
-      savePermit(permit, {});
-    }
-    frappe.events.trigger('permit-details-results', permit);
+  frappe.events.on('i3ms-company', args => {
+    console.log('i3ms-company called');
+    ipcRenderer.send('i3ms-company', args);
   });
 
   ipcRenderer.on('permits-details-results', e => {
+    ipcRenderer.removeAllListeners('permit-details-results');
     frappe.events.trigger('permits-details-results', e);
   });
 
@@ -165,10 +164,22 @@ import { normalizeCompanyName } from './utils';
 
   frappe.events.on('permit-details', args => {
     ipcRenderer.send('permit-details', args);
+    ipcRenderer.once('permit-details-results', (e, permit) => {
+      if (permit) {
+        savePermit(permit, args);
+      }
+      frappe.events.trigger('permit-details-results', permit);
+    });
   });
 
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
+    ipcRenderer.on('permit-details-results', (e, permit) => {
+      if (permit) {
+        savePermit(permit, {});
+      }
+      frappe.events.trigger('permit-details-results', permit);
+    });
   });
 
   frappe.events.on('tag-vehicles', permit => {

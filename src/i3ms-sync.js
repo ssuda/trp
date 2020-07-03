@@ -2,12 +2,21 @@ import frappe from 'frappejs';
 
 import { apolloClient, readQuery, readQueryFunction } from '@/hasura';
 
-export async function readTP(query) {
+async function fetchCompanyName() {
   if (!frappe.AccountingSettings.i3msCompanyName) {
-    await Promise.resolve((resolve, reject) => {
+    console.log('setting i3ms company');
+    frappe.events.trigger('i3ms-company');
+
+    return new Promise((resolve, reject) => {
       frappe.events.on('i3ms-company-name', resolve);
     });
   }
+
+  return Promise.resolve();
+}
+
+export async function readTP(query) {
+  await fetchCompanyName();
 
   const companyName = `%${frappe.AccountingSettings.i3msCompanyName}%`;
 
@@ -63,12 +72,27 @@ export async function readTP(query) {
   return (response && response.data && response.data.tp) || [];
 }
 
+function tpReadFunction() {
+  return readQueryFunction(
+    'tp_group_by_permit',
+    'transporter_permit',
+    `
+        Date
+        Transporter
+        Destination
+        LicenseeName
+        Load
+        NumberOfTrips
+        Permit
+        Source
+        Circle
+        Material
+        `
+  );
+}
+
 export async function readTPByPermit(query) {
-  if (!frappe.AccountingSettings.i3msCompanyName) {
-    await Promise.resolve((resolve, reject) => {
-      frappe.events.on('i3ms-company-name', resolve);
-    });
-  }
+  await fetchCompanyName();
 
   const companyName = `%${frappe.AccountingSettings.i3msCompanyName}%`;
 
@@ -76,22 +100,7 @@ export async function readTPByPermit(query) {
 
   const response = await apolloClient.query({
     // Query
-    query: readQueryFunction(
-      'tp_group_by_permit',
-      'transporter_permit',
-      `
-          Date
-          Transporter
-          Destination
-          LicenseeName
-          Load
-          NumberOfTrips
-          Permit
-          Source
-          Circle
-          Material
-        `
-    ),
+    query: tpReadFunction(),
 
     variables: {
       order_by: { Date: 'asc' },
