@@ -79,9 +79,10 @@ export async function permitsDetails(args, sse, browser = i3ms) {
   console.log('permits details called', permits.length);
 
   permits = permits.map(p => {
-    if (args.i3msReturns) {
-      CLOSED_PERMITS[p.name] = p.closed;
-    }
+    // Refresh all for Returns
+    // if (args.i3msReturns) {
+    //   CLOSED_PERMITS[p.name] = p.closed;
+    // }
     return p.name;
   });
 
