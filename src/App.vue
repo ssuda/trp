@@ -326,7 +326,6 @@ export default {
         }
 
         this.checkForUpdates();
-        this.setupAutoTagging();
       }
       // if (resetRoute) {
       //   this.$router.replace('/');
@@ -342,10 +341,6 @@ export default {
       frappe.events.trigger('check-for-updates');
     },
 
-    setupAutoTagging() {
-      frappe.events.trigger('auto-tagging');
-    },
-
     async openBrowser() {
       let online = await isOnline();
 
@@ -359,13 +354,16 @@ export default {
           password: frappe.AccountingSettings.i3msPassword
         };
 
+        // setup auto tagging
+        frappe.events.trigger('auto-tagging');
+
         frappe.events.trigger('open-browser', {
           credentials,
           showBrowser: true,
           returnCompanyName: true
         });
 
-        //fetch permits
+        // refresh permits
         let permits = await twoMonthsOldPermits();
         frappe.events.trigger('refresh-permits', {
           credentials,
@@ -376,12 +374,11 @@ export default {
           await delay(120000);
           online = await isOnline();
         }
-      } else if (
-        !frappe.AccountingSettings.i3msUsername ||
-        !frappe.AccountingSettings.i3msPassword
-      ) {
-        frappe.AccountingSettings.on('change', this.openBrowser);
+        this.openBrowser();
       }
+
+      // restart all incase of credentials change
+      frappe.AccountingSettings.on('change', this.openBrowser);
     }
   }
 };
