@@ -13,12 +13,22 @@ export let busyFlag = {
 };
 
 //export methods
+let newPermitBrowser;
+
 export async function newPermits(credentials, sse) {
-  let hiddenBrowser = browser();
+  if (newPermitBrowser) {
+    await newPermitBrowser.disconnect();
+  }
 
-  await hiddenBrowser.browserInit(credentials, true, true);
+  newPermitBrowser = browser();
 
-  while (true) {
+  let toExit = false;
+
+  await newPermitBrowser.browserInit(credentials, true, true, () => {
+    toExit = true;
+  });
+
+  while (!toExit) {
     let out = [];
     try {
       console.log('Calling new permits');
@@ -28,7 +38,7 @@ export async function newPermits(credentials, sse) {
           onlyNewPermits: true
         },
         null,
-        hiddenBrowser
+        newPermitBrowser
       );
 
       console.log('new permits details', out);
@@ -41,11 +51,20 @@ export async function newPermits(credentials, sse) {
   }
 }
 
+let refreshBrowser;
 export async function refreshPermits(args, sse) {
   console.log('Calling refreshPermits');
 
-  let hiddenBrowser = browser();
-  await hiddenBrowser.browserInit(args.credentials, true, true);
+  if (refreshBrowser) {
+    await refreshBrowser.disconnect();
+  }
+
+  refreshBrowser = browser();
+
+  let toExit = false;
+  await refreshBrowser.browserInit(args.credentials, true, true, () => {
+    toExit = true;
+  });
 
   let permits = args.permits || [];
 
@@ -53,11 +72,7 @@ export async function refreshPermits(args, sse) {
     CLOSED_PERMITS[permit.name] = permit.closed;
   });
 
-  while (true) {
-    if (permits.length) {
-      await delay(process.env.NODE_ENV === 'development' ? 600000 : 3600000);
-    }
-
+  while (!toExit) {
     console.log('Calling refresh permits');
 
     while (busyFlag.isBusy) {
@@ -65,10 +80,12 @@ export async function refreshPermits(args, sse) {
     }
 
     try {
-      permits = await permitsDetails({}, sse, hiddenBrowser);
+      permits = await permitsDetails({}, sse, refreshBrowser);
     } catch (ex) {
       console.error(ex);
     }
+
+    await delay(process.env.NODE_ENV === 'development' ? 600000 : 1800000);
   }
 }
 
