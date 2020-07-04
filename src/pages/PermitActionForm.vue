@@ -313,7 +313,7 @@ export default {
             this.duration = Interval.fromDateTimes(
               startTimer,
               endTimer
-            ).toFormat("HH 'hours' mm 'minutes' ss 'seconds'");
+            ).toFormat("HH:mm:ss");
           }, 1000);
 
           this.loading = true;
