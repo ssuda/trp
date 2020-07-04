@@ -217,7 +217,7 @@ module.exports = function() {
 
   async function login(myAttempt) {
     try {
-      if (myAttempt != loginAttempt) {
+      if (myAttempt != loginAttempt || !page) {
         return;
       }
 
