@@ -377,8 +377,19 @@ export default {
         this.openBrowser();
       }
 
+      let i3msUsername = frappe.AccountingSettings.i3msUsername;
+      let i3msPassword = frappe.AccountingSettings.i3msPassword;
+      const self = this;
+
       // restart all incase of credentials change
-      frappe.AccountingSettings.on('change', this.openBrowser);
+      frappe.AccountingSettings.on('change', doc => {
+        if (
+          i3msUsername != frappe.AccountingSettings.i3msUsername ||
+          i3msPassword != frappe.AccountingSettings.i3msPassword
+        ) {
+          self.openBrowser();
+        }
+      });
     }
   }
 };
