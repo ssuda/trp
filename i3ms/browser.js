@@ -14,6 +14,68 @@ process.on('unhandledRejection', async (reason, p) => {
   );
 });
 
+function browserArgs(headless) {
+  const result = [
+    '--disable-background-timer-throttling',
+    '--disable-breakpad',
+    '--disable-client-side-phishing-detection',
+    '--disable-cloud-import',
+    '--disable-default-apps',
+    '--disable-dev-shm-usage',
+    '--disable-extensions',
+    '--disable-gesture-typing',
+    '--disable-hang-monitor',
+    '--disable-infobars',
+    '--disable-notifications',
+    '--disable-offer-store-unmasked-wallet-cards',
+    '--disable-offer-upload-credit-cards',
+    '--disable-popup-blocking',
+    '--disable-print-preview',
+    '--disable-prompt-on-repost',
+    '--disable-setuid-sandbox',
+    '--disable-speech-api',
+    '--disable-sync',
+    '--disable-tab-for-desktop-share',
+    '--disable-translate',
+    '--disable-voice-input',
+    '--disable-wake-on-wifi',
+    '--enable-async-dns',
+    '--enable-simple-cache-backend',
+    '--enable-tcp-fast-open',
+    '--enable-webgl',
+    '--hide-scrollbars',
+    '--metrics-recording-only',
+    '--mute-audio',
+    '--no-default-browser-check',
+    '--no-first-run',
+    '--no-pings',
+    '--no-sandbox',
+    '--no-zygote',
+    '--password-store=basic',
+    '--prerender-from-omnibox=disabled',
+    '--use-gl=swiftshader',
+    '--use-mock-keychain',
+    '--autoplay-policy=user-gesture-required',
+    '--disable-background-networking',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-component-update',
+    '--disable-domain-reliability',
+    '--disable-features=AudioServiceOutOfProcess',
+    '--disable-ipc-flooding-protection',
+    '--disable-renderer-backgrounding',
+    '--disk-cache-size=33554432',
+    '--ignore-gpu-blacklist'
+  ];
+
+  if (headless === true) {
+    result.push('--single-process');
+  } else {
+    result.push('--start-maximized');
+  }
+
+  return result;
+}
+
 module.exports = function() {
   // Globals
   let browser;
@@ -26,51 +88,13 @@ module.exports = function() {
     if (!browser) {
       browser = await puppeteer.launch({
         headless: !!headless,
+        args: browserArgs(!!headless),
         executablePath: findChrome(),
         defaultViewport: {
           width: 1200,
           height: 800
         },
-        timeout: 0,
-        args: [
-          '--autoplay-policy=user-gesture-required',
-          '--disable-background-networking',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-breakpad',
-          '--disable-client-side-phishing-detection',
-          '--disable-component-update',
-          '--disable-default-apps',
-          '--disable-dev-shm-usage',
-          '--disable-domain-reliability',
-          '--disable-extensions',
-          '--disable-features=AudioServiceOutOfProcess',
-          '--disable-hang-monitor',
-          '--disable-ipc-flooding-protection',
-          '--disable-notifications',
-          '--disable-offer-store-unmasked-wallet-cards',
-          '--disable-popup-blocking',
-          '--disable-print-preview',
-          '--disable-prompt-on-repost',
-          '--disable-renderer-backgrounding',
-          '--disable-setuid-sandbox',
-          '--disable-speech-api',
-          '--disable-sync',
-          '--disk-cache-size=33554432',
-          '--hide-scrollbars',
-          '--ignore-gpu-blacklist',
-          '--metrics-recording-only',
-          '--mute-audio',
-          '--no-default-browser-check',
-          '--no-first-run',
-          '--no-pings',
-          '--no-sandbox',
-          '--no-zygote',
-          '--password-store=basic',
-          '--use-gl=swiftshader',
-          '--use-mock-keychain',
-          '--single-process'
-        ]
+        timeout: 0
       });
       console.log('browser created');
       browser.on('error', () => page.reload());
