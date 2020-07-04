@@ -10,5 +10,7 @@ module.exports = class AutoTaggingDocument extends BaseDocument {
     }
 
     console.log('AutoTagging name', this.name);
+
+    frappe.events.trigger('auto-tagging');
   }
 };
