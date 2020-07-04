@@ -47,7 +47,7 @@ export async function refreshPermits(args, sse) {
   let hiddenBrowser = browser();
   await hiddenBrowser.browserInit(args.credentials, true, true);
 
-  const permits = args.permits || [];
+  let permits = args.permits || [];
 
   permits.forEach(permit => {
     CLOSED_PERMITS[permit.name] = permit.closed;
@@ -59,6 +59,7 @@ export async function refreshPermits(args, sse) {
     }
 
     console.log('Calling refresh permits');
+
     while (busyFlag.isBusy) {
       await delay(120000);
     }
