@@ -319,6 +319,8 @@ import { normalizeCompanyName } from './utils';
       doctype: 'AutoTagging'
     });
 
+    console.log('Setting up auto tagging number of docs', docs.length);
+
     if (docs.length) {
       const credentials = {
         username: frappe.AccountingSettings.i3msUsername,
@@ -338,9 +340,10 @@ import { normalizeCompanyName } from './utils';
         let autoTags = docs.filter(doc => {
           let permit = permits.find(
             p =>
-              p.source == doc.source.toUpperCase() &&
+              p.source.toUpperCase() == doc.source.toUpperCase() &&
               (!doc.transportedFrom ||
-                doc.transportedFrom.toUpperCase() == p.transportedFrom)
+                doc.transportedFrom.toUpperCase() ==
+                  p.transportedFrom.toUpperCase())
           );
 
           if (permit) {
@@ -350,6 +353,8 @@ import { normalizeCompanyName } from './utils';
 
           return false;
         });
+
+        console.log('Matched new Permit with Auto Tagging', autoTags.length);
 
         //sort by priority and sort by permit number
         if (autoTags.length) {
