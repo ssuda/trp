@@ -111,6 +111,8 @@ import Button from '@/components/Button';
 import FormControl from '@/components/Controls/FormControl';
 import BackLink from '@/components/BackLink';
 import _ from 'lodash';
+import isOnline from 'is-online';
+
 import {
   handleErrorWithDialog,
   showMessageDialog,
@@ -179,6 +181,18 @@ export default {
 
   methods: {
     async onClick() {
+      let online = await isOnline();
+      if (!online) {
+        return showMessageDialog({
+          description: this._('No Internet Connectivity, please check.'),
+          buttons: [
+            {
+              label: _('Ok')
+            }
+          ]
+        });
+      }
+
       const credentials = {
         username: frappe.AccountingSettings.i3msUsername,
         password: frappe.AccountingSettings.i3msPassword
@@ -296,9 +310,10 @@ export default {
         if (trucks.length) {
           let timerInterval = setInterval(() => {
             const endTimer = DateTime.local();
-            duarion = Interval.fromDateTimes(startTimer, endTimer).toFormat(
-              "HH 'hours' mm 'minutes' ss 'seconds'"
-            );
+            this.duration = Interval.fromDateTimes(
+              startTimer,
+              endTimer
+            ).toFormat("HH 'hours' mm 'minutes' ss 'seconds'");
           }, 1000);
 
           this.loading = true;

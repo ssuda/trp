@@ -426,6 +426,10 @@ export function normalizeCompanyName(name) {
     .toUpperCase();
 }
 
+export function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export function openSettings(tab = 'General') {
   ipcRenderer.send('open-settings-window', tab);
 }

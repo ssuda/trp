@@ -42,7 +42,12 @@ import Vue from 'vue';
 import { remote } from 'electron';
 import fs from 'fs';
 
-import { connectToLocalDatabase, showMessageDialog, dbPath } from '@/utils';
+import {
+  connectToLocalDatabase,
+  showMessageDialog,
+  dbPath,
+  delay
+} from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
 import config from '@/config';
 import { DateTime } from 'luxon';
@@ -53,6 +58,7 @@ import TermsAndConditions from './components/TermsAndConditions.vue';
 import AdvancePayment from './components/AdvancePayment.vue';
 
 import { twoMonthsOldPermits } from '@/permit';
+import isOnline from 'is-online';
 
 const toBool = v => {
   v = v.toLowerCase();
@@ -341,9 +347,12 @@ export default {
     },
 
     async openBrowser() {
+      let online = await isOnline();
+
       if (
         frappe.AccountingSettings.i3msUsername &&
-        frappe.AccountingSettings.i3msPassword
+        frappe.AccountingSettings.i3msPassword &&
+        online
       ) {
         const credentials = {
           username: frappe.AccountingSettings.i3msUsername,
@@ -358,11 +367,20 @@ export default {
 
         //fetch permits
         let permits = await twoMonthsOldPermits();
-
         frappe.events.trigger('refresh-permits', {
           credentials,
           permits
         });
+      } else if (!online) {
+        while (!online) {
+          await delay(120000);
+          online = await isOnline();
+        }
+      } else if (
+        !frappe.AccountingSettings.i3msUsername ||
+        !frappe.AccountingSettings.i3msPassword
+      ) {
+        frappe.AccountingSettings.on('change', this.openBrowser);
       }
     }
   }
