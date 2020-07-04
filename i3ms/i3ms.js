@@ -17,7 +17,7 @@ let newPermitBrowser;
 
 export async function newPermits(credentials, sse) {
   if (newPermitBrowser) {
-    await newPermitBrowser.disconnect();
+    return;
   }
 
   newPermitBrowser = browser();
