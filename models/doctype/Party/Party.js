@@ -40,39 +40,39 @@ module.exports = {
       label: 'Supplier',
       fieldtype: 'Check'
     },
-    {
-      fieldname: 'defaultAccount',
-      label: 'Default Account',
-      fieldtype: 'Link',
-      target: 'Account',
-      getFilters: (query, doc) => {
-        return {
-          isGroup: 0,
-          accountType: doc.customer ? 'Receivable' : 'Payable'
-        };
-      },
-      formula: doc => {
-        if (doc.customer) {
-          return 'Debtors';
-        }
-        if (doc.supplier) {
-          return 'Creditors';
-        }
-      }
-    },
-    {
-      fieldname: 'outstandingAmount',
-      label: 'Outstanding Amount',
-      fieldtype: 'Currency'
-    },
-    {
-      fieldname: 'currency',
-      label: 'Currency',
-      fieldtype: 'Link',
-      target: 'Currency',
-      placeholder: 'INR',
-      formula: () => frappe.AccountingSettings.currency
-    },
+    // {
+    //   fieldname: 'defaultAccount',
+    //   label: 'Default Account',
+    //   fieldtype: 'Link',
+    //   target: 'Account',
+    //   getFilters: (query, doc) => {
+    //     return {
+    //       isGroup: 0,
+    //       accountType: doc.customer ? 'Receivable' : 'Payable'
+    //     };
+    //   },
+    //   formula: doc => {
+    //     if (doc.customer) {
+    //       return 'Debtors';
+    //     }
+    //     if (doc.supplier) {
+    //       return 'Creditors';
+    //     }
+    //   }
+    // },
+    // {
+    //   fieldname: 'outstandingAmount',
+    //   label: 'Outstanding Amount',
+    //   fieldtype: 'Currency'
+    // },
+    // {
+    //   fieldname: 'currency',
+    //   label: 'Currency',
+    //   fieldtype: 'Link',
+    //   target: 'Currency',
+    //   placeholder: 'INR',
+    //   formula: () => frappe.AccountingSettings.currency
+    // },
     {
       fieldname: 'email',
       label: 'Email',
@@ -117,8 +117,8 @@ module.exports = {
     'phone',
     'pan',
     'gstin',
-    'address',
-    'defaultAccount',
-    'currency'
+    'address'
+    //'defaultAccount',
+    //'currency'
   ]
 };

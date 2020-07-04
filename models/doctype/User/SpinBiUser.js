@@ -71,6 +71,30 @@ module.exports = {
       fieldtype: 'Data',
       hidden: 1,
       formula: doc => accountingSettings.companyName
+    },
+    {
+      fieldname: 'canTag',
+      label: 'Can Tag',
+      fieldtype: 'Check',
+      default: 1
+    },
+    {
+      fieldname: 'canRelease',
+      label: 'Can Release',
+      fieldtype: 'Check',
+      default: 1
+    },
+    {
+      fieldname: 'canCreateTrip',
+      label: 'Can Create Trip',
+      fieldtype: 'Check',
+      default: 1
+    },
+    {
+      fieldname: 'canCreateOrder',
+      label: 'Can Create Order',
+      fieldtype: 'Check',
+      default: 1
     }
   ],
 
@@ -80,6 +104,10 @@ module.exports = {
     'password',
     'phoneNumber',
     'role',
-    'status'
+    'status',
+    'canTag',
+    'canRelease',
+    'canCreateOrder',
+    'canCreateTrip'
   ]
 };
