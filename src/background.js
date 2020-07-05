@@ -298,6 +298,7 @@ ipcMain.on('reload-main-window', async () => {
 });
 
 ipcMain.on('auto-tagging', (event, args) => {
+  console.log('Received auto tagging from renderer');
   newPermits(args, event.sender);
 });
 

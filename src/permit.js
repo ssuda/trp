@@ -1,6 +1,8 @@
 import frappe from 'frappejs';
 import { DateTime } from 'luxon';
 
+import { readTPByPermit } from '@/i3ms-sync';
+
 export function pickPermitFields(permit) {
   return (({
     name,
@@ -29,9 +31,44 @@ export function pickPermitFields(permit) {
   }))(permit);
 }
 
+export async function lastMonthActivePermits() {
+  const startDate = DateTime.local()
+    .minus({ months: 1 })
+    .startOf('month')
+    .toISO();
+
+  const endDate = DateTime.local()
+    .minus({ months: 1 })
+    .endOf('month')
+    .toISO();
+
+  const rows = await readTPByPermit(
+    {
+      StartDate: {
+        _gte: startDate,
+        _lte: endDate
+      },
+      groupByDate: false
+    },
+    'Permit'
+  );
+
+  //const failed = [];
+  console.log('number of records from hasura', rows.length);
+
+  return frappe.db.getAll({
+    doctype: 'Permit',
+    fields: ['*'],
+    filters: {
+      name: ['in', rows.map(row => row.Permit)]
+    }
+  });
+}
+
 export async function twoMonthsOldPermits() {
   const dt = DateTime.local()
     .minus({ months: 2 })
+    .startOf('month')
     .toISO();
 
   return frappe.db.getAll({

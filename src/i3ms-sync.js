@@ -72,11 +72,12 @@ export async function readTP(query) {
   return (response && response.data && response.data.tp) || [];
 }
 
-function tpReadFunction() {
+function tpReadFunction(returning) {
   return readQueryFunction(
     'tp_group_by_permit',
     'transporter_permit',
-    `
+    returning ||
+      `
         Date
         Transporter
         Destination
@@ -91,7 +92,7 @@ function tpReadFunction() {
   );
 }
 
-export async function readTPByPermit(query) {
+export async function readTPByPermit(query, returning) {
   await fetchCompanyName();
 
   const companyName = `%${frappe.AccountingSettings.i3msCompanyName}%`;
@@ -100,7 +101,7 @@ export async function readTPByPermit(query) {
 
   const response = await apolloClient.query({
     // Query
-    query: tpReadFunction(),
+    query: tpReadFunction(returning),
 
     variables: {
       order_by: { Date: 'asc' },
