@@ -46,7 +46,7 @@ import BackLink from '@/components/BackLink';
 import Trip from '../../reports/Trip/Trip';
 import { exportData } from '@/utils';
 
-import { twoMonthsOldPermits } from '@/permit';
+import { lastMonthActivePermits } from '@/permit';
 
 import { handleErrorWithDialog } from '@/utils';
 import { readTPByPermit } from '@/i3ms-sync';
@@ -94,7 +94,7 @@ export default {
         password: frappe.AccountingSettings.i3msPassword
       };
 
-      const permits = await twoMonthsOldPermits();
+      const permits = await lastMonthActivePermits();
 
       frappe.events.trigger('permits-details', {
         credentials,

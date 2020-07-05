@@ -312,12 +312,16 @@ import { normalizeCompanyName } from './utils';
     }
   }
 
-  frappe.events.on('auto-tagging', async () => {
+  frappe.events.on('auto-tagging', async docs => {
     console.log('Setting up auto tagging');
     //Fetch autoTagging
-    let docs = await frappe.db.getAll({
+    docs = docs || [];
+
+    let oldDocs = await frappe.db.getAll({
       doctype: 'AutoTagging'
     });
+
+    docs = docs.concat(oldDocs);
 
     console.log('Setting up auto tagging number of docs', docs.length);
 

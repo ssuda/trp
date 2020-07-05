@@ -76,6 +76,17 @@ function browserArgs(headless) {
   return result;
 }
 
+function defaultViewport(headless) {
+  return {
+    deviceScaleFactor: 1,
+    hasTouch: false,
+    height: headless === true ? 1080 : 0,
+    isLandscape: true,
+    isMobile: false,
+    width: headless === true ? 1920 : 0
+  };
+}
+
 module.exports = function() {
   // Globals
   let browser;
@@ -90,10 +101,7 @@ module.exports = function() {
         headless: !!headless,
         args: browserArgs(!!headless),
         executablePath: findChrome(),
-        defaultViewport: {
-          width: 1200,
-          height: 800
-        },
+        defaultViewport: defaultViewport(!!headless),
         timeout: 0
       });
       console.log('browser created');
