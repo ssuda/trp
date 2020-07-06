@@ -6,7 +6,7 @@ import FeatherIcon from 'frappejs/ui/components/FeatherIcon';
 import outsideClickDirective from 'frappejs/ui/plugins/outsideClickDirective';
 import models from '../models';
 import { ipcRenderer } from 'electron';
-//import { syncDoc } from '@/utils';
+import { firestore } from '@/firebase';
 
 // vue imports
 import Vue from 'vue';
@@ -22,6 +22,7 @@ import _ from 'lodash';
 import BaseDocument from '@/basedocument';
 import Document from 'frappejs/model/document';
 import { FieldValue } from '@/firebase';
+import { normalizeCompanyName } from './utils';
 
 (async () => {
   frappe.isServer = true;
@@ -126,19 +127,28 @@ import { FieldValue } from '@/firebase';
     ipcRenderer.send('relaunch-app');
   });
 
+  ipcRenderer.on('i3ms-company-name', (e, name) => {
+    const i3msCompanyName = normalizeCompanyName(name);
+
+    frappe.AccountingSettings.update({
+      i3msCompanyName
+    });
+
+    frappe.events.trigger('i3ms-company-name', i3msCompanyName);
+  });
+
   frappe.events.on('open-browser', args => {
     console.log('open browser called');
     ipcRenderer.send('open-browser', args);
   });
 
-  ipcRenderer.on('permit-details-results', (e, permit) => {
-    if (permit) {
-      savePermit(permit, {});
-    }
-    frappe.events.trigger('permit-details-results', permit);
+  frappe.events.on('i3ms-company', args => {
+    console.log('i3ms-company called');
+    ipcRenderer.send('i3ms-company', args);
   });
 
   ipcRenderer.on('permits-details-results', e => {
+    ipcRenderer.removeAllListeners('permit-details-results');
     frappe.events.trigger('permits-details-results', e);
   });
 
@@ -154,10 +164,22 @@ import { FieldValue } from '@/firebase';
 
   frappe.events.on('permit-details', args => {
     ipcRenderer.send('permit-details', args);
+    ipcRenderer.once('permit-details-results', (e, permit) => {
+      if (permit) {
+        savePermit(permit, args);
+      }
+      frappe.events.trigger('permit-details-results', permit);
+    });
   });
 
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
+    ipcRenderer.on('permit-details-results', (e, permit) => {
+      if (permit) {
+        savePermit(permit, {});
+      }
+      frappe.events.trigger('permit-details-results', permit);
+    });
   });
 
   frappe.events.on('tag-vehicles', permit => {
@@ -203,9 +225,21 @@ import { FieldValue } from '@/firebase';
 
       batchSize++;
       if (batchSize >= 10) {
-        await frappe.currentUser.remote.ref.update({
-          tagged: FieldValue.increment(batchSize)
-        });
+        if (!frappe.currentUser.remote) {
+          try {
+            frappe.currentUser.remote = await firestore
+              .collection('customers')
+              .doc(frappe.AccountingSettings.gstin)
+              .get();
+          } catch (ex) {}
+        }
+
+        if (!frappe.currentUser.remote) {
+          await frappe.currentUser.remote.ref.update({
+            tagged: FieldValue.increment(batchSize)
+          });
+        }
+
         batchSize = 0;
         frappe.syncDoc({
           doctype: 'Permit',
@@ -278,12 +312,18 @@ import { FieldValue } from '@/firebase';
     }
   }
 
-  frappe.events.on('auto-tagging', async () => {
+  frappe.events.on('auto-tagging', async docs => {
     console.log('Setting up auto tagging');
     //Fetch autoTagging
-    let docs = await frappe.db.getAll({
+    docs = docs || [];
+
+    let oldDocs = await frappe.db.getAll({
       doctype: 'AutoTagging'
     });
+
+    docs = docs.concat(oldDocs);
+
+    console.log('Setting up auto tagging number of docs', docs.length);
 
     if (docs.length) {
       const credentials = {
@@ -304,9 +344,10 @@ import { FieldValue } from '@/firebase';
         let autoTags = docs.filter(doc => {
           let permit = permits.find(
             p =>
-              p.source == doc.source.toUpperCase() &&
+              p.source.toUpperCase() == doc.source.toUpperCase() &&
               (!doc.transportedFrom ||
-                doc.transportedFrom.toUpperCase() == p.transportedFrom)
+                doc.transportedFrom.toUpperCase() ==
+                  p.transportedFrom.toUpperCase())
           );
 
           if (permit) {
@@ -316,6 +357,8 @@ import { FieldValue } from '@/firebase';
 
           return false;
         });
+
+        console.log('Matched new Permit with Auto Tagging', autoTags.length);
 
         //sort by priority and sort by permit number
         if (autoTags.length) {

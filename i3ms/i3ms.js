@@ -13,12 +13,22 @@ export let busyFlag = {
 };
 
 //export methods
+let newPermitBrowser;
+
 export async function newPermits(credentials, sse) {
-  let hiddenBrowser = browser();
+  if (newPermitBrowser) {
+    return;
+  }
 
-  await hiddenBrowser.browserInit(credentials, true, true);
+  newPermitBrowser = browser();
 
-  while (true) {
+  let toExit = false;
+
+  await newPermitBrowser.browserInit(credentials, true, true, () => {
+    toExit = true;
+  });
+
+  while (!toExit) {
     let out = [];
     try {
       console.log('Calling new permits');
@@ -28,7 +38,7 @@ export async function newPermits(credentials, sse) {
           onlyNewPermits: true
         },
         null,
-        hiddenBrowser
+        newPermitBrowser
       );
 
       console.log('new permits details', out);
@@ -41,31 +51,41 @@ export async function newPermits(credentials, sse) {
   }
 }
 
+let refreshBrowser;
 export async function refreshPermits(args, sse) {
   console.log('Calling refreshPermits');
 
-  let hiddenBrowser = browser();
-  await hiddenBrowser.browserInit(args.credentials, true, true);
+  if (refreshBrowser) {
+    await refreshBrowser.disconnect();
+  }
 
-  const permits = args.permits || [];
+  refreshBrowser = browser();
+
+  let toExit = false;
+  await refreshBrowser.browserInit(args.credentials, true, true, () => {
+    toExit = true;
+  });
+
+  let permits = args.permits || [];
 
   permits.forEach(permit => {
     CLOSED_PERMITS[permit.name] = permit.closed;
   });
 
-  while (true) {
-    await delay(process.env.NODE_ENV === 'development' ? 600000 : 3600000);
-
+  while (!toExit) {
     console.log('Calling refresh permits');
+
     while (busyFlag.isBusy) {
       await delay(120000);
     }
 
     try {
-      await permitsDetails({}, sse, hiddenBrowser);
+      permits = await permitsDetails({}, sse, refreshBrowser);
     } catch (ex) {
       console.error(ex);
     }
+
+    await delay(process.env.NODE_ENV === 'development' ? 600000 : 1800000);
   }
 }
 
@@ -77,9 +97,10 @@ export async function permitsDetails(args, sse, browser = i3ms) {
   console.log('permits details called', permits.length);
 
   permits = permits.map(p => {
-    if (args.i3msReturns) {
-      CLOSED_PERMITS[p.name] = p.closed;
-    }
+    // Refresh all for Returns
+    // if (args.i3msReturns) {
+    //   CLOSED_PERMITS[p.name] = p.closed;
+    // }
     return p.name;
   });
 
@@ -231,7 +252,7 @@ export async function permitReport(args, sse, browser = i3ms) {
 async function successfullyTagged(permitNo, credentials, browser = i3ms) {
   if (credentials) {
     console.log(credentials);
-    await browser.browserInit(credentials);
+    await browser.browserInit(credentials, true);
   }
 
   console.log('permitno', permitNo);
@@ -263,13 +284,15 @@ export async function permitDetails(permit, sse, browser = i3ms) {
     noTrips,
     noTagged,
     quantity,
+    material,
+    destination,
     validate,
     transportedFrom
   } = permit;
 
   console.log('inside permit details', permit);
 
-  if (!permit.quantity || !permit.transportedFrom || !permit.source) {
+  if (!quantity || !destination || !transportedFrom || !taggingUrl) {
     if (taggingUrl && !vehicleDetails) {
       const u = new URL(taggingUrl);
       vehicleDetails =
@@ -491,7 +514,7 @@ async function tabTagging(taggingUrl, tab, chunk, options, sse) {
 
 async function tagFromTab(taggingUrl, chunk, options, sse) {
   const tab = browser();
-  await tab.browserInit(options.credentials, !options.showBrowser, true);
+  await tab.browserInit(options.credentials, false, true);
   await tabTagging(taggingUrl, tab, chunk, options, sse);
   return tab;
 }
@@ -500,6 +523,8 @@ async function openTabs(taggingUrl, chunks, options, sse) {
   try {
     let tabs = [];
     let numTabs = +options.numBrowsers || 4;
+
+    numTabs = chunks.length > numTabs ? numTabs : chunks.length;
 
     let arr = [];
 
@@ -525,8 +550,7 @@ async function openTabs(taggingUrl, chunks, options, sse) {
         sse
       );
     }
-
-    const tagged = successfullyTagged(options.name, null, tabs[0]);
+    const tagged = await successfullyTagged(options.name, null, tabs[0]);
 
     for (let i = 0; i < numTabs; ++i) {
       await tabs[i].disconnect();
@@ -544,7 +568,6 @@ export async function tagVehicles(options, sse) {
     trucks,
     Math.ceil(trucks.length / (+options.numBrowsers || 4))
   );
-
   try {
     if (trucks.length) {
       return openTabs(taggingUrl, chunks, options, sse);
@@ -581,10 +604,20 @@ export async function releaseVehicles(options, sse) {
   }
 }
 
-export async function browserInit(cred, headless, tologin) {
-  return i3ms.browserInit(cred, headless, tologin);
+export async function browserInit(
+  cred,
+  headless,
+  tologin,
+  cb,
+  returnCompanyName
+) {
+  return i3ms.browserInit(cred, true, tologin, cb, returnCompanyName);
 }
 
 export async function disconnect() {
   return i3ms.disconnect();
+}
+
+export async function companyName() {
+  return i3ms.companyName();
 }

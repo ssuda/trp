@@ -14,6 +14,79 @@ process.on('unhandledRejection', async (reason, p) => {
   );
 });
 
+function browserArgs(headless) {
+  const result = [
+    '--disable-background-timer-throttling',
+    '--disable-breakpad',
+    '--disable-client-side-phishing-detection',
+    '--disable-cloud-import',
+    '--disable-default-apps',
+    '--disable-dev-shm-usage',
+    '--disable-extensions',
+    '--disable-gesture-typing',
+    '--disable-hang-monitor',
+    '--disable-infobars',
+    '--disable-notifications',
+    '--disable-offer-store-unmasked-wallet-cards',
+    '--disable-offer-upload-credit-cards',
+    '--disable-popup-blocking',
+    '--disable-print-preview',
+    '--disable-prompt-on-repost',
+    '--disable-setuid-sandbox',
+    '--disable-speech-api',
+    '--disable-sync',
+    '--disable-tab-for-desktop-share',
+    '--disable-translate',
+    '--disable-voice-input',
+    '--disable-wake-on-wifi',
+    '--enable-async-dns',
+    '--enable-simple-cache-backend',
+    '--enable-tcp-fast-open',
+    '--enable-webgl',
+    '--hide-scrollbars',
+    '--metrics-recording-only',
+    '--mute-audio',
+    '--no-default-browser-check',
+    '--no-first-run',
+    '--no-pings',
+    '--no-sandbox',
+    '--no-zygote',
+    '--password-store=basic',
+    '--prerender-from-omnibox=disabled',
+    '--use-gl=swiftshader',
+    '--use-mock-keychain',
+    '--autoplay-policy=user-gesture-required',
+    '--disable-background-networking',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-component-update',
+    '--disable-domain-reliability',
+    '--disable-features=AudioServiceOutOfProcess',
+    '--disable-ipc-flooding-protection',
+    '--disable-renderer-backgrounding',
+    '--disk-cache-size=33554432',
+    '--ignore-gpu-blacklist'
+  ];
+
+  if (headless === true) {
+    result.push('--single-process');
+  } else {
+    result.push('--start-maximized');
+  }
+
+  return result;
+}
+
+function defaultViewport(headless) {
+  return {
+    deviceScaleFactor: 1,
+    hasTouch: false,
+    height: headless === true ? 1080 : 0,
+    isLandscape: true,
+    isMobile: false,
+    width: headless === true ? 1920 : 0
+  };
+}
+
 module.exports = function() {
   // Globals
   let browser;
@@ -26,19 +99,10 @@ module.exports = function() {
     if (!browser) {
       browser = await puppeteer.launch({
         headless: !!headless,
+        args: browserArgs(!!headless),
         executablePath: findChrome(),
-        defaultViewport: {
-          width: 1200,
-          height: 800
-        },
-        timeout: 0,
-        args: [
-          '--disable-background-timer-throttling',
-          '--enable-automation',
-          '--disable-renderer-backgrounding',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-ipc-flooding-protection'
-        ]
+        defaultViewport: defaultViewport(!!headless),
+        timeout: 0
       });
       console.log('browser created');
       browser.on('error', () => page.reload());
@@ -143,7 +207,7 @@ module.exports = function() {
       } catch (ex) {
         console.error(ex);
         console.log('Retrying', numAttempts, href);
-        if (!browser || !page) {
+        if (!browser || !page || /net::ERR_/i.test(ex.message)) {
           success = false;
           break;
         }
@@ -161,7 +225,7 @@ module.exports = function() {
 
   async function login(myAttempt) {
     try {
-      if (myAttempt != loginAttempt) {
+      if (myAttempt != loginAttempt || !page) {
         return;
       }
 
@@ -355,7 +419,7 @@ module.exports = function() {
             for (let truckNo of trucks) {
               console.log('releasing trucks', truckNo);
               await page.select('#lstFrom', truckNo);
-              await delay(2000);
+              //await delay(2000);
               await page.click('#btnAdd');
             }
             await page.click('#btnRelease');
@@ -592,7 +656,10 @@ module.exports = function() {
 
         console.log('Retrying in loop');
         await Promise.all([
-          page.waitForNavigation({ timeout: 120000 }), // The promise resolves after navigation has finished
+          page.waitForNavigation({
+            timeout: 120000,
+            waitUntil: 'networkidle0'
+          }), // The promise resolves after navigation has finished
           page.click('#btnsearch') // Clicking the link will indirectly cause a navigation
         ]);
 
@@ -624,7 +691,7 @@ module.exports = function() {
         console.error(ex);
       }
 
-      await delay(10000);
+      //await delay(10000);
 
       const result = await extractRowDetails('#tabdata');
 
@@ -999,14 +1066,34 @@ module.exports = function() {
     console.log(rows);
   }
 
+  async function companyName() {
+    return page.$eval('.welcome', el =>
+      el.childNodes[0].textContent
+        .trim()
+        .replace(/^Wel *come/i, '')
+        .trim()
+    );
+  }
+
   let credentials, globalHeadless;
 
-  async function browserInit(cred, headless, tologin, cb) {
-    credentials = cred;
-    globalDisconnectHandler = cb;
+  async function browserInit(cred, headless, tologin, cb, returnCompany) {
+    if (cred) {
+      credentials = cred;
+    }
+
+    if (cb) {
+      globalDisconnectHandler = cb;
+    }
+
     await openBrowser(headless);
+
     if (tologin) {
       await i3msLogin();
+    }
+
+    if (returnCompany) {
+      return companyName();
     }
   }
 
@@ -1021,6 +1108,7 @@ module.exports = function() {
   return {
     getBrowser,
     getPage,
+    companyName,
     browserInit,
     getDetails,
     permitVehicles,

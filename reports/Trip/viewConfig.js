@@ -26,6 +26,7 @@ const viewConfig = {
         { label: 'Last 7 Days', value: '7days' },
         { label: 'This Month', value: 'thismonth' },
         { label: 'Last 30 Days', value: '30days' },
+        { label: 'Last Month', value: 'lastmonth' },
         { label: 'Last 6 Months', value: '6months' },
         { label: 'This Year', value: 'thisyear' },
         { label: 'Last 12 Months', value: '12months' },
@@ -64,6 +65,12 @@ const viewConfig = {
 
           case 'thismonth':
             return d.startOf('month').toFormat('yyyy-LL-dd');
+
+          case 'lastmonth':
+            return d
+              .minus({ month: 1 })
+              .startOf('month')
+              .toFormat('yyyy-LL-dd');
 
           case 'thisyear':
             return d.startOf('year').toFormat('yyyy-LL-dd');

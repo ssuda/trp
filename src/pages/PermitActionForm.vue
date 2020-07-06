@@ -24,14 +24,14 @@
             </h1>
             <div class="flex justify-between mt-2">
               <div class="w-1/3">
-                <FormControl
+                <!-- <FormControl
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('showBrowser')"
                   :value="doc.showBrowser"
                   :showLabel="true"
                   @change="value => doc.set('showBrowser', value)"
-                />
+                /> -->
 
                 <FormControl
                   class="mt-4 text-base"
@@ -90,6 +90,7 @@
             <p>Total: {{ total }}</p>
             <p class="ml-8">Success: {{ success }}</p>
             <p class="ml-8">Failed: {{ failed }}</p>
+            <p class="ml-8">Duration: {{ duration }}</p>
           </div>
           <div
             class="px-8 mt-5 font-medium text-green-600"
@@ -104,12 +105,14 @@
 </template>
 <script>
 import frappe from 'frappejs';
-const { DateTime } = require('luxon');
+const { DateTime, Interval } = require('luxon');
 import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import FormControl from '@/components/Controls/FormControl';
 import BackLink from '@/components/BackLink';
 import _ from 'lodash';
+import isOnline from 'is-online';
+
 import {
   handleErrorWithDialog,
   showMessageDialog,
@@ -134,6 +137,7 @@ export default {
       loading: false,
       failed: 0,
       total: 0,
+      duration: '',
       message: ''
     };
   },
@@ -177,6 +181,18 @@ export default {
 
   methods: {
     async onClick() {
+      let online = await isOnline();
+      if (!online) {
+        return showMessageDialog({
+          description: this._('No Internet Connectivity, please check.'),
+          buttons: [
+            {
+              label: _('Ok')
+            }
+          ]
+        });
+      }
+
       const credentials = {
         username: frappe.AccountingSettings.i3msUsername,
         password: frappe.AccountingSettings.i3msPassword
@@ -204,6 +220,8 @@ export default {
           this.$router.back();
         });
       } else if (this.doc.action === 'tagging') {
+        const startTimer = DateTime.local();
+
         if (!this.doc.truckList && !this.doc.trucks) {
           showMessageDialog({ message: this._('Please provide trucks') });
           this.loading = false;
@@ -290,6 +308,14 @@ export default {
         }
 
         if (trucks.length) {
+          let timerInterval = setInterval(() => {
+            const endTimer = DateTime.local();
+            this.duration = Interval.fromDateTimes(
+              startTimer,
+              endTimer
+            ).toDuration().toFormat("hh'h':mm'm':ss's'");
+          }, 1000);
+
           this.loading = true;
           frappe.events.trigger('tag-vehicles', obj);
 
@@ -310,6 +336,7 @@ export default {
           frappe.events.on('failed', failedCb);
 
           frappe.events.once('tag-results', async () => {
+            clearInterval(timerInterval);
             this.loading = false;
             frappe.events.off('total', totalCb);
             frappe.events.off('failed', failedCb);

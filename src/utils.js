@@ -412,6 +412,24 @@ export function getActionsForDocument(doc) {
   return actions;
 }
 
+export function normalizeCompanyName(name) {
+  return name
+    .trim()
+    .replace(/a unit of.*$/i, '')
+    .replace(/&amp;/i, '&')
+    .replace(/&amp;/i, '&')
+    .replace(/ & /i, ' AND ')
+    .replace(/^m\/?s +/i, '')
+    .replace(/ (\(?Pr?i?v?a?t?e?\)?\.? ?)?(Ltd\.?|Limited)$/i, '')
+    .replace(/ LLP$/i, '')
+    .trim()
+    .toUpperCase();
+}
+
+export function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export function openSettings(tab = 'General') {
   ipcRenderer.send('open-settings-window', tab);
 }

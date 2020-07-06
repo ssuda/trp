@@ -19,6 +19,7 @@ import {
   releaseVehicles,
   browserInit,
   busyFlag,
+  companyName,
   disconnect
 } from '../i3ms/i3ms';
 
@@ -58,6 +59,18 @@ async function processMessage(message, cb) {
   }
 
   switch (type) {
+    case 'i3ms-company':
+      {
+        console.log('i3ms-company is called');
+        const r = await browserInit(null, null, false, disconnectHandler, true);
+
+        if (r) {
+          console.log('sending company name to browser', r);
+          event.sender.send('i3ms-company-name', r);
+        }
+      }
+      break;
+
     case 'permit-report':
       {
         console.log('permit-report', args.startDate, args.endDate);
@@ -257,7 +270,17 @@ ipcMain.on('check-for-updates', () => {
 ipcMain.on('open-browser', async (event, args) => {
   console.log('open browser called');
   await disconnect();
-  await browserInit(args.credentials, !args.showBrowser, true);
+  const r = await browserInit(
+    args.credentials,
+    !args.showBrowser,
+    true,
+    null,
+    args.returnCompanyName
+  );
+
+  if (args.returnCompanyName && r) {
+    event.sender.send('i3ms-company-name', r);
+  }
 });
 
 ipcMain.on('close-browser', async () => {
@@ -269,11 +292,13 @@ ipcMain.on('open-settings-window', (event, tab) => {
   createSettingsWindow(tab);
 });
 
-ipcMain.on('reload-main-window', () => {
+ipcMain.on('reload-main-window', async () => {
+  await disconnect();
   mainWindow.reload();
 });
 
 ipcMain.on('auto-tagging', (event, args) => {
+  console.log('Received auto tagging from renderer');
   newPermits(args, event.sender);
 });
 
@@ -289,6 +314,17 @@ ipcMain.on('relaunch-app', (event, args) => {
 //openBrowser(true);
 
 function messageQueueCallback() {}
+
+ipcMain.on('i3ms-company', async (event, args) => {
+  messageQueue.push(
+    {
+      type: 'i3ms-company',
+      event,
+      args
+    },
+    messageQueueCallback
+  );
+});
 
 ipcMain.on('permit-report', async (event, args) => {
   messageQueue.push(

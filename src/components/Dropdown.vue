@@ -2,7 +2,7 @@
   <Popover
     :show-popup="isShown"
     :hide-arrow="true"
-    class="z-50"
+    class="z-50 relative"
     :placement="right ? 'bottom-end' : 'bottom-start'"
   >
     <div

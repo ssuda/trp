@@ -1,13 +1,81 @@
 const frappe = require('frappejs');
 const { firestore, FieldValue } = require('@/firebase');
-//const { DateTime } = require('luxon');
 const { machineIdSync } = require('node-machine-id');
 const { syncDoc } = require('@/utils');
 
 const { tagRelease } = require('@/permit');
 const { DateTime } = require('luxon');
 
+const { readTPByPermit } = require('@/i3ms-sync');
+
 let deviceId = machineIdSync({ original: true });
+
+async function readLatestTP(lastSnapshot) {
+  let time = DateTime.fromISO(lastSnapshot);
+
+  if (frappe.AccountingSettings.i3msFirstTimeSync) {
+    time = time.minus({ months: 1 }).startOf('month');
+    await frappe.AccountingSettings.update({
+      i3msFirstTimeSync: 0
+    });
+  } else {
+    time = time.minus({ hours: 1 });
+  }
+
+  const rows = await readTPByPermit({
+    StartDate: {
+      _gte: time
+    },
+    groupByDate: false
+  });
+
+  console.log('response from hasura');
+
+  //const failed = [];
+  console.log('number of records from hasura', rows.length);
+
+  for (let doc of rows) {
+    await syncDoc({
+      doctype: 'Permit',
+      name: doc.Permit,
+      type: 'I3MS',
+      destination: doc.Destination,
+      material: doc.Mineral,
+      source: doc.LicenseeName,
+      transportedFrom: doc.Source,
+      circle: doc.Circle,
+      numTrips: doc.NumberOfTrips,
+      delivered: doc.Load,
+      _turnOffSync: true
+    });
+
+    // try {
+    //   await syncDoc({
+    //     doctype: 'Trip',
+    //     permit: doc.Permit,
+    //     name: doc.TPNo,
+    //     truck: doc.VehicleNo,
+    //     tpNumber: doc.TPNo,
+    //     startDate: doc.StartDate,
+    //     loadQty: doc.Weight
+    //   });
+    // } catch (ex) {
+    //   failed.push({
+    //     doctype: 'Trip',
+    //     permit: doc.Permit,
+    //     name: doc.TPNo,
+    //     truck: doc.VehicleNo,
+    //     tpNumber: doc.TPNo,
+    //     startDate: doc.StartDate,
+    //     loadQty: doc.Weight
+    //   });
+    // }
+  }
+
+  // for (let doc of failed) {
+  //   await syncDoc(doc);
+  // }
+}
 
 async function processRecord(docs, model) {
   console.log('Syncing', model, docs.length);
@@ -116,6 +184,8 @@ async function syncFromFirebase() {
   } else {
     timestamp = DateTime.local().toJSDate();
   }
+
+  readLatestTP(lastSnapshot);
 
   console.log(gstin, lastSnapshot, timestamp);
 

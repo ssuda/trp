@@ -99,16 +99,6 @@ export default {
       await this.doc.set(field, value);
       await delay(1000);
       this.statusText = _('Saved');
-      if (this.doc.i3msUsername && this.doc.i3msPassword) {
-        await this.doc.update();
-        frappe.events.trigger('open-browser', {
-          credentials: {
-            username: this.doc.i3msUsername,
-            password: this.doc.i3msPassword
-          },
-          showBrowser: true
-        });
-      }
     }
   }
 };

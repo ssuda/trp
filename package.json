@@ -1,7 +1,7 @@
 {
   "name": "spinbi-erp",
   "description": "SpinBi ERP",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "author": {
     "name": "SpinBi Technologies",
     "email": "samba@spinbi.com"
@@ -18,6 +18,12 @@
   "main": "background.js",
   "dependencies": {
     "@popperjs/core": "^2.0.3",
+    "apollo-cache-inmemory": "^1.6.6",
+    "apollo-client": "^2.6.10",
+    "apollo-link": "^1.2.14",
+    "apollo-link-http": "^1.5.17",
+    "apollo-link-ws": "^1.0.20",
+    "apollo-utilities": "^1.3.4",
     "axios": "^0.19.2",
     "chrome-finder": "^1.0.7",
     "console-stamp": "^0.2.9",
@@ -30,6 +36,9 @@
     "frappe-datatable": "^1.15.2",
     "frappejs": "https://github.com/frappe/frappejs",
     "glob": "^7.1.6",
+    "graphql": "^15.2.0",
+    "graphql-tag": "^2.10.3",
+    "is-online": "^8.4.0",
     "knex": "^0.21.1",
     "lodash": "^4.17.15",
     "luxon": "^1.21.3",
@@ -38,6 +47,7 @@
     "portal-vue": "^2.1.6",
     "puppeteer": "^3.0.4",
     "sqlite3": "^4.2.0",
+    "subscriptions-transport-ws": "^0.9.16",
     "tailwindcss": "^1.2.0",
     "uuidv4": "^6.0.8",
     "voucher-code-generator": "^1.1.1",

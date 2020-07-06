@@ -46,9 +46,10 @@ import BackLink from '@/components/BackLink';
 import Trip from '../../reports/Trip/Trip';
 import { exportData } from '@/utils';
 
-import { twoMonthsOldPermits } from '@/permit';
+import { lastMonthActivePermits } from '@/permit';
 
 import { handleErrorWithDialog } from '@/utils';
+import { readTPByPermit } from '@/i3ms-sync';
 
 export default {
   name: 'PermitActionForm',
@@ -68,7 +69,7 @@ export default {
   },
   computed: {
     buttonText() {
-      return this.loading ? this._(`Refreshing...`) : this._('Next');
+      return this.loading ? this._(`Loading...`) : this._('Next');
     }
   },
 
@@ -82,6 +83,7 @@ export default {
         .minus({ months: 1 })
         .startOf('month')
         .toISO();
+
       let endDate = DateTime.local()
         .minus({ months: 1 })
         .endOf('month')
@@ -92,7 +94,7 @@ export default {
         password: frappe.AccountingSettings.i3msPassword
       };
 
-      const permits = await twoMonthsOldPermits();
+      const permits = await lastMonthActivePermits();
 
       frappe.events.trigger('permits-details', {
         credentials,
@@ -126,6 +128,32 @@ export default {
             ];
           });
 
+          // let rows = await readTPByPermit({
+          //   StartDate: {
+          //     _gte: startDate,
+          //     _lte: endDate
+          //   }
+          // });
+
+          // rows = rows.map(row => {
+          //   return [
+          //     DateTime.fromISO(row.Date).toFormat('dd-MM-yyyy'),
+          //     row.LicenseeName,
+          //     row.Source,
+          //     row.Permit,
+          //     row.Source.lastIndexOf('(') != -1
+          //       ? row.Source.substring(
+          //           row.Source.lastIndexOf('(') + 1,
+          //           row.Source.lastIndexOf(')')
+          //         )
+          //       : '',
+          //     row.Material,
+          //     row.Load,
+          //     (row.Destination || '').replace(/,.*$/, '').toUpperCase(),
+          //     row.LicenseeName.replace(/\(.*$/, '')
+          //   ];
+          // });
+
           const columns = [
             'Date',
             'Name of the Lessee/Licensee',
@@ -148,6 +176,7 @@ export default {
         } catch (ex) {
           console.error(ex);
         }
+        this.loading = false;
         this.message = 'Success';
       });
     },
