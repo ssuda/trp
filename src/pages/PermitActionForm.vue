@@ -310,10 +310,9 @@ export default {
         if (trucks.length) {
           let timerInterval = setInterval(() => {
             const endTimer = DateTime.local();
-            this.duration = Interval.fromDateTimes(
-              startTimer,
-              endTimer
-            ).toDuration().toFormat("hh'h':mm'm':ss's'");
+            this.duration = Interval.fromDateTimes(startTimer, endTimer)
+              .toDuration()
+              .toFormat("hh'h':mm'm':ss's'");
           }, 1000);
 
           this.loading = true;
