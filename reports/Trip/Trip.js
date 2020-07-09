@@ -83,6 +83,23 @@ class Trip {
       groupNumber++;
     }
 
+    const dimensions = params.dimensions || {};
+
+    if (dimensions.permit) {
+      trips = trips.select('Permit.name as permit');
+      groupNumber++;
+    }
+
+    if (dimensions.source) {
+      trips = trips.select('Permit.source as source');
+      groupNumber++;
+    }
+
+    if (dimensions.transportedFrom) {
+      trips = trips.select('Permit.transportedFrom as transportedFrom');
+      groupNumber++;
+    }
+
     if (params.customer) {
       trips = trips.select('Permit.customer as customer');
       groupNumber++;
@@ -99,7 +116,14 @@ class Trip {
       .sum('loadQty as loadQty')
       .sum('unloadQty as unloadQty');
 
-    if (params.customer || params.type || params.i3msReturns) {
+    if (
+      params.customer ||
+      params.type ||
+      params.i3msReturns ||
+      dimensions.permit ||
+      dimensions.source ||
+      dimensions.transportedFrom
+    ) {
       trips = trips.join('Permit', 'Permit.name', 'Trip.permit');
     }
 
@@ -203,9 +227,12 @@ class Trip {
 
     if (!params.dashboard && !params.i3msReturns) {
       glEntries.unshift({
-        customer: '',
-        truckOwner: '',
-        periodicity: { template: '<b>Total</b>' },
+        transportedFrom: !params.periodicity
+          ? { content: 'Total', format: value => value.bold() }
+          : '',
+        periodicity: params.periodicity
+          ? { content: 'Total', format: value => value.bold() }
+          : '',
         numPermits: numberFormat.formatNumber(numPermits, '#,###'),
         loadQty: numberFormat.formatNumber(loaded),
         unloadQty: numberFormat.formatNumber(unloaded),
