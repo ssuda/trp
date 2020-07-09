@@ -23,6 +23,7 @@ import BaseDocument from '@/basedocument';
 import Document from 'frappejs/model/document';
 import { FieldValue } from '@/firebase';
 import { normalizeCompanyName } from './utils';
+import { DateTime } from 'luxon';
 
 (async () => {
   frappe.isServer = true;
@@ -100,6 +101,14 @@ import { normalizeCompanyName } from './utils';
           startDate: trip.tp_date
         });
 
+        let dt = DateTime.fromFormat(trip.tp_date, 'MM/dd/yyyy hh:mm:ss a');
+
+        if (!dt.isValid) {
+          dt = DateTime.fromFormat(trip.tp_date, 'dd MMM yyyy');
+        }
+
+        dt = dt.toDate();
+
         await frappe.syncDoc({
           doctype: 'Trip',
           name: trip.tp_number,
@@ -108,7 +117,7 @@ import { normalizeCompanyName } from './utils';
           tpNumber: trip.tp_number,
           tpUrl: trip.tp_url,
           loadQty: trip.load_carrying,
-          startDate: trip.tp_date
+          startDate: dt
         });
       }
 

@@ -227,10 +227,7 @@ export async function permitReport(args, sse, browser = i3ms) {
         });
 
         return {
-          tp_date: moment(tpDetails['Pass Date'], [
-            'MM/DD/YYYY hh:mm:ss A',
-            'DD MMM YYYY'
-          ]).toDate(),
+          tp_date: tpDetails['Pass Date'],
           tp_number: tpDetails['Pass Number Text'],
           tp_url: tpDetails['Pass Number'],
           truck_number: tpDetails['Truck Number'],
