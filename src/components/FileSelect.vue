@@ -15,6 +15,7 @@
       ref="fileInput"
       class="hidden"
       type="file"
+      :accept="accept"
       @change="handleFileChange"
     />
   </label>
@@ -25,6 +26,7 @@ export default {
   props: {
     value: File,
     label: String,
+    accept: String,
     icon: {
       type: Boolean,
       default: true
