@@ -14,6 +14,20 @@ import voucherCodes from 'voucher-code-generator';
 import { dbPath } from '@/utils';
 import config from '@/config';
 
+async function getCompanyInfo(gstin) {
+  return firestore
+    .collection('customers')
+    .doc(gstin)
+    .get();
+}
+
+async function getCompanyInfoByI3msUsername(i3msUsername) {
+  return firestore
+    .collection('AccountingSettings')
+    .where('i3msUsername', '==', i3msUsername)
+    .get();
+}
+
 function waitForUser() {
   return new Promise((resolve, reject) => {
     const unsubscribe = firebaseAuth.onAuthStateChanged(
@@ -106,10 +120,7 @@ export default {
         if (gstin && !user.remote) {
           console.log('Fetching company info');
 
-          user.remote = await firestore
-            .collection('customers')
-            .doc(gstin)
-            .get();
+          user.remote = await getCompanyInfo(gstin);
 
           if (user.remote.get('billingPeriodEnd')) {
             let now = DateTime.local();
@@ -184,6 +195,13 @@ export default {
     if (process.env.NODE_ENV !== 'development') {
       if (fbuser.remote && fbuser.remote.exists) {
         throw new Error('This company already registered, please login');
+      }
+
+      if (user.i3msUsername) {
+        const snapshot = await getCompanyInfoByI3msUsername(user.i3msUsername);
+        if (snapshot.docs.length) {
+          throw new Error('One company already registered with i3ms username');
+        }
       }
     }
 
