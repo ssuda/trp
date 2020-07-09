@@ -3,6 +3,14 @@
     <PageHeader>
       <h1 slot="title" class="text-2xl font-bold">{{ report.title }}</h1>
       <template slot="actions">
+        <Button
+          class="mr-2"
+          :icon="true"
+          type="primary"
+          @click="downloadReport"
+        >
+          <feather-icon name="download" class="w-4 h-4 text-white" />
+        </Button>
         <SearchBar class="ml-2" />
       </template>
     </PageHeader>
@@ -21,63 +29,29 @@
         />
       </div>
     </div>
-    <div class="px-8 mt-4">
-      <div>
-        <div ref="header" class="overflow-hidden">
-          <Row gap="2rem" :grid-template-columns="gridTemplateColumns">
-            <div
-              class="text-base truncate py-4"
-              :class="[
-                getColumnAlignClass(column),
-                loading ? 'text-gray-100' : 'text-gray-600'
-              ]"
-              v-for="column in columns"
-              :key="column.label"
-            >
-              <span :class="{ 'bg-gray-100': loading }">
-                {{ column.label }}
-              </span>
-            </div>
-          </Row>
-        </div>
-        <WithScroll @scroll="onBodyScroll">
-          <div class="flex-1 overflow-auto report-scroll-container">
-            <Row
-              v-show="row.isShown"
-              v-for="(row, i) in rows"
-              :key="i"
-              gap="2rem"
-              :grid-template-columns="gridTemplateColumns"
-            >
-              <div
-                class="text-base truncate py-4"
-                :class="getCellClasses(row, column)"
-                v-for="column in columns"
-                :key="column.label"
-                @click="toggleChildren(row, i)"
-              >
-                <div class="inline-flex">
-                  <feather-icon
-                    v-if="row.isBranch && !row.isLeaf && column === columns[0]"
-                    class="w-4 h-4 mr-2 flex-shrink-0"
-                    :name="row.expanded ? 'chevron-down' : 'chevron-right'"
-                  />
-                  <span class="truncate" :class="{ 'bg-gray-100': loading }">
-                    <component
-                      :is="cellComponent(row[column.fieldname], column)"
-                    />
-                  </span>
-                </div>
-              </div>
-            </Row>
-          </div>
-        </WithScroll>
+    <div class="mt-4 flex text-base px-8" v-if="report.dimensionFields">
+      <div
+        class="ml-3 first:ml-0 w-32"
+        v-for="df in dimensionFields"
+        :key="df.fieldname"
+      >
+        <FormControl
+          size="small"
+          input-class="bg-gray-100"
+          :df="df"
+          :label="df.label"
+          :showLabel="true"
+          :value="dimensions[df.fieldname]"
+          @change="value => onDimensionChange(df, value)"
+        />
       </div>
     </div>
+    <div ref="datatable" class="pl-8 pr-4 mt-4 pb-4 border-b"></div>
   </div>
 </template>
 <script>
 import frappe from 'frappejs';
+import DataTable from 'frappe-datatable';
 import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 import SearchBar from '@/components/SearchBar';
@@ -85,6 +59,8 @@ import Row from '@/components/Row';
 import WithScroll from '@/components/WithScroll';
 import FormControl from '@/components/Controls/FormControl';
 import reportViewConfig from '@/../reports/view';
+
+import { exportData } from '@/utils';
 
 export default {
   name: 'Report',
@@ -97,6 +73,15 @@ export default {
     FormControl,
     WithScroll
   },
+  mounted() {
+    console.log('columns', this.columns);
+    this.datatable = new DataTable(this.$refs.datatable, {
+      columns: this.columns,
+      //checkboxColumn: true,
+      inlineFilters: true,
+      layout: 'ratio'
+    });
+  },
   provide() {
     return {
       doc: this.filters
@@ -108,9 +93,20 @@ export default {
       filters[df.fieldname] = null;
     }
 
+    let dimensions = {};
+
+    if (reportViewConfig[this.reportName].dimensionFields) {
+      for (let df of reportViewConfig[this.reportName].dimensionFields(
+        filters
+      )) {
+        dimensions[df.fieldname] = true;
+      }
+    }
+
     return {
       loading: true,
       filters,
+      dimensions,
       reportData: {
         rows: [],
         columns: []
@@ -118,7 +114,6 @@ export default {
     };
   },
   async activated() {
-    this.reportData.columns = this.report.getColumns();
     await this.setDefaultFilters();
     await this.fetchReportData();
   },
@@ -128,12 +123,25 @@ export default {
         this.$refs.header.scrollLeft = scrollLeft;
       });
     },
+
+    downloadReport() {
+      const rows = this.reportData.rows.map(row =>
+        this.columns.map(c => row[c.fieldname])
+      );
+      const columns = this.columns.map(c => c.name);
+      exportData(this.report.title, columns, rows, true);
+    },
+
     async fetchReportData() {
+      this.loading = true;
       await this.populateFormulaFields();
 
       let data = await frappe.call({
         method: this.report.method,
-        args: this.filters
+        args: {
+          ...this.filters,
+          dimensions: this.dimensions
+        }
       });
 
       let rows;
@@ -143,16 +151,25 @@ export default {
         rows = data;
       }
 
-      if (data.columns) {
-        this.reportData.columns = this.report.getColumns(data);
-      }
-
       if (!rows) {
         rows = [];
       }
 
       this.reportData.rows = this.addTreeMeta(rows);
       this.loading = false;
+      this.datatable.refresh(
+        this.reportData.rows.map(row =>
+          this.columns.map(c => row[c.fieldname])
+        ),
+        this.columns.map(c => ({
+          name: c.name || c.label,
+          editable: false,
+          resizable: false,
+          focusable: false,
+          sortable: true
+        }))
+      );
+      this.datatable.cellmanager.activateFilter(1);
     },
 
     addTreeMeta(rows) {
@@ -193,6 +210,11 @@ export default {
     onFilterChange(df, value) {
       this.filters[df.fieldname] = value;
       this.fetchReportData();
+    },
+
+    onDimensionChange(df, value) {
+      this.dimensions[df.fieldname] = value;
+      setTimeout(() => this.fetchReportData(), 0);
     },
 
     async setDefaultFilters() {
@@ -265,7 +287,7 @@ export default {
         ];
       }
       return [
-        this.getColumnAlignClass(column),
+        //this.getColumnAlignClass(column),
         treeCellClasses,
         this.loading ? 'text-gray-100' : 'text-gray-900'
       ];
@@ -278,10 +300,22 @@ export default {
       );
     },
 
+    dimensionFields() {
+      if (!this.report.dimensionFields) {
+        return [];
+      }
+
+      return this.report.dimensionFields(this.filters).map(df => ({
+        fieldname: df.fieldname,
+        fieldtype: 'Check',
+        label: df.label
+      }));
+    },
+
     columns() {
       return this.loading
         ? this.blankStateData.columns
-        : this.reportData.columns;
+        : this.report.getColumns(this.dimensions, this.filters);
     },
     rows() {
       return this.loading ? this.blankStateData.rows : this.reportData.rows;
@@ -331,6 +365,8 @@ export default {
 </script>
 
 <style>
+@import '../styles/frappe-datatable.css';
+
 .report-scroll-container {
   height: calc(100vh - 12rem);
 }
