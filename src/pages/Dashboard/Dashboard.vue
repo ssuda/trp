@@ -62,7 +62,6 @@ export default {
     }
 
     const d = DateTime.local()
-      .startOf('month')
       .toFormat('yyyy-LL-dd');
 
     this.filters = {
@@ -78,13 +77,13 @@ export default {
     };
   },
 
-  mounted() {
-    this.datatable = new DataTable(this.$refs.datatable, {
-      columns: this.columns,
-      //checkboxColumn: true,
-      inlineFilters: true,
-      layout: 'ratio'
-    });
+  activated() {
+    if (!this.datatable) {
+      this.datatable = new DataTable(this.$refs.datatable, {
+        columns: this.columns,
+        layout: 'ratio'
+      });
+    }
     this.fetchReportData();
   },
 
