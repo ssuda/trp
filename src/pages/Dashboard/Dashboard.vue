@@ -61,8 +61,7 @@ export default {
       this.$router.push('/i3msAccount');
     }
 
-    const d = DateTime.local()
-      .toFormat('yyyy-LL-dd');
+    const d = DateTime.local().toFormat('yyyy-LL-dd');
 
     this.filters = {
       dateRange: 'today',
