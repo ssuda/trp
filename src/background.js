@@ -202,6 +202,10 @@ function createWindow() {
     resizable: true
   });
 
+  if (mainWindow.maximizable) {
+    mainWindow.maximize();
+  }
+
   const menu = Menu.buildFromTemplate([
     {
       label: 'File',

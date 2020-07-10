@@ -46,7 +46,7 @@
         />
       </div>
     </div>
-    <div ref="datatable" class="pl-8 pr-4 mt-4 pb-4 border-b"></div>
+    <div ref="datatable" class="pl-8 pr-4 mt-4"></div>
   </div>
 </template>
 <script>
@@ -169,7 +169,9 @@ export default {
           sortable: true
         }))
       );
-      this.datatable.cellmanager.activateFilter(1);
+
+      this.datatable.columnmanager.toggleFilter(true);
+      this.datatable.columnmanager.focusFilter(1);
     },
 
     addTreeMeta(rows) {
@@ -366,7 +368,9 @@ export default {
 
 <style>
 @import '../styles/frappe-datatable.css';
-
+.dt-scrollable {
+  overflow-x: hidden !important;
+}
 .report-scroll-container {
   height: calc(100vh - 12rem);
 }
