@@ -41,34 +41,23 @@ import { DateTime } from 'luxon';
   //   console.log = function() {};
   // }
 
-  async function savePermit(permit, args) {
+  async function savePermit(permit) {
     console.log('Got result from i3ms', permit);
 
-    let tagged = permit.tagged || {};
-
-    let oldTagged = args.tagged
-      ? typeof args.tagged === 'string'
-        ? JSON.parse(args.tagged)
-        : args.tagged
-      : null;
-
-    if (!oldTagged) {
-      try {
-        const currentDoc = frappe.getDoc('Permit', permit.name);
-        oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
-      } catch (ex) {
-        oldTagged = {};
-      }
+    if (!permit) {
+      return;
     }
 
-    oldTagged = Object.keys(oldTagged).reduce((p, v) => {
-      if (oldTagged[v]) {
-        p[v] = oldTagged[v];
-      }
-      return p;
-    }, {});
+    let tagged = permit.tagged || {};
+    let oldTagged = {};
 
-    tagged = Object.assign(oldTagged || {}, tagged);
+    try {
+      const currentDoc = frappe.getDoc('Permit', permit.name);
+      oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
+    } catch (ex) {}
+
+    tagged = Object.assign(oldTagged, tagged);
+
     let trips = permit.trips || [];
     //save permit
     await frappe.syncDoc({
@@ -156,11 +145,6 @@ import { DateTime } from 'luxon';
     ipcRenderer.send('i3ms-company', args);
   });
 
-  ipcRenderer.on('permits-details-results', e => {
-    ipcRenderer.removeAllListeners('permit-details-results');
-    frappe.events.trigger('permits-details-results', e);
-  });
-
   ipcRenderer.on('failed', (e, results) => {
     console.log('received failed from main process', results);
     frappe.events.trigger('failed', results);
@@ -174,19 +158,20 @@ import { DateTime } from 'luxon';
   frappe.events.on('permit-details', args => {
     ipcRenderer.send('permit-details', args);
     ipcRenderer.once('permit-details-results', (e, permit) => {
-      if (permit) {
-        savePermit(permit, args);
-      }
+      savePermit(permit);
       frappe.events.trigger('permit-details-results', permit);
     });
+  });
+
+  ipcRenderer.on('permits-details-results', e => {
+    ipcRenderer.removeAllListeners('permit-details-results');
+    frappe.events.trigger('permits-details-results', e);
   });
 
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
     ipcRenderer.on('permit-details-results', (e, permit) => {
-      if (permit) {
-        savePermit(permit, {});
-      }
+      savePermit(permit);
       frappe.events.trigger('permit-details-results', permit);
     });
   });
@@ -203,7 +188,7 @@ import { DateTime } from 'luxon';
       permit.tagged = JSON.stringify(finallyTagged);
 
       if (!permit.name) {
-        savePermit(response, permit);
+        savePermit(response);
       } else {
         // End of the tagging
         frappe.syncDoc({
@@ -346,7 +331,7 @@ import { DateTime } from 'luxon';
         console.log('Received new permits', permits);
 
         for (let i = 0; i < permits.length; ++i) {
-          savePermit(permits[i], {});
+          savePermit(permits[i]);
         }
 
         //find docs;
