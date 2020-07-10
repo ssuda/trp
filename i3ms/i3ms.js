@@ -401,11 +401,16 @@ export async function permitDetails(permit, sse, browser = i3ms) {
     permit.trips = reportResult.trips;
     //check whether there no trips for in last one week
     const latestTrip = permit.trips.reduce((p, trip) => {
-      if (p > trip.tp_date.getTime()) {
+      const d = moment(trip.tp_date, [
+                   'MM/DD/YYYY hh:mm:ss A',
+                   'DD MMM YYYY'
+                  ]).toDate();
+
+      if (p > d.getTime()) {
         return p;
       }
 
-      return trip.tp_date.getTime();
+      return d.getTime();
     }, 0);
 
     if (latestTrip) {
