@@ -98,8 +98,8 @@ module.exports = function() {
     console.log('creating/connecting browser in headless mode', headless);
     if (!browser) {
       browser = await puppeteer.launch({
-        headless: !!headless,
-        args: browserArgs(!!headless),
+        headless: true,
+        args: browserArgs(true),
         executablePath: findChrome(),
         defaultViewport: defaultViewport(!!headless),
         timeout: 0
