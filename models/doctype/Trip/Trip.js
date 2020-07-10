@@ -25,8 +25,11 @@ module.exports = {
     'loadQty',
     'unloadQty',
     'advance',
-    'discount',
-    'fuel'
+    'fuel',
+    'pump_name',
+    'ewb_no',
+    'docNo',
+    'driver_phoneNumber'
   ],
 
   showTitle: true,
@@ -123,7 +126,7 @@ module.exports = {
       fieldname: 'pump_name',
       label: 'Pump Name',
       fieldtype: 'Data'
-    },
+    }
   ],
 
   quickEditFields: [
@@ -140,6 +143,6 @@ module.exports = {
     'docNo',
     'driver_phoneNumber',
     'ewb_no',
-    'pump_name',
+    'pump_name'
   ]
 };
