@@ -89,11 +89,11 @@ module.exports = {
       label: 'Unloaded',
       fieldtype: 'Float'
     },
-    {
-      fieldname: 'discount',
-      label: 'Discount',
-      fieldtype: 'Currency'
-    },
+    // {
+    //   fieldname: 'discount',
+    //   label: 'Discount',
+    //   fieldtype: 'Currency'
+    // },
     {
       fieldname: 'advance',
       label: 'Advance',
@@ -103,7 +103,27 @@ module.exports = {
       fieldname: 'fuel',
       label: 'Fuel',
       fieldtype: 'Currency'
-    }
+    },
+    {
+      fieldname: 'docNo',
+      label: 'Invoice/Challan No',
+      fieldtype: 'Data'
+    },
+    {
+      fieldname: 'driver_phoneNumber',
+      label: 'Driver Phone Number',
+      fieldtype: 'Data'
+    },
+    {
+      fieldname: 'ewb_no',
+      label: 'Ewaybill No',
+      fieldtype: 'Data'
+    },
+    {
+      fieldname: 'pump_name',
+      label: 'Pump Name',
+      fieldtype: 'Data'
+    },
   ],
 
   quickEditFields: [
@@ -114,8 +134,12 @@ module.exports = {
     'endDate',
     'loadQty',
     'unloadQty',
-    'discount',
+    //'discount',
     'advance',
-    'fuel'
+    'fuel',
+    'docNo',
+    'driver_phoneNumber',
+    'ewb_no',
+    'pump_name',
   ]
 };
