@@ -129,15 +129,26 @@ module.exports = {
     }
   ],
 
+  editableFields: [
+    'lrNumber',
+    'endDate',
+    'unloadQty',
+    'advance',
+    'fuel',
+    'docNo',
+    'driver_phoneNumber',
+    'ewb_no',
+    'pump_name'
+  ],
+
   quickEditFields: [
     'permit',
     'truck',
-    'lrNumber',
     'startDate',
     'endDate',
     'loadQty',
     'unloadQty',
-    //'discount',
+    'lrNumber',
     'advance',
     'fuel',
     'docNo',

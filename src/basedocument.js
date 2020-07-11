@@ -69,7 +69,14 @@ module.exports = class BaseDocument extends Observable {
           _deleted: true
         });
     } else if (event === 'afterUpdate' || event === 'afterInsert') {
-      if (this.doctype === 'Trip' && !this.endDate) {
+      if (
+        this.doctype === 'Trip' &&
+        this.type == 'I3MS' &&
+        !(
+          this.meta.editableFields &&
+          this.meta.editableFields.some(f => this[f])
+        )
+      ) {
         return;
       }
 

@@ -181,8 +181,11 @@ export default {
 
   methods: {
     async onClick() {
+      this.loading = true;
+
       let online = await isOnline();
       if (!online) {
+        this.loading = false;
         return showMessageDialog({
           description: this._('No Internet Connectivity, please check.'),
           buttons: [
@@ -199,8 +202,6 @@ export default {
       };
 
       const permit = pickPermitFields(this.doc.permit || {});
-
-      this.loading = true;
 
       if (this.doc.action === 'fetchNew') {
         let permits = await twoMonthsOldPermits();

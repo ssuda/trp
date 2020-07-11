@@ -90,13 +90,13 @@ import { DateTime } from 'luxon';
           startDate: trip.tp_date
         });
 
-        let dt = DateTime.fromFormat(trip.tp_date, 'MM/dd/yyyy hh:mm:ss a');
+        let dt = DateTime.fromFormat(trip.tp_date, 'M/d/yyyy h:m:s a');
 
         if (!dt.isValid) {
-          dt = DateTime.fromFormat(trip.tp_date, 'dd MMM yyyy');
+          dt = DateTime.fromFormat(trip.tp_date, 'd MMM yyyy');
         }
 
-        dt = dt.toDate();
+        dt = dt.toJSDate();
 
         await frappe.syncDoc({
           doctype: 'Trip',
@@ -155,25 +155,21 @@ import { DateTime } from 'luxon';
     frappe.events.trigger('total', results);
   });
 
-  frappe.events.on('permit-details', args => {
-    ipcRenderer.send('permit-details', args);
-    ipcRenderer.once('permit-details-results', (e, permit) => {
-      savePermit(permit);
-      frappe.events.trigger('permit-details-results', permit);
-    });
+  ipcRenderer.on('permit-details-results', (e, permit) => {
+    savePermit(permit);
+    frappe.events.trigger('permit-details-results', permit);
   });
 
   ipcRenderer.on('permits-details-results', e => {
-    ipcRenderer.removeAllListeners('permit-details-results');
     frappe.events.trigger('permits-details-results', e);
+  });
+
+  frappe.events.on('permit-details', args => {
+    ipcRenderer.send('permit-details', args);
   });
 
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
-    ipcRenderer.on('permit-details-results', (e, permit) => {
-      savePermit(permit);
-      frappe.events.trigger('permit-details-results', permit);
-    });
   });
 
   frappe.events.on('tag-vehicles', permit => {
