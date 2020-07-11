@@ -306,11 +306,15 @@ module.exports = function() {
       //console.log('waiting for vehicle no box', truckNo);
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       //console.log('checking disabled box', truckNo);
-      await page.$eval('#txtVehicleNo', (el, truckNo) => {
-        el.disabled = false;
-        el.value = truckNo;
-        document.querySelector('#btnsearch').click();
-      }, truckNo);
+      await page.$eval(
+        '#txtVehicleNo',
+        (el, truckNo) => {
+          el.disabled = false;
+          el.value = truckNo;
+          document.querySelector('#btnsearch').click();
+        },
+        truckNo
+      );
       //await typeInTextBox('#txtVehicleNo', truckNo);
       //await page.click('#btnsearch');
       //console.log('clicking btnsearch', truckNo);
@@ -1112,7 +1116,9 @@ module.exports = function() {
   }
 
   async function dailyI3msData(date) {
-    await browsePage(`https://i3ms.orissaminerals.gov.in/I3MS/ePass/TruckWiseReportDtls.aspx?fromdate=${date}&todate=${date}&Sourcetype=0`);
+    await browsePage(
+      `https://i3ms.orissaminerals.gov.in/I3MS/ePass/TruckWiseReportDtls.aspx?fromdate=${date}&todate=${date}&Sourcetype=0`
+    );
     console.log('Waiting for lbtnAll');
     await page.waitForSelector('#lbtnAll');
     console.log('Clicking lbtnAll');
@@ -1124,7 +1130,9 @@ module.exports = function() {
   }
 
   async function i3msVehicles() {
-    await browsePage(`https://i3ms.orissaminerals.gov.in/website/RegisteredVehicleReport.aspx`);
+    await browsePage(
+      `https://i3ms.orissaminerals.gov.in/website/RegisteredVehicleReport.aspx`
+    );
     console.log('Waiting for lbtnAll');
     await page.waitForSelector('#lbtnAll');
     console.log('Clicking lbtnAll');
@@ -1132,7 +1140,7 @@ module.exports = function() {
     // console.log('Clicking lbtnAll');
     // await navigationClickHelper('#lbtnAll', 600000);
     console.log('Extracting table');
-    await page.waitForSelector('#grvVeiwVehicleReg', {timeout: 0});
+    await page.waitForSelector('#grvVeiwVehicleReg', { timeout: 0 });
     await delay(180000);
     return extractTable('#grvVeiwVehicleReg');
   }
@@ -1166,6 +1174,6 @@ module.exports = function() {
     receiveMineral,
     openBrowser,
     dailyI3msData,
-    i3msVehicles, 
+    i3msVehicles
   };
 };
