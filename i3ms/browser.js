@@ -97,12 +97,11 @@ module.exports = function() {
   async function createBrowser(headless) {
     console.log('creating/connecting browser in headless mode', headless);
     if (!browser) {
-      //browser = await puppeteer.connect({ browserWSEndpoint: 'ws://localhost:3000' });
       browser = await puppeteer.launch({
-        headless: true,
-        args: browserArgs(true),
+        headless: !!headless,
+        args: browserArgs(!!headless),
         executablePath: findChrome(),
-        defaultViewport: defaultViewport(true),
+        defaultViewport: defaultViewport(!!headless),
         timeout: 0
       });
       console.log('browser created');
@@ -311,7 +310,7 @@ module.exports = function() {
         (el, truckNo) => {
           el.disabled = false;
           el.value = truckNo;
-          document.querySelector('#btnsearch').click();
+          //document.querySelector('#btnsearch').click();
         },
         truckNo
       );
@@ -319,9 +318,9 @@ module.exports = function() {
       //await page.click('#btnsearch');
       //console.log('clicking btnsearch', truckNo);
 
-      //await navigationClickHelper('#btnsearch'); // Clicking the link will indirectly cause a navigation
+      await navigationClickHelper('#btnsearch'); // Clicking the link will indirectly cause a navigation
 
-      //await page.waitForNavigation();
+      // await page.waitForNavigation();
       //console.log('waiting for radio or error message', truckNo);
 
       const r = await promiseAny(
@@ -332,21 +331,20 @@ module.exports = function() {
       //console.log('Is Error? ', r == 2);
 
       if (r == 1) {
-        await page.evaluate(() => {
-          document.querySelector('#rdo_GPS_0').checked = true;
-          document.querySelector('#Rdo_VTS_0').checked = true;
-          document.querySelector('#chkClick').checked = true;
-        });
-        //await setRadioButton('#rdo_GPS_0');
-        //await navigationClickHelper('#rdo_GPS_0');
-        //await setRadioButton('#Rdo_VTS_0');
-        //await page.click('#chkClick');
-
+        // await page.evaluate(() => {
+        //   document.querySelector('#rdo_GPS_0').checked = true;
+        //   document.querySelector('#Rdo_VTS_0').checked = true;
+        //   document.querySelector('#chkClick').checked = true;
+        // });
+        await setRadioButton('#rdo_GPS_0');
+        // await navigationClickHelper('#rdo_GPS_0');
+        await setRadioButton('#Rdo_VTS_0');
         // await navigationClickHelper('#Rdo_VTS_0');
         // await setRadioButton('#Rdo_SIM_0');
         await navigationClickHelper('#Rdo_SIM_0');
         // await setRadioButton('#chkClick');
-        //await page.click('#btnSubmit');
+        await page.click('#chkClick');
+        // await page.click('#btnSubmit');
         await navigationClickHelper('#btnSubmit'); // Clicking the link will indirectly cause a navigation
         await delay(100);
       } else {
