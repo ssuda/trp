@@ -102,7 +102,7 @@ module.exports = function() {
         headless: true,
         args: browserArgs(true),
         executablePath: findChrome(),
-        defaultViewport: defaultViewport(!!headless),
+        defaultViewport: defaultViewport(true),
         timeout: 0
       });
       console.log('browser created');
@@ -346,8 +346,9 @@ module.exports = function() {
         // await setRadioButton('#Rdo_SIM_0');
         await navigationClickHelper('#Rdo_SIM_0');
         // await setRadioButton('#chkClick');
-        // await page.click('#btnSubmit');
+        //await page.click('#btnSubmit');
         await navigationClickHelper('#btnSubmit'); // Clicking the link will indirectly cause a navigation
+        await delay(100);
       } else {
         reason = page.$eval('#lblMsg', el => el.innerText);
 
