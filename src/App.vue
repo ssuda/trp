@@ -176,11 +176,18 @@ export default {
       } else if (this.$route.path.startsWith('/settings')) {
         this.activeScreen = 'Settings';
       } else {
+
         let user;
         try {
           user = await Users.getCurrentUser(null, true);
         } catch (ex) {
           console.error(ex);
+        }
+
+        if (config.get('authChanged', true)) {
+          await Users.logout();
+          user = null;
+          config.set('authChanged', false);
         }
 
         console.log('current user', user);
