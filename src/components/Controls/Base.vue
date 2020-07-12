@@ -13,6 +13,7 @@
       @blur="e => triggerChange(e.target.value)"
       @focus="e => $emit('focus', e)"
       @input="e => $emit('input', e)"
+      @keyup="e => (e.keyCode === 13 ? triggerChange(e.target.value) : false)"
     />
   </div>
 </template>

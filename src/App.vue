@@ -89,6 +89,9 @@ export default {
       if (size.length) {
         win.setSize(...size);
         win.setResizable(resizable);
+        if (resizable) {
+          win.maximize();
+        }
       }
     }
   },
@@ -319,7 +322,9 @@ export default {
             );
           }
 
-          this.openBrowser();
+          if (process.env.NODE_ENV !== 'development') {
+            this.openBrowser();
+          }
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';

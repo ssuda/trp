@@ -26,7 +26,7 @@ firestore.enablePersistence({
   synchronizeTabs: true
 });
 
-firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+//firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
 const FieldValue = firebase.firestore.FieldValue;
 const Timestamp = firebase.firestore.Timestamp;

@@ -95,13 +95,20 @@ module.exports = function() {
   let globalDisconnectHandler;
 
   async function createBrowser(headless) {
+    console.log('process.env.SHOW_BROWSER  = ', process.env.SHOW_BROWSER);
+
+    headless =
+      process.env.SHOW_BROWSER == undefined
+        ? !!headless
+        : !process.env.SHOW_BROWSER;
+
     console.log('creating/connecting browser in headless mode', headless);
     if (!browser) {
       browser = await puppeteer.launch({
-        headless: !!headless,
-        args: browserArgs(!!headless),
+        headless,
+        args: browserArgs(headless),
         executablePath: findChrome(),
-        defaultViewport: defaultViewport(!!headless),
+        defaultViewport: defaultViewport(headless),
         timeout: 0
       });
       console.log('browser created');

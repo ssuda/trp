@@ -25,8 +25,16 @@ module.exports = {
       fieldname: 'password',
       label: 'Password',
       fieldtype: 'Password',
+      placeholder: 'password',
       required: 1
+    },
+    {
+      fieldname: 'rememberme',
+      label: 'Remember me',
+      fieldtype: 'Check',
+      placeholder: 'Remember me',
+      default: 1
     }
   ],
-  quickEditFields: ['email', 'password']
+  quickEditFields: ['email', 'password', 'rememberme']
 };
