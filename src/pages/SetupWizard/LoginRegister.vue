@@ -29,6 +29,7 @@ import FormControl from '@/components/Controls/FormControl';
 import Button from '@/components/Button';
 import Popover from '@/components/Popover';
 import Users from '@/users';
+import { firebaseAuth, firebase } from '@/firebase';
 
 import { handleErrorWithDialog, showMessageDialog } from '@/utils';
 
@@ -92,7 +93,7 @@ export default {
       });
     },
     allValuesFilled() {
-      let values = this.fields.map(f => this.doc[f.fieldname]);
+      let values = this.fields.map(f => this.doc[f.fieldname] !== undefined);
       return values.every(Boolean);
     },
     async submit() {
@@ -106,6 +107,11 @@ export default {
       }
       try {
         this.loading = true;
+        if (this.doc.rememberme) {
+          firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        } else {
+          firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+        }
         await Users.login(this.doc.email, this.doc.password);
         //await onlyConnectToRemoteDatabase();
         this.$emit('login-complete');

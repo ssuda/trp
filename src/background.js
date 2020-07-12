@@ -202,10 +202,6 @@ function createWindow() {
     resizable: true
   });
 
-  if (mainWindow.maximizable) {
-    mainWindow.maximize();
-  }
-
   const menu = Menu.buildFromTemplate([
     {
       label: 'File',
@@ -304,6 +300,18 @@ ipcMain.on('reload-main-window', async () => {
 ipcMain.on('auto-tagging', (event, args) => {
   console.log('Received auto tagging from renderer');
   newPermits(args, event.sender);
+});
+
+ipcMain.on('show-browser', async (event, args) => {
+  console.log('showing browsers');
+  await disconnect();
+  process.env.SHOW_BROWSER = true;
+});
+
+ipcMain.on('hide-browser', async (event, args) => {
+  console.log('hiding browsers');
+  await disconnect();
+  delete process.env.SHOW_BROWSER;
 });
 
 ipcMain.on('refresh-permits', (event, args) => {

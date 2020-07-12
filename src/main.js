@@ -140,6 +140,16 @@ import { DateTime } from 'luxon';
     ipcRenderer.send('open-browser', args);
   });
 
+  frappe.events.on('show-browser', args => {
+    console.log('show browser called');
+    ipcRenderer.send('show-browser', args);
+  });
+
+  frappe.events.on('hide-browser', args => {
+    console.log('hide browser called');
+    ipcRenderer.send('hide-browser', args);
+  });
+
   frappe.events.on('i3ms-company', args => {
     console.log('i3ms-company called');
     ipcRenderer.send('i3ms-company', args);
