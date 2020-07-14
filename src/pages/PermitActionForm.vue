@@ -391,7 +391,7 @@ export default {
 
             const chunks = splitToChunks(obj.trucks, numParts);
             for (let chunk of chunks) {
-              obj.trucks = chunk;
+              input.trucks = chunk;
               sqs.sendMessage(frappe.globalConfig.awsConfig, input);
             }
           } else {
