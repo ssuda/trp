@@ -51,7 +51,6 @@
                   :value="doc.taggingUrl"
                   @change="value => doc.set('taggingUrl', value)"
                 />
-
                 <FormControl
                   v-if="doc.action == 'tagging'"
                   class="mt-4 text-base"
@@ -59,6 +58,15 @@
                   :df="meta.getField('truckList')"
                   :value="doc.truckList"
                   @change="value => doc.set('truckList', value)"
+                />
+                <FormControl
+                  v-if="doc.action == 'tagging'"
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('isCloudTagging')"
+                  :value="doc.isCloudTagging"
+                  :showLabel="true"
+                  @change="value => doc.set('isCloudTagging', value)"
                 />
                 <FormControl
                   v-if="doc.action == 'release'"
@@ -113,10 +121,14 @@ import BackLink from '@/components/BackLink';
 import _ from 'lodash';
 import isOnline from 'is-online';
 
+import sqs from '@/sqs';
+import { firestore } from '@/firebase';
+
 import {
   handleErrorWithDialog,
   showMessageDialog,
-  extractTrucks
+  extractTrucks,
+  splitToChunks
 } from '@/utils';
 
 import { refreshPermit, twoMonthsOldPermits, pickPermitFields } from '@/permit';
@@ -279,32 +291,35 @@ export default {
           };
         } else {
           obj.taggingUrl = this.doc.taggingUrl;
-          let ret = await new Promise((resolve, reject) => {
-            refreshPermit(
-              {
-                ...obj,
-                noTrips: true,
-                validate: true
-              },
-              p => {
-                resolve(p);
-              }
-            );
-          });
 
-          if (!ret) {
-            showMessageDialog({
-              description: this._(
-                'No Permit to tag vehicles, please check in i3ms'
-              ),
-              buttons: [
+          if (!this.doc.isCloudTagging) {
+            let ret = await new Promise((resolve, reject) => {
+              refreshPermit(
                 {
-                  label: _('Ok')
+                  ...obj,
+                  noTrips: true,
+                  validate: true
+                },
+                p => {
+                  resolve(p);
                 }
-              ]
+              );
             });
-            this.loading = false;
-            return;
+
+            if (!ret) {
+              showMessageDialog({
+                description: this._(
+                  'No Permit to tag vehicles, please check in i3ms'
+                ),
+                buttons: [
+                  {
+                    label: _('Ok')
+                  }
+                ]
+              });
+              this.loading = false;
+              return;
+            }
           }
         }
 
@@ -317,35 +332,98 @@ export default {
           }, 1000);
 
           this.loading = true;
-          frappe.events.trigger('tag-vehicles', obj);
 
-          const totalCb = total => {
-            console.log('received total', this.total, total);
-            this.total += parseInt(total);
-          };
+          if (this.doc.isCloudTagging) {
+            let input = _.pick(obj, [
+              'credentials',
+              'trucks',
+              'name',
+              'taggingUrl'
+            ]);
 
-          const failedCb = failed => {
-            console.log('received failed', failed);
-            this.failed += parseInt(failed);
-          };
+            input.gstin = frappe.AccountingSettings.gstin;
+            input.deviceId = frappe.deviceId;
 
-          frappe.events.off('total', totalCb);
-          frappe.events.off('failed', failedCb);
+            const self = this;
+            let numParts =
+              input.trucks.length > 500
+                ? this.doc.numBrowsers
+                : Math.ceil(obj.trucks.length / 500);
+            let firstTime = true;
 
-          frappe.events.on('total', totalCb);
-          frappe.events.on('failed', failedCb);
+            let total = this.total;
+            let failed = this.failed;
 
-          frappe.events.once('tag-results', async () => {
-            clearInterval(timerInterval);
-            this.loading = false;
+            firestore
+              .collection('i3msCloudTaggingResult')
+              .where('gstin', '==', input.gstin)
+              .where('deviceId', '==', input.deviceId)
+              .onSnapshot(async function(querySnapshot) {
+                for (let doc of querySnapshot.docs) {
+                  if (firstTime) {
+                    doc.ref.delete();
+                    continue;
+                  }
+                  const data = doc.data();
+                  if (
+                    data.name == input.name ||
+                    data.taggingUrl == input.taggingUrl
+                  ) {
+                    self.total =
+                      (data.success || 0) + (data.failed || 0) + total;
+                    self.failed = (data.failed || 0) + failed;
+
+                    if (data.completed) {
+                      clearInterval(timerInterval);
+                      self.loading = false;
+                      await showMessageDialog({
+                        description: `${self.success} Vehicles Tagged successfully`,
+                        buttons: [{ label: 'Ok' }]
+                      });
+
+                      refreshPermit(obj);
+                      self.$router.back();
+                    }
+                  }
+                }
+                firstTime = false;
+              });
+
+            const chunks = splitToChunks(obj.trucks, numParts);
+            for (let chunk of chunks) {
+              obj.trucks = chunk;
+              sqs.sendMessage(frappe.globalConfig.awsConfig, input);
+            }
+          } else {
+            frappe.events.trigger('tag-vehicles', obj);
+            const totalCb = total => {
+              console.log('received total', this.total, total);
+              this.total += parseInt(total);
+            };
+
+            const failedCb = failed => {
+              console.log('received failed', failed);
+              this.failed += parseInt(failed);
+            };
+
             frappe.events.off('total', totalCb);
             frappe.events.off('failed', failedCb);
-            await showMessageDialog({
-              description: `${this.success} Vehicles Tagged successfully`,
-              buttons: [{ label: 'Ok' }]
+
+            frappe.events.on('total', totalCb);
+            frappe.events.on('failed', failedCb);
+
+            frappe.events.once('tag-results', async () => {
+              clearInterval(timerInterval);
+              this.loading = false;
+              frappe.events.off('total', totalCb);
+              frappe.events.off('failed', failedCb);
+              await showMessageDialog({
+                description: `${this.success} Vehicles Tagged successfully`,
+                buttons: [{ label: 'Ok' }]
+              });
+              this.$router.back();
             });
-            this.$router.back();
-          });
+          }
         } else {
           showMessageDialog({
             description: this._('All Trucks Already Tagged'),

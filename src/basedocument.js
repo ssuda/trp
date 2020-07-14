@@ -5,7 +5,7 @@ const { firestore, FieldValue } = require('@/firebase');
 
 const { machineIdSync } = require('node-machine-id');
 
-let deviceId = machineIdSync({ original: true });
+let deviceId = (frappe.deviceId = machineIdSync({ original: true }));
 
 const { isNullOrUndefined } = require('@/utils');
 

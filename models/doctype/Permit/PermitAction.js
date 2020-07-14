@@ -44,6 +44,12 @@ module.exports = {
       placeholder: 'Tagging Link'
     },
     {
+      fieldname: 'isCloudTagging',
+      label: 'Tagging in Cloud?',
+      fieldtype: 'Check',
+      placeholder: 'Tagging in Cloud?'
+    },
+    {
       fieldname: 'truckList',
       label: 'Truck List',
       fieldtype: 'Link',
