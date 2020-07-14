@@ -176,7 +176,6 @@ export default {
       } else if (this.$route.path.startsWith('/settings')) {
         this.activeScreen = 'Settings';
       } else {
-
         let user;
         try {
           user = await Users.getCurrentUser(null, true);
@@ -327,6 +326,12 @@ export default {
                 height: 'auto'
               }
             );
+          }
+
+          if (!frappe.AccountingSettings.gstin) {
+            frappe.AccountingSettings.update({
+              gstin: frappe.currentUser && frappe.currentUser.gstin
+            });
           }
 
           if (process.env.NODE_ENV !== 'development') {

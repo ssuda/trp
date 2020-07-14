@@ -434,6 +434,15 @@ export function openSettings(tab = 'General') {
   ipcRenderer.send('open-settings-window', tab);
 }
 
+export function splitToChunks(array, parts) {
+  let result = [];
+  let [...arr] = array;
+  for (let i = parts; i > 0; i--) {
+    result.push(arr.splice(0, Math.ceil(arr.length / i)));
+  }
+  return result;
+}
+
 export async function syncDoc(data) {
   const modelDef = frappe.models[data.doctype];
 
