@@ -362,10 +362,6 @@ export default {
             input.deviceId = frappe.deviceId;
 
             const self = this;
-            let numParts =
-              input.trucks.length > 500
-                ? this.doc.numBrowsers
-                : Math.ceil(obj.trucks.length / 500);
             let firstTime = true;
 
             let total = this.total;
@@ -406,10 +402,16 @@ export default {
                 firstTime = false;
               });
 
-            const chunks = splitToChunks(obj.trucks, numParts);
-            for (let chunk of chunks) {
-              input.trucks = chunk;
-              sqs.sendMessage(frappe.globalConfig.awsConfig, input);
+            const chunks = _.chunks(obj.trucks, 200);
+            const delay = 100;
+
+            for (let i = 0; i < chunks.length; ++i) {
+              input.trucks = chunks[i];
+              sqs.sendMessage(
+                frappe.globalConfig.awsConfig,
+                input,
+                delay * Math.floor(i / 4)
+              );
             }
           } else {
             frappe.events.trigger('tag-vehicles', obj);
