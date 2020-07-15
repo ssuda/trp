@@ -9,7 +9,7 @@ let writeQueueUrl =
 let readQueueUrl =
   'https://sqs.ap-south-1.amazonaws.com/166639284387/i3ms-tag-request';
 
-exports.sendMessage = function(config, message) {
+exports.sendMessage = function(config, message, delay) {
   if (!sqs) {
     AWS.config.update(config);
     // Create an SQS service object
@@ -20,6 +20,10 @@ exports.sendMessage = function(config, message) {
     QueueUrl: writeQueueUrl,
     MessageBody: JSON.stringify(message)
   };
+
+  if (delay) {
+    params.DelaySeconds = delay;
+  }
 
   return new Promise((resolve, reject) => {
     sqs.sendMessage(params, function(err, data) {
@@ -57,7 +61,7 @@ exports.receiveMessage = function(config) {
         const output = JSON.parse(data.Messages[0].Body);
 
         const deleteParams = {
-          QueueUrl: queueURL,
+          QueueUrl: readQueueUrl,
           ReceiptHandle: data.Messages[0].ReceiptHandle
         };
 
