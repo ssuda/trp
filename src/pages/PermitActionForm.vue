@@ -195,7 +195,10 @@ export default {
     async onClick() {
       this.loading = true;
 
-      if (!frappe.AccountingSettings.i3msUsername || !frappe.AccountingSettings.i3msPassword) {
+      if (
+        !frappe.AccountingSettings.i3msUsername ||
+        !frappe.AccountingSettings.i3msPassword
+      ) {
         await showMessageDialog({
           description: this._('Please enter i3ms username/password.'),
           buttons: [
@@ -204,7 +207,7 @@ export default {
             }
           ]
         });
-        
+
         this.$router.replace('/i3msAccount');
         return;
       }

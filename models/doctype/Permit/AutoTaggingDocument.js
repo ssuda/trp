@@ -10,9 +10,11 @@ module.exports = class AutoTaggingDocument extends BaseDocument {
 
     this.name = `${this.source}_${this.transportedFrom}`;
 
+    frappe.AccountingSettings.update({ newPermitAlert: true });
+
     console.log('AutoTagging name', this.name);
 
     // setup auto tagging
-    frappe.events.trigger('auto-tagging', [this]);
+    //frappe.events.trigger('auto-tagging', [this]);
   }
 };
