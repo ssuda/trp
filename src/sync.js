@@ -88,7 +88,7 @@ async function processRecord(docs, model) {
 
     doc = doc.data();
 
-    const { setupComplete, i3msUsername, i3msPassword } =
+    const { setupComplete, i3msUsername, i3msPassword, i3msCompanyName } =
       frappe.AccountingSettings || {};
 
     if (setupComplete && doc.deviceId == deviceId) continue;
@@ -112,8 +112,17 @@ async function processRecord(docs, model) {
       } else {
         console.log('Syncing from firestore', doc);
         if (model === 'AccountingSettings') {
-          doc.i3msUsername = i3msUsername;
-          doc.i3msPassword = i3msPassword;
+          if (i3msUsername) {
+            doc.i3msUsername = i3msUsername;
+          }
+
+          if (i3msPassword) {
+            doc.i3msPassword = i3msPassword;
+          }
+
+          if (i3msCompanyName) {
+            doc.i3msCompanyName = i3msCompanyName;
+          }
         }
         await syncDoc({
           doctype: model,

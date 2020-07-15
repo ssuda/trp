@@ -143,6 +143,12 @@ module.exports = {
       hidden: 1
     },
     {
+      fieldname: 'newPermitAlert',
+      label: 'New Permit Alert',
+      fieldtype: 'Check',
+      default: 1
+    },
+    {
       fieldname: 'lastSnapshot',
       label: 'Snapshot',
       fieldtype: 'Date',

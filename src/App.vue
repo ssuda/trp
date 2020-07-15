@@ -372,7 +372,7 @@ export default {
         };
 
         // setup auto tagging
-        frappe.events.trigger('auto-tagging');
+        //frappe.events.trigger('auto-tagging');
 
         frappe.events.trigger('open-browser', {
           credentials,

@@ -158,6 +158,7 @@ export async function permitsDetails(args, sse, browser = i3ms) {
         name: r['Permit No.'],
         startDate: startDate,
         endDate: endDate,
+        circle: r['Circle'],
         taggingUrl: r['Tag New Vehicle'],
         vehicleDetails: r['Vehicle Details']
       };
