@@ -45,9 +45,9 @@ module.exports = {
     },
     {
       fieldname: 'isCloudTagging',
-      label: 'Tagging in Cloud?',
+      label: 'Tagging in Server? (Tagging will happen remotely in cloud)',
       fieldtype: 'Check',
-      placeholder: 'Tagging in Cloud?'
+      placeholder: 'Tagging in Server?'
     },
     {
       fieldname: 'truckList',
