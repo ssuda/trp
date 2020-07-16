@@ -403,7 +403,7 @@ export default {
               });
 
             const chunks = _.chunks(obj.trucks, 200);
-            const delay = 100;
+            const delay = 400;
 
             for (let i = 0; i < chunks.length; ++i) {
               input.trucks = chunks[i];
