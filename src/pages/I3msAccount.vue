@@ -27,6 +27,7 @@
                   :df="meta.getField('i3msUsername')"
                   :value="doc.i3msUsername"
                   :show-label="true"
+                  :readOnly="true"
                   @change="value => setValue('i3msUsername', value)"
                 />
                 <FormControl
