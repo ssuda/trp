@@ -402,17 +402,33 @@ export default {
                 firstTime = false;
               });
 
-            const chunks = _.chunks(obj.trucks, 200);
-            const delay = 400;
+            input.trucks = trucks;
+            firestore.collection('i3msCloudTagging').add(input);
 
-            for (let i = 0; i < chunks.length; ++i) {
-              input.trucks = chunks[i];
-              sqs.sendMessage(
-                frappe.globalConfig.awsConfig,
-                input,
-                delay * Math.floor(i / 4)
-              );
-            }
+            // const chunks = _.chunks(obj.trucks, 200);
+            // const delay = 400;
+
+            // for (let i = 0; i < chunks.length; ++i) {
+            //   input.trucks = chunks[i];
+            //   sqs.sendMessage(
+            //     frappe.globalConfig.awsConfig,
+            //     input,
+            //     delay * Math.floor(i / 4)
+            //   );
+            // const chunks = _.chunk(trucks, 250);
+            // let batchSize = Math.ceil(trucks.length / 4);
+
+            // if (batchSize < 1000) {
+            //     batchSize = 1000;
+            // }
+
+            // let delay = 300;
+
+            // for (let i = 0; i < chunks.length; i++) {
+            //     input.trucks = chunks[i];
+            //     sqs.sendMessage(frappe.globalConfig.awsConfig, input, delay * Math.floor((i * 250) / batchSize));
+            // }
+            //}
           } else {
             frappe.events.trigger('tag-vehicles', obj);
             const totalCb = total => {
