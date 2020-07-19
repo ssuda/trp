@@ -146,6 +146,10 @@ module.exports = class BaseDocument extends Observable {
     if (frappe.isServer && !this.isNew()) {
       let currentDoc = await frappe.db.get(this.doctype, this.name);
 
+      if (!currentDoc) {
+        return;
+      }
+
       //delete null or undefined in both the documents
       for (let field in currentDoc) {
         if (

@@ -392,11 +392,13 @@ export function getActionsForDocument(doc) {
     },
     condition: doc => !doc.isNew() && !doc.submitted && !doc.meta.isSingle,
     action: () =>
-      deleteDocWithPrompt(doc).then(res => {
-        if (res) {
-          router.push(`/list/${doc.doctype}`);
-        }
-      })
+      deleteDocWithPrompt(doc)
+        .then(res => {
+          if (res) {
+            router.push(`/list/${doc.doctype}`);
+          }
+        })
+        .catch(console.error)
   };
 
   let actions = [...(doc.meta.actions || []), deleteAction]
