@@ -94,7 +94,8 @@ module.exports = class BaseDocument extends Observable {
 
       let obj = {
         gstin,
-        deviceId
+        deviceId,
+        _deleted: false
       };
 
       for (let param in this) {
