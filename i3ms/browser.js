@@ -93,14 +93,13 @@ module.exports = function() {
   let page;
   let previousUrl;
   let globalDisconnectHandler;
+  let dlgMessage;
 
   async function createBrowser(headless) {
     console.log('process.env.SHOW_BROWSER  = ', process.env.SHOW_BROWSER);
 
     headless =
-      process.env.SHOW_BROWSER == undefined
-        ? !!headless
-        : !process.env.SHOW_BROWSER;
+      process.env.SHOW_BROWSER == undefined ? true : !process.env.SHOW_BROWSER;
 
     console.log('creating/connecting browser in headless mode', headless);
     if (!browser) {
@@ -135,6 +134,7 @@ module.exports = function() {
     //monitorInternet(page);
 
     page.on('dialog', async dialog => {
+      dlgMessage = dialog.message();
       console.log('the dialog message is', dialog.message());
       console.log('the dialog type is', dialog.type());
       try {
