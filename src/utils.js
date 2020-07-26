@@ -107,25 +107,25 @@ export function extractTrucks(text) {
   return [...new Set(Array.from(text.matchAll(trucksRegexp), m => m[0]))];
 }
 
-export async function connectToLocalDatabase(filepath) {
-  console.log('called local db connect', filepath);
+export async function connectToLocalDatabase(filePath) {
+  console.log('called local db connect', filePath);
   frappe.login('Administrator');
 
-  let files = config.get('files') || [];
-  console.log('files', files);
-  let file = files.find(file => file.filePath === filepath);
-  if (file && file.companyName && !filepath.includes(file.companyName)) {
-    //move file to company name
-    file.filePath = dbPath(file.companyName);
-    fs.renameSync(filepath, file.filePath);
-    filepath = file.filePath;
-    config.set('files', files);
-  }
+  // let files = config.get('files') || [];
+  // console.log('files', files);
+  // let file = files.find(file => file.filePath === filePath);
+  // if (file && file.companyName && !filePath.includes(file.companyName)) {
+  //   //move file to company name
+  //   file.filePath = dbPath(file.companyName);
+  //   fs.renameSync(filePath, file.filePath);
+  //   filePath = file.filePath;
+  //   config.set('files', files);
+  // }
 
-  console.log('before local db connect', filepath);
+  console.log('before local db connect', filePath);
 
   frappe.db = new SQLite({
-    dbPath: filepath
+    dbPath: filePath
   });
 
   frappe.db.typeMap.LongText = 'text';
@@ -137,29 +137,29 @@ export async function connectToLocalDatabase(filepath) {
   await postStart();
   frappe._turnOffSync = false;
 
-  console.log('after local db connect', filepath);
+  console.log('after local db connect', filePath);
 
-  if (filepath === ':memory:') {
+  if (filePath === ':memory:') {
     return;
   }
 
   // set file info in config
-  if (!file) {
-    files = [
-      {
-        companyName: frappe.AccountingSettings.companyName,
-        filePath: filepath
-      },
-      ...files
-    ];
-    config.set('files', files);
-  } else if (!file.companyName) {
-    file.companyName = frappe.AccountingSettings.companyName;
-    config.set('files', files);
-  }
+  // if (!file) {
+  //   files = [
+  //     {
+  //       companyName: frappe.AccountingSettings.companyName,
+  //       filePath
+  //     },
+  //     ...files
+  //   ];
+  // } else if (!file.companyName) {
+  //   file.companyName = frappe.AccountingSettings.companyName;
+  // }
+
+  // config.set('files', files);
 
   // set last selected file
-  config.set('lastSelectedFilePath', filepath);
+  config.set('lastSelectedFilePath', filePath);
   console.log('lastSelectedFilePath', config.get('lastSelectedFilePath', null));
 }
 
@@ -190,6 +190,14 @@ export function isNullOrUndefined(val) {
 
 export function dbPath(companyName) {
   return path.join(remote.getGlobal('userData'), `${companyName}.db`);
+}
+
+export function allDBPaths() {
+  const files = fs
+    .readdirSync(remote.getGlobal('userData'))
+    .filter(fn => fn.endsWith('.db'));
+  const names = files.map(fn => fn.replace(/\.db$/, ''));
+  return names;
 }
 
 export async function exportData(title, columns, rows = [], titleOnly = false) {

@@ -127,7 +127,6 @@ export default {
 
       if (config.get('createNewCompany', false)) {
         frappe.newCompany = config.get('createNewCompany');
-        config.set('createNewCompany', false);
       } else {
         const lastSelectedFilePath = config.get('lastSelectedFilePath', null);
         console.log('lastSelectedFilePath', lastSelectedFilePath);
@@ -159,6 +158,7 @@ export default {
 
       try {
         await connectToLocalDatabase(dbpath);
+        config.set('createNewCompany', false);
       } catch (ex) {
         console.error(ex);
       }

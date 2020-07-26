@@ -39,7 +39,10 @@
                   :df="meta.getField('numBrowsers')"
                   :value="doc.numBrowsers"
                   :showLabel="true"
-                  v-if="doc.action == 'tagging'"
+                  v-if="
+                    doc.action == 'tagging' &&
+                      frappe.currentUser.email != 'samba@spinbi.com'
+                  "
                   @change="value => doc.set('numBrowsers', value)"
                 />
 
@@ -52,13 +55,28 @@
                   @change="value => doc.set('taggingUrl', value)"
                 />
                 <FormControl
-                  v-if="doc.action == 'tagging'"
+                  v-if="
+                    doc.action == 'tagging' &&
+                      frappe.currentUser.email != 'samba@spinbi.com'
+                  "
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('truckList')"
                   :value="doc.truckList"
                   @change="value => doc.set('truckList', value)"
                 />
+                <FormControl
+                  v-if="doc.action == 'release' || doc.action == 'tagging'"
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('trucks')"
+                  :value="doc.trucks"
+                  placeholder="Paste the trucks"
+                  @change="value => doc.set('trucks', value)"
+                />
+              </div>
+
+              <div class="w-1/3">
                 <FormControl
                   v-if="doc.action == 'tagging'"
                   class="mt-4 text-base"
@@ -68,14 +86,24 @@
                   :showLabel="true"
                   @change="value => doc.set('isCloudTagging', value)"
                 />
+
                 <FormControl
-                  v-if="doc.action == 'release'"
+                  v-if="frappe.currentUser.email == 'samba@spinbi.com'"
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
-                  :df="meta.getField('trucks')"
-                  :value="doc.trucks"
-                  placeholder="Paste the trucks"
-                  @change="value => doc.set('trucks', value)"
+                  :df="meta.getField('username')"
+                  :value="doc.username"
+                  :show-label="true"
+                  @change="value => doc.set('username', value)"
+                />
+                <FormControl
+                  v-if="frappe.currentUser.email == 'samba@spinbi.com'"
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('password')"
+                  :value="doc.password"
+                  :show-label="true"
+                  @change="value => doc.set('password', value)"
                 />
               </div>
             </div>
@@ -193,12 +221,16 @@ export default {
 
   methods: {
     async onClick() {
+      let tempTaggingDoc;
+
       this.loading = true;
 
-      if (
-        !frappe.AccountingSettings.i3msUsername ||
-        !frappe.AccountingSettings.i3msPassword
-      ) {
+      const username =
+        this.doc.username || frappe.AccountingSettings.i3msUsername;
+      const password =
+        this.doc.password || frappe.AccountingSettings.i3msPassword;
+
+      if (!username || !password) {
         await showMessageDialog({
           description: this._('Please enter i3ms username/password.'),
           buttons: [
@@ -226,8 +258,8 @@ export default {
       }
 
       const credentials = {
-        username: frappe.AccountingSettings.i3msUsername,
-        password: frappe.AccountingSettings.i3msPassword
+        username,
+        password
       };
 
       const permit = pickPermitFields(this.doc.permit || {});
@@ -360,6 +392,7 @@ export default {
 
             input.gstin = frappe.AccountingSettings.gstin;
             input.deviceId = frappe.deviceId;
+            input.retry = !!this.doc.permit;
 
             const self = this;
             let firstTime = true;
@@ -380,7 +413,8 @@ export default {
                   const data = doc.data();
                   if (
                     data.name == input.name ||
-                    data.taggingUrl == input.taggingUrl
+                    data.taggingUrl == input.taggingUrl ||
+                    !(input.name || input.taggingUrl)
                   ) {
                     self.total =
                       (data.success || 0) + (data.failed || 0) + total;
@@ -394,41 +428,34 @@ export default {
                         buttons: [{ label: 'Ok' }]
                       });
 
+                      // delete tempTagging
+                      if (tempTaggingDoc) {
+                        await tempTaggingDoc.delete();
+                      }
+
                       refreshPermit(obj);
-                      self.$router.back();
+                      // if (frappe.currentUser.email != 'samba@spinbi.com') {
+                      //   self.$router.back();
+                      // }
                     }
                   }
                 }
                 firstTime = false;
               });
 
+            console.log('Adding cloud tagging input', input);
             input.trucks = trucks;
-            firestore.collection('i3msCloudTagging').add(input);
-
-            // const chunks = _.chunks(obj.trucks, 200);
-            // const delay = 400;
-
-            // for (let i = 0; i < chunks.length; ++i) {
-            //   input.trucks = chunks[i];
-            //   sqs.sendMessage(
-            //     frappe.globalConfig.awsConfig,
-            //     input,
-            //     delay * Math.floor(i / 4)
-            //   );
-            // const chunks = _.chunk(trucks, 250);
-            // let batchSize = Math.ceil(trucks.length / 4);
-
-            // if (batchSize < 1000) {
-            //     batchSize = 1000;
-            // }
-
-            // let delay = 300;
-
-            // for (let i = 0; i < chunks.length; i++) {
-            //     input.trucks = chunks[i];
-            //     sqs.sendMessage(frappe.globalConfig.awsConfig, input, delay * Math.floor((i * 250) / batchSize));
-            // }
-            //}
+            if (input.taggingUrl) {
+              await firestore.collection('i3msCloudTagging').add(input);
+            } else {
+              tempTaggingDoc = await firestore
+                .collection('tempTagging')
+                .add(input);
+            }
+            showMessageDialog({
+              description: `Submitted Tag request for ${input.trucks.length} for ${input.taggingUrl} Successfully`,
+              buttons: [{ label: 'Ok' }]
+            });
           } else {
             frappe.events.trigger('tag-vehicles', obj);
             const totalCb = total => {
@@ -456,6 +483,7 @@ export default {
                 description: `${this.success} Vehicles Tagged successfully`,
                 buttons: [{ label: 'Ok' }]
               });
+
               this.$router.back();
             });
           }

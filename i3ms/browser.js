@@ -1091,12 +1091,21 @@ module.exports = function() {
   }
 
   async function companyName() {
-    return page.$eval('.welcome', el =>
-      el.childNodes[0].textContent
-        .trim()
-        .replace(/^Wel *come/i, '')
-        .trim()
-    );
+    try {
+      const el = await page.$('.welcome');
+
+      if (el) {
+        return page.$eval('.welcome', el =>
+          el.childNodes[0].textContent
+            .trim()
+            .replace(/^Wel *come/i, '')
+            .trim()
+        );
+      }
+      return '';
+    } catch (ex) {
+      return '';
+    }
   }
 
   let credentials, globalHeadless;

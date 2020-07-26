@@ -38,6 +38,16 @@ module.exports = {
       default: 4
     },
     {
+      fieldname: 'username',
+      label: 'I3MS Username',
+      fieldtype: 'Data'
+    },
+    {
+      fieldname: 'password',
+      label: 'I3MS Password',
+      fieldtype: 'Password'
+    },
+    {
       fieldname: 'taggingUrl',
       label: 'Tagging Link',
       fieldtype: 'Data',

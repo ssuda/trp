@@ -84,31 +84,31 @@ export default {
 
         if (frappe.db && !user.local) {
           console.log('Fetching spinbi user');
-          try {
-            user.local = await frappe.getDoc('SpinBiUser', user.email);
-          } catch (ex) {}
+          // try {
+          //   user.local = await frappe.getDoc('SpinBiUser', user.email);
+          // } catch (ex) {}
 
-          if (!user.local) {
-            const snapshot = await firestore
-              .collection('SpinBiUser')
-              .doc(user.email)
-              .get();
+          // if (!user.local) {
+          const snapshot = await firestore
+            .collection('SpinBiUser')
+            .doc(user.email)
+            .get();
 
-            if (snapshot && snapshot.exists) {
-              user.local = snapshot.data();
-              const companies = user.local.companies.filter(Boolean);
-              console.log('companies', companies);
-              if (companies) {
-                config.set(
-                  'files',
-                  companies.map(c => ({
-                    companyName: c,
-                    filePath: dbPath(c)
-                  }))
-                );
-              }
+          if (snapshot && snapshot.exists) {
+            user.local = snapshot.data();
+            const companies = user.local.companies.filter(Boolean);
+            console.log('companies', companies);
+            if (companies) {
+              config.set(
+                'files',
+                companies.map(c => ({
+                  companyName: c,
+                  filePath: dbPath(c)
+                }))
+              );
             }
           }
+          //}
 
           console.log('spinbiuser', user.local);
 
@@ -219,10 +219,11 @@ export default {
     );
 
     await fbuser.reauthenticateWithCredential(credential);
+    await this.updateUsersWithNewCompanyNameAndGstin(user);
+
     frappe.currentUser && (frappe.currentUser.remote = null);
     fbuser = await this.getCurrentUser(user.gstin);
 
-    await this.updateUsersWithNewCompanyNameAndGstin(user);
     console.log(frappe.currentUser);
     return fbuser;
   },
@@ -280,6 +281,14 @@ export default {
   },
 
   async updateUsersWithNewCompanyNameAndGstin(user) {
+    if (
+      !frappe.AccountingSettings.gstin ||
+      !frappe.AccountingSettings.companyName
+    ) {
+      console.log('gstin/companyname not set in updateuser');
+      return;
+    }
+
     const remoteUser = await firestore
       .collection('SpinBiUser')
       .doc(user.email)

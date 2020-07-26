@@ -59,6 +59,8 @@ import { remote } from 'electron';
 import frappe from 'frappejs';
 import glob from 'glob';
 
+import { dbPath, allDBPaths } from '@/utils';
+
 import sidebarConfig from '../sidebarConfig';
 import WindowControls from './WindowControls';
 import FormControl from '@/components/Controls/FormControl';
@@ -182,16 +184,14 @@ export default {
     },
 
     populateCompanies() {
-      const files = config.get('files', []);
-      this.companies = files.reduce((p, file) => {
-        if (file.companyName) {
-          p[file.companyName] = () => this.selectCompany(file.filePath);
-        }
+      const names = [...allDBPaths(), ...frappe.currentUser.local.companies];
+      this.companies = names.reduce((p, companyName) => {
+        p[companyName] = () => this.selectCompany(dbPath(companyName));
         return p;
       }, {});
       this.companyName = frappe.AccountingSettings.companyName;
       this.companies['Create'] = () => this.createNewCompany();
-      console.log('files', files, this.companies, this.companyName);
+      console.log(this.companies, this.companyName);
     }
   }
 };
