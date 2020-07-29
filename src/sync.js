@@ -78,7 +78,7 @@ async function readLatestTP(lastSnapshot) {
 }
 
 async function processRecord(docs, model) {
-  console.log('Syncing', model, docs.length);
+  console.log('Syncing from firestore', model, docs.length);
 
   await frappe.db.sql('PRAGMA foreign_keys = OFF');
   for (let doc of docs) {
@@ -198,7 +198,12 @@ async function syncFromFirebase() {
 
   console.log(gstin, lastSnapshot, timestamp);
 
-  for (let model in frappe.models) {
+  const models = Object.keys(frappe.models).filter(
+    k => k != 'AccountingSettings'
+  );
+  models.unshift('AccountingSettings');
+
+  for (let model of models) {
     if (
       [
         'Tax',

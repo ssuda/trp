@@ -88,7 +88,23 @@
                 />
 
                 <FormControl
-                  v-if="frappe.currentUser.email == 'samba@spinbi.com'"
+                  v-if="
+                    doc.action == 'tagging' &&
+                      frappe.currentUser.email == 'samba@spinbi.com'
+                  "
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('gstin')"
+                  :value="doc.gstin"
+                  :show-label="true"
+                  @change="value => doc.set('gstin', value)"
+                />
+
+                <FormControl
+                  v-if="
+                    doc.action == 'tagging' &&
+                      frappe.currentUser.email == 'samba@spinbi.com'
+                  "
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('username')"
@@ -97,7 +113,10 @@
                   @change="value => doc.set('username', value)"
                 />
                 <FormControl
-                  v-if="frappe.currentUser.email == 'samba@spinbi.com'"
+                  v-if="
+                    doc.action == 'tagging' &&
+                      frappe.currentUser.email == 'samba@spinbi.com'
+                  "
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('password')"
@@ -390,7 +409,7 @@ export default {
               'taggingUrl'
             ]);
 
-            input.gstin = frappe.AccountingSettings.gstin;
+            input.gstin = this.doc.gstin || frappe.AccountingSettings.gstin;
             input.deviceId = frappe.deviceId;
             input.retry = !!this.doc.permit;
 
@@ -400,54 +419,57 @@ export default {
             let total = this.total;
             let failed = this.failed;
 
-            firestore
-              .collection('i3msCloudTaggingResult')
-              .where('gstin', '==', input.gstin)
-              .where('deviceId', '==', input.deviceId)
-              .onSnapshot(async function(querySnapshot) {
-                for (let doc of querySnapshot.docs) {
-                  if (firstTime) {
-                    doc.ref.delete();
-                    continue;
-                  }
-                  const data = doc.data();
-                  if (
-                    data.name == input.name ||
-                    data.taggingUrl == input.taggingUrl ||
-                    !(input.name || input.taggingUrl)
-                  ) {
-                    self.total =
-                      (data.success || 0) + (data.failed || 0) + total;
-                    self.failed = (data.failed || 0) + failed;
+            if (input.taggingUrl) {
+              firestore
+                .collection('i3msCloudTaggingResult')
+                .where('gstin', '==', input.gstin)
+                .where('deviceId', '==', input.deviceId)
+                .onSnapshot(async function(querySnapshot) {
+                  for (let doc of querySnapshot.docs) {
+                    if (firstTime) {
+                      doc.ref.delete();
+                      continue;
+                    }
+                    const data = doc.data();
+                    if (
+                      data.name == input.name ||
+                      data.taggingUrl == input.taggingUrl ||
+                      !(input.name || input.taggingUrl)
+                    ) {
+                      self.total =
+                        (data.success || 0) + (data.failed || 0) + total;
+                      self.failed = (data.failed || 0) + failed;
 
-                    if (data.completed) {
-                      clearInterval(timerInterval);
-                      self.loading = false;
-                      await showMessageDialog({
-                        description: `${self.success} Vehicles Tagged successfully`,
-                        buttons: [{ label: 'Ok' }]
-                      });
+                      if (data.completed) {
+                        clearInterval(timerInterval);
+                        self.loading = false;
+                        await showMessageDialog({
+                          description: `${self.success} Vehicles Tagged successfully`,
+                          buttons: [{ label: 'Ok' }]
+                        });
 
-                      // delete tempTagging
-                      if (tempTaggingDoc) {
-                        await tempTaggingDoc.delete();
+                        // delete tempTagging
+                        if (tempTaggingDoc) {
+                          await tempTaggingDoc.delete();
+                        }
+
+                        refreshPermit(obj);
+                        // if (frappe.currentUser.email != 'samba@spinbi.com') {
+                        //   self.$router.back();
+                        // }
                       }
-
-                      refreshPermit(obj);
-                      // if (frappe.currentUser.email != 'samba@spinbi.com') {
-                      //   self.$router.back();
-                      // }
                     }
                   }
-                }
-                firstTime = false;
-              });
+                  firstTime = false;
+                });
+            }
 
             console.log('Adding cloud tagging input', input);
             input.trucks = trucks;
             if (input.taggingUrl) {
               await firestore.collection('i3msCloudTagging').add(input);
             } else {
+              this.loading = false;
               tempTaggingDoc = await firestore
                 .collection('tempTagging')
                 .add(input);

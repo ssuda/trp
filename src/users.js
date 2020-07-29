@@ -21,6 +21,13 @@ async function getCompanyInfo(gstin) {
     .get();
 }
 
+async function getAccountingSettings(gstin) {
+  return firestore
+    .collection('AccountingSettings')
+    .doc(`${gstin}_AccountingSettings`)
+    .get();
+}
+
 async function getCompanyInfoByI3msUsername(i3msUsername) {
   return firestore
     .collection('AccountingSettings')
@@ -121,6 +128,7 @@ export default {
           console.log('Fetching company info');
 
           user.remote = await getCompanyInfo(gstin);
+          user.accountingSettings = await getAccountingSettings(gstin);
 
           if (user.remote.get('billingPeriodEnd')) {
             let now = DateTime.local();

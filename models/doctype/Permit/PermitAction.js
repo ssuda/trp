@@ -73,6 +73,11 @@ module.exports = {
       placeholder: 'Paste Each Truck in New Line'
     },
     {
+      fieldname: 'gstin',
+      label: 'GSTN',
+      fieldtype: 'Data'
+    },
+    {
       fieldname: 'action',
       label: 'Action',
       fieldtype: 'Data',

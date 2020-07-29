@@ -467,7 +467,12 @@ export async function syncDoc(data) {
     }
 
     console.log('Syncing single', data.doctype, data, finalData);
-    return frappe.db.updateSingle(data.doctype, finalData);
+
+    if (data.doctype === 'AccountingSettings') {
+      return frappe.AccountingSettings.update(finalData);
+    } else {
+      return frappe.db.updateSingle(data.doctype, finalData);
+    }
   }
 
   console.log('Syncing record', data.doctype);
