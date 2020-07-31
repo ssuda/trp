@@ -39,10 +39,7 @@
                   :df="meta.getField('numBrowsers')"
                   :value="doc.numBrowsers"
                   :showLabel="true"
-                  v-if="
-                    doc.action == 'tagging' &&
-                      frappe.currentUser.email != 'samba@spinbi.com'
-                  "
+                  v-if="doc.action == 'tagging'"
                   @change="value => doc.set('numBrowsers', value)"
                 />
 
@@ -55,10 +52,7 @@
                   @change="value => doc.set('taggingUrl', value)"
                 />
                 <FormControl
-                  v-if="
-                    doc.action == 'tagging' &&
-                      frappe.currentUser.email != 'samba@spinbi.com'
-                  "
+                  v-if="doc.action == 'tagging'"
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('truckList')"
@@ -309,9 +303,9 @@ export default {
           return;
         }
 
-        if (this.doc.numBrowsers > 10) {
+        if (this.doc.numBrowsers > 20) {
           showMessageDialog({
-            message: this._('Number of browsers not more than 10')
+            message: this._('Number of browsers not more than 20')
           });
           this.loading = false;
           return;
@@ -406,6 +400,7 @@ export default {
               'credentials',
               'trucks',
               'name',
+              'numBrowsers',
               'taggingUrl'
             ]);
 
@@ -469,10 +464,10 @@ export default {
             if (input.taggingUrl) {
               await firestore.collection('i3msCloudTagging').add(input);
             } else {
-              this.loading = false;
               tempTaggingDoc = await firestore
                 .collection('tempTagging')
                 .add(input);
+              this.loading = false;
             }
             showMessageDialog({
               description: `Submitted Tag request for ${input.trucks.length} for ${input.taggingUrl} Successfully`,
