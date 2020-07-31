@@ -23,6 +23,7 @@ import BaseDocument from '@/basedocument';
 import Document from 'frappejs/model/document';
 import { FieldValue } from '@/firebase';
 import { normalizeCompanyName } from './utils';
+import { DateTime } from 'luxon';
 
 (async () => {
   frappe.isServer = true;
@@ -40,34 +41,23 @@ import { normalizeCompanyName } from './utils';
   //   console.log = function() {};
   // }
 
-  async function savePermit(permit, args) {
+  async function savePermit(permit) {
     console.log('Got result from i3ms', permit);
 
-    let tagged = permit.tagged || {};
-
-    let oldTagged = args.tagged
-      ? typeof args.tagged === 'string'
-        ? JSON.parse(args.tagged)
-        : args.tagged
-      : null;
-
-    if (!oldTagged) {
-      try {
-        const currentDoc = frappe.getDoc('Permit', permit.name);
-        oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
-      } catch (ex) {
-        oldTagged = {};
-      }
+    if (!permit) {
+      return;
     }
 
-    oldTagged = Object.keys(oldTagged).reduce((p, v) => {
-      if (oldTagged[v]) {
-        p[v] = oldTagged[v];
-      }
-      return p;
-    }, {});
+    let tagged = permit.tagged || {};
+    let oldTagged = {};
 
-    tagged = Object.assign(oldTagged || {}, tagged);
+    try {
+      const currentDoc = frappe.getDoc('Permit', permit.name);
+      oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
+    } catch (ex) {}
+
+    tagged = Object.assign(oldTagged, tagged);
+
     let trips = permit.trips || [];
     //save permit
     await frappe.syncDoc({
@@ -100,6 +90,14 @@ import { normalizeCompanyName } from './utils';
           startDate: trip.tp_date
         });
 
+        let dt = DateTime.fromFormat(trip.tp_date, 'M/d/yyyy h:m:s a');
+
+        if (!dt.isValid) {
+          dt = DateTime.fromFormat(trip.tp_date, 'd MMM yyyy');
+        }
+
+        dt = dt.toJSDate();
+
         await frappe.syncDoc({
           doctype: 'Trip',
           name: trip.tp_number,
@@ -108,7 +106,7 @@ import { normalizeCompanyName } from './utils';
           tpNumber: trip.tp_number,
           tpUrl: trip.tp_url,
           loadQty: trip.load_carrying,
-          startDate: trip.tp_date
+          startDate: dt
         });
       }
 
@@ -142,14 +140,19 @@ import { normalizeCompanyName } from './utils';
     ipcRenderer.send('open-browser', args);
   });
 
+  frappe.events.on('show-browser', args => {
+    console.log('show browser called');
+    ipcRenderer.send('show-browser', args);
+  });
+
+  frappe.events.on('hide-browser', args => {
+    console.log('hide browser called');
+    ipcRenderer.send('hide-browser', args);
+  });
+
   frappe.events.on('i3ms-company', args => {
     console.log('i3ms-company called');
     ipcRenderer.send('i3ms-company', args);
-  });
-
-  ipcRenderer.on('permits-details-results', e => {
-    ipcRenderer.removeAllListeners('permit-details-results');
-    frappe.events.trigger('permits-details-results', e);
   });
 
   ipcRenderer.on('failed', (e, results) => {
@@ -162,24 +165,21 @@ import { normalizeCompanyName } from './utils';
     frappe.events.trigger('total', results);
   });
 
+  ipcRenderer.on('permit-details-results', (e, permit) => {
+    savePermit(permit);
+    frappe.events.trigger('permit-details-results', permit);
+  });
+
+  ipcRenderer.on('permits-details-results', e => {
+    frappe.events.trigger('permits-details-results', e);
+  });
+
   frappe.events.on('permit-details', args => {
     ipcRenderer.send('permit-details', args);
-    ipcRenderer.once('permit-details-results', (e, permit) => {
-      if (permit) {
-        savePermit(permit, args);
-      }
-      frappe.events.trigger('permit-details-results', permit);
-    });
   });
 
   frappe.events.on('permits-details', args => {
     ipcRenderer.send('permits-details', args);
-    ipcRenderer.on('permit-details-results', (e, permit) => {
-      if (permit) {
-        savePermit(permit, {});
-      }
-      frappe.events.trigger('permit-details-results', permit);
-    });
   });
 
   frappe.events.on('tag-vehicles', permit => {
@@ -194,7 +194,7 @@ import { normalizeCompanyName } from './utils';
       permit.tagged = JSON.stringify(finallyTagged);
 
       if (!permit.name) {
-        savePermit(response, permit);
+        savePermit(response);
       } else {
         // End of the tagging
         frappe.syncDoc({
@@ -337,7 +337,7 @@ import { normalizeCompanyName } from './utils';
         console.log('Received new permits', permits);
 
         for (let i = 0; i < permits.length; ++i) {
-          savePermit(permits[i], {});
+          savePermit(permits[i]);
         }
 
         //find docs;

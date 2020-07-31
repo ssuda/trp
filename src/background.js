@@ -302,6 +302,18 @@ ipcMain.on('auto-tagging', (event, args) => {
   newPermits(args, event.sender);
 });
 
+ipcMain.on('show-browser', async (event, args) => {
+  console.log('showing browsers');
+  await disconnect();
+  process.env.SHOW_BROWSER = true;
+});
+
+ipcMain.on('hide-browser', async (event, args) => {
+  console.log('hiding browsers');
+  await disconnect();
+  delete process.env.SHOW_BROWSER;
+});
+
 ipcMain.on('refresh-permits', (event, args) => {
   refreshPermits(args, event.sender);
 });

@@ -27,6 +27,7 @@
                   :df="meta.getField('i3msUsername')"
                   :value="doc.i3msUsername"
                   :show-label="true"
+                  :readOnly="frappe.currentUser.email != 'samba@spinbi.com'"
                   @change="value => setValue('i3msUsername', value)"
                 />
                 <FormControl

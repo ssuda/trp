@@ -6,8 +6,9 @@
         <SearchBar class="ml-2" />
       </template>
     </PageHeader>
-    <div class="px-8">
-      <div class="my-10 border-t" />
+    <div class="px-8 flex-1">
+      <div ref="datatable" class="border-b mt-4"></div>
+      <div class="my-10" />
       <TripStats />
       <!-- <div class="border-t" />
       <Cashflow />
@@ -29,11 +30,14 @@
 <script>
 import PageHeader from '@/components/PageHeader';
 import SearchBar from '@/components/SearchBar';
+import DataTable from 'frappe-datatable';
+import { DateTime } from 'luxon';
 // import Cashflow from './Cashflow';
 // import UnpaidInvoices from './UnpaidInvoices';
 // import ProfitAndLoss from './ProfitAndLoss';
 // import Expenses from './Expenses';
 import TripStats from './TripStats';
+import tripConfig from '../../../reports/Trip/viewConfig';
 
 import frappe from 'frappejs';
 
@@ -56,6 +60,76 @@ export default {
     ) {
       this.$router.push('/i3msAccount');
     }
+
+    const d = DateTime.local().toFormat('yyyy-LL-dd');
+
+    this.filters = {
+      dateRange: 'today',
+      fromDate: d,
+      toDate: d
+    };
+
+    this.dimensions = {
+      permit: true,
+      source: true,
+      transportedFrom: true
+    };
+  },
+
+  activated() {
+    if (!this.datatable) {
+      this.datatable = new DataTable(this.$refs.datatable, {
+        columns: this.columns,
+        layout: 'ratio'
+      });
+    }
+    this.fetchReportData();
+  },
+
+  computed: {
+    columns() {
+      return tripConfig.getColumns(this.dimensions, this.filters);
+    }
+  },
+
+  methods: {
+    async fetchReportData() {
+      this.loading = true;
+      let data = await frappe.call({
+        method: tripConfig.method,
+        args: {
+          ...this.filters,
+          dimensions: this.dimensions
+        }
+      });
+
+      let rows;
+      if (data.rows) {
+        rows = data.rows;
+      } else {
+        rows = data;
+      }
+
+      if (!rows) {
+        rows = [];
+      }
+
+      this.loading = false;
+      this.datatable.refresh(
+        rows.map(row => this.columns.map(c => row[c.fieldname])),
+        this.columns.map(c => ({
+          name: c.name || c.label,
+          editable: false,
+          resizable: false,
+          focusable: false,
+          sortable: true
+        }))
+      );
+    }
   }
 };
 </script>
+
+<style scoped>
+@import '../../styles/frappe-datatable.css';
+</style>

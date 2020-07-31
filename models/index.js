@@ -77,6 +77,5 @@ module.exports = {
   GetStarted: require('./doctype/GetStarted/GetStarted'),
   AccountingLedgerEntry: require('./doctype/AccountingLedgerEntry/AccountingLedgerEntry.js'),
   AutoTagging: require('./doctype/Permit/AutoTagging'),
-  PermitRequest: require('./doctype/Permit/PermitRequest'),
-  Driver: require('./doctype/Trip/Driver')
+  PermitRequest: require('./doctype/Permit/PermitRequest')
 };

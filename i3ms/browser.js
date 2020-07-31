@@ -93,15 +93,21 @@ module.exports = function() {
   let page;
   let previousUrl;
   let globalDisconnectHandler;
+  let dlgMessage;
 
   async function createBrowser(headless) {
+    console.log('process.env.SHOW_BROWSER  = ', process.env.SHOW_BROWSER);
+
+    headless =
+      process.env.SHOW_BROWSER == undefined ? true : !process.env.SHOW_BROWSER;
+
     console.log('creating/connecting browser in headless mode', headless);
     if (!browser) {
       browser = await puppeteer.launch({
-        headless: !!headless,
-        args: browserArgs(!!headless),
+        headless,
+        args: browserArgs(headless),
         executablePath: findChrome(),
-        defaultViewport: defaultViewport(!!headless),
+        defaultViewport: defaultViewport(headless),
         timeout: 0
       });
       console.log('browser created');
@@ -128,6 +134,7 @@ module.exports = function() {
     //monitorInternet(page);
 
     page.on('dialog', async dialog => {
+      dlgMessage = dialog.message();
       console.log('the dialog message is', dialog.message());
       console.log('the dialog type is', dialog.type());
       try {
@@ -299,30 +306,43 @@ module.exports = function() {
   }
 
   async function tagVehicle(href, truckNo) {
-    console.log('Trying to tag vehicle', truckNo);
+    //console.log('Trying to tag vehicle', truckNo);
     let reason = '';
     try {
-      console.log('waiting for vehicle no box', truckNo);
+      //console.log('waiting for vehicle no box', truckNo);
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
-      console.log('checking disabled box', truckNo);
-      await page.$eval('#txtVehicleNo', el => (el.disabled = false));
-      await typeInTextBox('#txtVehicleNo', truckNo);
+      //console.log('checking disabled box', truckNo);
+      await page.$eval(
+        '#txtVehicleNo',
+        (el, truckNo) => {
+          el.disabled = false;
+          el.value = truckNo;
+          //document.querySelector('#btnsearch').click();
+        },
+        truckNo
+      );
+      //await typeInTextBox('#txtVehicleNo', truckNo);
       //await page.click('#btnsearch');
-      console.log('clicking btnsearch', truckNo);
+      //console.log('clicking btnsearch', truckNo);
 
       await navigationClickHelper('#btnsearch'); // Clicking the link will indirectly cause a navigation
 
       // await page.waitForNavigation();
-      console.log('waiting for radio or error message', truckNo);
+      //console.log('waiting for radio or error message', truckNo);
 
       const r = await promiseAny(
         page.waitForSelector('#rdo_GPS_0', { timeout: 30000 }),
         page.waitForSelector('#lblMsg')
       );
 
-      console.log('Is Error? ', r == 2);
+      //console.log('Is Error? ', r == 2);
 
       if (r == 1) {
+        // await page.evaluate(() => {
+        //   document.querySelector('#rdo_GPS_0').checked = true;
+        //   document.querySelector('#Rdo_VTS_0').checked = true;
+        //   document.querySelector('#chkClick').checked = true;
+        // });
         await setRadioButton('#rdo_GPS_0');
         // await navigationClickHelper('#rdo_GPS_0');
         await setRadioButton('#Rdo_VTS_0');
@@ -333,11 +353,12 @@ module.exports = function() {
         await page.click('#chkClick');
         // await page.click('#btnSubmit');
         await navigationClickHelper('#btnSubmit'); // Clicking the link will indirectly cause a navigation
+        await delay(100);
       } else {
         reason = page.$eval('#lblMsg', el => el.innerText);
 
         if (/something wrong/i.test(reason)) {
-          console.log('failed vehicle retrying...', truckNo);
+          //console.log('failed vehicle retrying...', truckNo);
           return tagVehicle(href, truckNo);
         }
       }
@@ -422,7 +443,10 @@ module.exports = function() {
               //await delay(2000);
               await page.click('#btnAdd');
             }
-            await page.click('#btnRelease');
+
+            if (await page.$('#btnRelease')) {
+              await page.click('#btnRelease');
+            }
             await delay(2000);
             r = _.difference(r, trucks);
           }
@@ -1067,12 +1091,21 @@ module.exports = function() {
   }
 
   async function companyName() {
-    return page.$eval('.welcome', el =>
-      el.childNodes[0].textContent
-        .trim()
-        .replace(/^Wel *come/i, '')
-        .trim()
-    );
+    try {
+      const el = await page.$('.welcome');
+
+      if (el) {
+        return page.$eval('.welcome', el =>
+          el.childNodes[0].textContent
+            .trim()
+            .replace(/^Wel *come/i, '')
+            .trim()
+        );
+      }
+      return '';
+    } catch (ex) {
+      return '';
+    }
   }
 
   let credentials, globalHeadless;
@@ -1095,6 +1128,36 @@ module.exports = function() {
     if (returnCompany) {
       return companyName();
     }
+  }
+
+  async function dailyI3msData(date) {
+    await browsePage(
+      `https://i3ms.orissaminerals.gov.in/I3MS/ePass/TruckWiseReportDtls.aspx?fromdate=${date}&todate=${date}&Sourcetype=0`
+    );
+    console.log('Waiting for lbtnAll');
+    await page.waitForSelector('#lbtnAll');
+    console.log('Clicking lbtnAll');
+    await navigationClickHelper('#lbtnAll', 600000);
+    console.log('Clicking lbtnAll');
+    await navigationClickHelper('#lbtnAll', 600000);
+    console.log('Extracting table');
+    return extractTable('#grd_itemlist');
+  }
+
+  async function i3msVehicles() {
+    await browsePage(
+      `https://i3ms.orissaminerals.gov.in/website/RegisteredVehicleReport.aspx`
+    );
+    console.log('Waiting for lbtnAll');
+    await page.waitForSelector('#lbtnAll');
+    console.log('Clicking lbtnAll');
+    await navigationClickHelper('#lbtnAll', 0);
+    // console.log('Clicking lbtnAll');
+    // await navigationClickHelper('#lbtnAll', 600000);
+    console.log('Extracting table');
+    await page.waitForSelector('#grvVeiwVehicleReg', { timeout: 0 });
+    await delay(180000);
+    return extractTable('#grvVeiwVehicleReg');
   }
 
   function getBrowser() {
@@ -1124,6 +1187,8 @@ module.exports = function() {
     disconnect,
     receiveConfirm,
     receiveMineral,
-    openBrowser
+    openBrowser,
+    dailyI3msData,
+    i3msVehicles
   };
 };

@@ -33,15 +33,31 @@ module.exports = {
     },
     {
       fieldname: 'numBrowsers',
-      label: 'Number of Browsers (1 to 10)',
+      label: 'Number of Browsers (1 to 20)',
       fieldtype: 'Data',
       default: 4
+    },
+    {
+      fieldname: 'username',
+      label: 'I3MS Username',
+      fieldtype: 'Data'
+    },
+    {
+      fieldname: 'password',
+      label: 'I3MS Password',
+      fieldtype: 'Password'
     },
     {
       fieldname: 'taggingUrl',
       label: 'Tagging Link',
       fieldtype: 'Data',
       placeholder: 'Tagging Link'
+    },
+    {
+      fieldname: 'isCloudTagging',
+      label: 'Tagging in Server? (Tagging will happen remotely in cloud)',
+      fieldtype: 'Check',
+      placeholder: 'Tagging in Server?'
     },
     {
       fieldname: 'truckList',
@@ -55,6 +71,11 @@ module.exports = {
       label: 'Trucks',
       fieldtype: 'LongText',
       placeholder: 'Paste Each Truck in New Line'
+    },
+    {
+      fieldname: 'gstin',
+      label: 'GSTN',
+      fieldtype: 'Data'
     },
     {
       fieldname: 'action',

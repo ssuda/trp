@@ -5,7 +5,7 @@ const { firestore, FieldValue } = require('@/firebase');
 
 const { machineIdSync } = require('node-machine-id');
 
-let deviceId = machineIdSync({ original: true });
+let deviceId = (frappe.deviceId = machineIdSync({ original: true }));
 
 const { isNullOrUndefined } = require('@/utils');
 
@@ -69,7 +69,14 @@ module.exports = class BaseDocument extends Observable {
           _deleted: true
         });
     } else if (event === 'afterUpdate' || event === 'afterInsert') {
-      if (this.doctype === 'Trip' && !this.endDate) {
+      if (
+        this.doctype === 'Trip' &&
+        this.type == 'I3MS' &&
+        !(
+          this.meta.editableFields &&
+          this.meta.editableFields.some(f => this[f])
+        )
+      ) {
         return;
       }
 
@@ -87,7 +94,8 @@ module.exports = class BaseDocument extends Observable {
 
       let obj = {
         gstin,
-        deviceId
+        deviceId,
+        _deleted: false
       };
 
       for (let param in this) {
@@ -138,6 +146,10 @@ module.exports = class BaseDocument extends Observable {
   async compareWithCurrentDoc() {
     if (frappe.isServer && !this.isNew()) {
       let currentDoc = await frappe.db.get(this.doctype, this.name);
+
+      if (!currentDoc) {
+        return;
+      }
 
       //delete null or undefined in both the documents
       for (let field in currentDoc) {

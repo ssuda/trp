@@ -116,7 +116,8 @@ module.exports = {
       fieldname: 'i3msUsername',
       label: 'I3MS UserName',
       fieldtype: 'Data',
-      placeholder: 'I3MS Username'
+      placeholder: 'I3MS Username',
+      required: 1
     },
     {
       fieldname: 'i3msPassword',

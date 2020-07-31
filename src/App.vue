@@ -46,7 +46,8 @@ import {
   connectToLocalDatabase,
   showMessageDialog,
   dbPath,
-  delay
+  delay,
+  syncDoc
 } from '@/utils';
 import { getMainWindowSize } from '@/screenSize';
 import config from '@/config';
@@ -79,7 +80,7 @@ export default {
       let size = {
         Desk: [width, height],
         DatabaseSelector: [600, 600],
-        SetupWizard: [600, 650],
+        SetupWizard: [600, 670],
         Settings: [460, 577],
         LoginRegister: [600, 600]
       }[value];
@@ -89,6 +90,9 @@ export default {
       if (size.length) {
         win.setSize(...size);
         win.setResizable(resizable);
+        if (resizable) {
+          win.maximize();
+        }
       }
     }
   },
@@ -124,7 +128,6 @@ export default {
 
       if (config.get('createNewCompany', false)) {
         frappe.newCompany = config.get('createNewCompany');
-        config.set('createNewCompany', false);
       } else {
         const lastSelectedFilePath = config.get('lastSelectedFilePath', null);
         console.log('lastSelectedFilePath', lastSelectedFilePath);
@@ -156,6 +159,7 @@ export default {
 
       try {
         await connectToLocalDatabase(dbpath);
+        config.set('createNewCompany', false);
       } catch (ex) {
         console.error(ex);
       }
@@ -166,18 +170,33 @@ export default {
       isLogin,
       comingFromSetupWizard
     ) {
-      const { setupComplete } = frappe.AccountingSettings || {};
+      let { setupComplete } = frappe.AccountingSettings || {};
+
+      let user;
+      try {
+        user = await Users.getCurrentUser(null, true);
+        if (
+          !setupComplete &&
+          user &&
+          user.accountingSettings.exists &&
+          user.accountingSettings.get('setupComplete')
+        ) {
+          setupComplete = 1;
+        }
+      } catch (ex) {
+        console.error(ex);
+      }
+
       console.log('setupcomplete', setupComplete);
       if (!setupComplete && !isLogin) {
         this.activeScreen = 'SetupWizard';
       } else if (this.$route.path.startsWith('/settings')) {
         this.activeScreen = 'Settings';
       } else {
-        let user;
-        try {
-          user = await Users.getCurrentUser(null, true);
-        } catch (ex) {
-          console.error(ex);
+        if (config.get('authChanged', true)) {
+          await Users.logout();
+          user = null;
+          config.set('authChanged', false);
         }
 
         console.log('current user', user);
@@ -189,6 +208,30 @@ export default {
             dbPath(user.remote.get('name'))
           );
           config.set('lastSelectedFilePath', dbPath(user.remote.get('name')));
+          console.log(
+            'Setitng AccountingSettings from firestore',
+            user.accountingSettings.data()
+          );
+          await syncDoc({
+            doctype: 'AccountingSettings',
+            ...user.accountingSettings.data()
+          });
+          frappe.events.trigger('reload-main-window');
+          return;
+        } else if (
+          !frappe.AccountingSettings.i3msUsername &&
+          user &&
+          user.accountingSettings &&
+          user.accountingSettings.get('i3msUsername')
+        ) {
+          console.log(
+            'Setitng AccountingSettings from firestore',
+            user.accountingSettings.data()
+          );
+          await syncDoc({
+            doctype: 'AccountingSettings',
+            ...user.accountingSettings.data()
+          });
           frappe.events.trigger('reload-main-window');
           return;
         }
@@ -319,7 +362,15 @@ export default {
             );
           }
 
-          this.openBrowser();
+          if (!frappe.AccountingSettings.gstin) {
+            frappe.AccountingSettings.update({
+              gstin: frappe.currentUser && frappe.currentUser.gstin
+            });
+          }
+
+          if (process.env.NODE_ENV !== 'development') {
+            this.openBrowser();
+          }
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';
@@ -355,7 +406,7 @@ export default {
         };
 
         // setup auto tagging
-        frappe.events.trigger('auto-tagging');
+        //frappe.events.trigger('auto-tagging');
 
         frappe.events.trigger('open-browser', {
           credentials,

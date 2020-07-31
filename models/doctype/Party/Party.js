@@ -26,6 +26,18 @@ module.exports = {
     //   placeholder: 'ABCDE1234F'
     // },
     {
+      fieldname: 'gstin',
+      label: 'GSTIN No.',
+      fieldtype: 'Data',
+      placeholder: '29AAGCB7383J1Z1'
+    },
+    {
+      fieldname: 'pan',
+      label: 'PAN',
+      fieldtype: 'Data',
+      placeholder: 'ABCDE1234F'
+    },
+    {
       fieldname: 'image',
       label: 'Image',
       fieldtype: 'AttachImage'

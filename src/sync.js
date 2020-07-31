@@ -78,7 +78,7 @@ async function readLatestTP(lastSnapshot) {
 }
 
 async function processRecord(docs, model) {
-  console.log('Syncing', model, docs.length);
+  console.log('Syncing from firestore', model, docs.length);
 
   await frappe.db.sql('PRAGMA foreign_keys = OFF');
   for (let doc of docs) {
@@ -88,7 +88,7 @@ async function processRecord(docs, model) {
 
     doc = doc.data();
 
-    const { setupComplete, i3msUsername, i3msPassword } =
+    const { setupComplete, i3msUsername, i3msPassword, i3msCompanyName } =
       frappe.AccountingSettings || {};
 
     if (setupComplete && doc.deviceId == deviceId) continue;
@@ -112,8 +112,17 @@ async function processRecord(docs, model) {
       } else {
         console.log('Syncing from firestore', doc);
         if (model === 'AccountingSettings') {
-          doc.i3msUsername = i3msUsername;
-          doc.i3msPassword = i3msPassword;
+          if (i3msUsername) {
+            doc.i3msUsername = i3msUsername;
+          }
+
+          if (i3msPassword) {
+            doc.i3msPassword = i3msPassword;
+          }
+
+          if (i3msCompanyName) {
+            doc.i3msCompanyName = i3msCompanyName;
+          }
         }
         await syncDoc({
           doctype: model,
@@ -189,7 +198,12 @@ async function syncFromFirebase() {
 
   console.log(gstin, lastSnapshot, timestamp);
 
-  for (let model in frappe.models) {
+  const models = Object.keys(frappe.models).filter(
+    k => k != 'AccountingSettings'
+  );
+  models.unshift('AccountingSettings');
+
+  for (let model of models) {
     if (
       [
         'Tax',

@@ -11,7 +11,7 @@
         </h6> -->
         <FormControl
           class="text-base"
-          input-class="bg-gray-100 p-2 text-lg font-semibold"
+          input-class="bg-gray-100 p-2 text-lg font-bold"
           :df="companyField"
           :value="companyName"
           @change="value => companies[value]()"
@@ -59,6 +59,8 @@ import { remote } from 'electron';
 import frappe from 'frappejs';
 import glob from 'glob';
 
+import { dbPath, allDBPaths } from '@/utils';
+
 import sidebarConfig from '../sidebarConfig';
 import WindowControls from './WindowControls';
 import FormControl from '@/components/Controls/FormControl';
@@ -69,8 +71,6 @@ const fileNameRegex = /([\w ]+)\.db/i;
 export default {
   data() {
     return {
-      companies: {},
-      companyName: '',
       groups: [],
       activeGroup: null
     };
@@ -89,11 +89,27 @@ export default {
       return remote.app.getVersion();
     },
 
+    companyName() {
+      return frappe.AccountingSettings.companyName;
+    },
+
     companyField() {
       return {
         fieldtype: 'Select',
-        options: Object.keys(this.companies)
+        options: Object.keys(this.companies),
+        default: this.companyName
       };
+    },
+
+    companies() {
+      const names = [...allDBPaths(), ...frappe.currentUser.local.companies];
+      const ret = names.reduce((p, companyName) => {
+        p[companyName] = () => this.selectCompany(dbPath(companyName));
+        return p;
+      }, {});
+      ret['Create'] = () => this.createNewCompany();
+      console.log(ret, this.companyName);
+      return ret;
     }
   },
 
@@ -103,8 +119,6 @@ export default {
   },
 
   async mounted() {
-    this.populateCompanies();
-    this.companyName = await sidebarConfig.getTitle();
     this.groups = sidebarConfig.groups;
 
     let currentPath = this.$router.currentRoute.fullPath;
@@ -179,19 +193,6 @@ export default {
         email: frappe.AccountingSettings.email
       });
       frappe.events.trigger('relaunch-app');
-    },
-
-    populateCompanies() {
-      const files = config.get('files', []);
-      this.companies = files.reduce((p, file) => {
-        if (file.companyName) {
-          p[file.companyName] = () => this.selectCompany(file.filePath);
-        }
-        return p;
-      }, {});
-      this.companyName = frappe.AccountingSettings.companyName;
-      this.companies['Create'] = () => this.createNewCompany();
-      console.log('files', files, this.companies, this.companyName);
     }
   }
 };

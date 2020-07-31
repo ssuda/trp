@@ -4,6 +4,7 @@ let title = 'Trip Report';
 
 const viewConfig = {
   title,
+
   filterFields: [
     {
       fieldtype: 'Select',
@@ -27,6 +28,7 @@ const viewConfig = {
         { label: 'This Month', value: 'thismonth' },
         { label: 'Last 30 Days', value: '30days' },
         { label: 'Last Month', value: 'lastmonth' },
+        { label: 'Last 2 Months', value: '2months' },
         { label: 'Last 6 Months', value: '6months' },
         { label: 'This Year', value: 'thisyear' },
         { label: 'Last 12 Months', value: '12months' },
@@ -36,7 +38,7 @@ const viewConfig = {
       label: 'Date Range',
       fieldname: 'dateRange',
       placeholder: 'Date Range',
-      default: 'thisyear'
+      default: 'thismonth'
     },
     {
       fieldtype: 'Date',
@@ -75,6 +77,9 @@ const viewConfig = {
           case 'thisyear':
             return d.startOf('year').toFormat('yyyy-LL-dd');
 
+          case '2months':
+            return d.minus({ months: 2 }).toFormat('yyyy-LL-dd');
+
           case '6months':
             return d.minus({ months: 6 }).toFormat('yyyy-LL-dd');
 
@@ -91,6 +96,20 @@ const viewConfig = {
       placeholder: 'To Date',
       label: 'To Date',
       fieldname: 'toDate',
+      formula: filters => {
+        if (!filters['dateRange'] || filters['dateRange'] === 'custom') {
+          return filters['toDate'];
+        }
+        console.log('received daterange', filters);
+        const d = DateTime.local();
+        switch (filters['dateRange']) {
+          case 'lastmonth':
+            return d
+              .minus({ month: 1 })
+              .endOf('month')
+              .toFormat('yyyy-LL-dd');
+        }
+      },
       condition: filters => filters['dateRange'] === 'custom'
     },
     {
@@ -106,14 +125,14 @@ const viewConfig = {
       fieldname: 'periodicity',
       placeholder: 'Periodicity'
     },
-    {
-      fieldtype: 'Link',
-      size: 'small',
-      target: 'Permit',
-      placeholder: 'Permit',
-      fieldname: 'permit',
-      label: 'Permit'
-    },
+    // {
+    //   fieldtype: 'Link',
+    //   size: 'small',
+    //   target: 'Permit',
+    //   placeholder: 'Permit',
+    //   fieldname: 'permit',
+    //   label: 'Permit'
+    // },
     {
       fieldtype: 'Link',
       size: 'small',
@@ -129,29 +148,15 @@ const viewConfig = {
       placeholder: 'Truck Owner',
       fieldname: 'truckOwner',
       label: 'Truck Owner'
-    },
-    {
-      fieldtype: 'Link',
-      target: 'Customer',
-      size: 'small',
-      placeholder: 'Customer',
-      label: 'Customer',
-      fieldname: 'customer'
-    },
-    {
-      fieldtype: 'Data',
-      size: 'small',
-      placeholder: 'Mine',
-      label: 'Mine',
-      fieldname: 'transportedFrom'
-    },
-    {
-      fieldtype: 'Data',
-      size: 'small',
-      placeholder: 'Destination',
-      label: 'Destination',
-      fieldname: 'destination'
     }
+    // {
+    //   fieldtype: 'Link',
+    //   target: 'Customer',
+    //   size: 'small',
+    //   placeholder: 'Customer',
+    //   label: 'Customer',
+    //   fieldname: 'customer'
+    // }
   ],
   method: 'trip-report',
   linkFields: [
@@ -169,54 +174,60 @@ const viewConfig = {
       action: () => {}
     }
   ],
-  getColumns() {
+
+  dimensionFields(filters) {
     return [
-      // {
-      //   label: 'Customer',
-      //   fieldtype: 'Link',
-      //   fieldname: 'customer'
-      // },
-      // {
-      //   label: 'Truck Owner',
-      //   fieldtype: 'Link',
-      //   fieldname: 'truckOwner'
-      // },
       {
-        label: 'Mine',
-        fieldtype: 'Link',
-        fieldname: 'transportedFrom'
+        label: 'Permit Wise',
+        fieldname: 'permit',
+        name: 'Permit'
       },
       {
-        label: 'Destination',
-        fieldtype: 'Link',
-        fieldname: 'destination'
+        label: 'Customer Wise',
+        fieldname: 'source',
+        name: 'Customer'
       },
       {
-        label: 'Periodicity',
-        fieldtype: 'Data',
-        fieldname: 'periodicity'
-      },
-      {
-        label: 'Number of Orders',
-        fieldtype: 'Int',
-        fieldname: 'numPermits'
-      },
-      {
-        label: 'Number of Trips',
-        fieldtype: 'Int',
-        fieldname: 'numTrips'
-      },
-      {
-        label: 'Loaded',
-        fieldtype: 'Float',
-        fieldname: 'loadQty'
+        label: 'Mine Wise',
+        fieldname: 'transportedFrom',
+        name: 'Mine'
       }
-      // {
-      //   label: 'Unloaded',
-      //   fieldtype: 'Float',
-      //   fieldname: 'unloadQty'
-      // }
     ];
+  },
+
+  getColumns(dimensions, filters) {
+    const f = this.dimensionFields(filters).filter(
+      d => dimensions[d.fieldname]
+    );
+
+    return f
+      .concat([
+        filters.periodicity
+          ? {
+              label: 'Date',
+              fieldtype: 'Data',
+              fieldname: 'periodicity'
+            }
+          : null,
+        !dimensions['permit']
+          ? {
+              label: 'Permits',
+              fieldtype: 'Int',
+              fieldname: 'numPermits'
+            }
+          : null,
+        {
+          label: 'Trips',
+          fieldtype: 'Int',
+          fieldname: 'numTrips'
+        },
+        {
+          label: 'Qty',
+          fieldtype: 'Float',
+          fieldname: 'loadQty'
+        }
+      ])
+      .filter(Boolean);
   }
 };
 

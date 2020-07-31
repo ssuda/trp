@@ -51,7 +51,6 @@
                   :value="doc.taggingUrl"
                   @change="value => doc.set('taggingUrl', value)"
                 />
-
                 <FormControl
                   v-if="doc.action == 'tagging'"
                   class="mt-4 text-base"
@@ -61,13 +60,63 @@
                   @change="value => doc.set('truckList', value)"
                 />
                 <FormControl
-                  v-if="doc.action == 'release'"
+                  v-if="doc.action == 'release' || doc.action == 'tagging'"
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('trucks')"
                   :value="doc.trucks"
                   placeholder="Paste the trucks"
                   @change="value => doc.set('trucks', value)"
+                />
+              </div>
+
+              <div class="w-1/3">
+                <FormControl
+                  v-if="doc.action == 'tagging'"
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('isCloudTagging')"
+                  :value="doc.isCloudTagging"
+                  :showLabel="true"
+                  @change="value => doc.set('isCloudTagging', value)"
+                />
+
+                <FormControl
+                  v-if="
+                    doc.action == 'tagging' &&
+                      frappe.currentUser.email == 'samba@spinbi.com'
+                  "
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('gstin')"
+                  :value="doc.gstin"
+                  :show-label="true"
+                  @change="value => doc.set('gstin', value)"
+                />
+
+                <FormControl
+                  v-if="
+                    doc.action == 'tagging' &&
+                      frappe.currentUser.email == 'samba@spinbi.com'
+                  "
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('username')"
+                  :value="doc.username"
+                  :show-label="true"
+                  @change="value => doc.set('username', value)"
+                />
+                <FormControl
+                  v-if="
+                    doc.action == 'tagging' &&
+                      frappe.currentUser.email == 'samba@spinbi.com'
+                  "
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('password')"
+                  :value="doc.password"
+                  :show-label="true"
+                  @change="value => doc.set('password', value)"
                 />
               </div>
             </div>
@@ -113,10 +162,14 @@ import BackLink from '@/components/BackLink';
 import _ from 'lodash';
 import isOnline from 'is-online';
 
+import sqs from '@/sqs';
+import { firestore } from '@/firebase';
+
 import {
   handleErrorWithDialog,
   showMessageDialog,
-  extractTrucks
+  extractTrucks,
+  splitToChunks
 } from '@/utils';
 
 import { refreshPermit, twoMonthsOldPermits, pickPermitFields } from '@/permit';
@@ -181,8 +234,32 @@ export default {
 
   methods: {
     async onClick() {
+      let tempTaggingDoc;
+
+      this.loading = true;
+
+      const username =
+        this.doc.username || frappe.AccountingSettings.i3msUsername;
+      const password =
+        this.doc.password || frappe.AccountingSettings.i3msPassword;
+
+      if (!username || !password) {
+        await showMessageDialog({
+          description: this._('Please enter i3ms username/password.'),
+          buttons: [
+            {
+              label: _('Ok')
+            }
+          ]
+        });
+
+        this.$router.replace('/i3msAccount');
+        return;
+      }
+
       let online = await isOnline();
       if (!online) {
+        this.loading = false;
         return showMessageDialog({
           description: this._('No Internet Connectivity, please check.'),
           buttons: [
@@ -194,13 +271,11 @@ export default {
       }
 
       const credentials = {
-        username: frappe.AccountingSettings.i3msUsername,
-        password: frappe.AccountingSettings.i3msPassword
+        username,
+        password
       };
 
       const permit = pickPermitFields(this.doc.permit || {});
-
-      this.loading = true;
 
       if (this.doc.action === 'fetchNew') {
         let permits = await twoMonthsOldPermits();
@@ -228,9 +303,9 @@ export default {
           return;
         }
 
-        if (this.doc.numBrowsers > 10) {
+        if (this.doc.numBrowsers > 20) {
           showMessageDialog({
-            message: this._('Number of browsers not more than 10')
+            message: this._('Number of browsers not more than 20')
           });
           this.loading = false;
           return;
@@ -278,74 +353,157 @@ export default {
           };
         } else {
           obj.taggingUrl = this.doc.taggingUrl;
-          let ret = await new Promise((resolve, reject) => {
-            refreshPermit(
-              {
-                ...obj,
-                noTrips: true,
-                validate: true
-              },
-              p => {
-                resolve(p);
-              }
-            );
-          });
 
-          if (!ret) {
-            showMessageDialog({
-              description: this._(
-                'No Permit to tag vehicles, please check in i3ms'
-              ),
-              buttons: [
+          if (!this.doc.isCloudTagging) {
+            let ret = await new Promise((resolve, reject) => {
+              refreshPermit(
                 {
-                  label: _('Ok')
+                  ...obj,
+                  noTrips: true,
+                  validate: true
+                },
+                p => {
+                  resolve(p);
                 }
-              ]
+              );
             });
-            this.loading = false;
-            return;
+
+            if (!ret) {
+              showMessageDialog({
+                description: this._(
+                  'No Permit to tag vehicles, please check in i3ms'
+                ),
+                buttons: [
+                  {
+                    label: _('Ok')
+                  }
+                ]
+              });
+              this.loading = false;
+              return;
+            }
           }
         }
 
         if (trucks.length) {
           let timerInterval = setInterval(() => {
             const endTimer = DateTime.local();
-            this.duration = Interval.fromDateTimes(
-              startTimer,
-              endTimer
-            ).toDuration().toFormat("hh'h':mm'm':ss's'");
+            this.duration = Interval.fromDateTimes(startTimer, endTimer)
+              .toDuration()
+              .toFormat("hh'h':mm'm':ss's'");
           }, 1000);
 
           this.loading = true;
-          frappe.events.trigger('tag-vehicles', obj);
 
-          const totalCb = total => {
-            console.log('received total', this.total, total);
-            this.total += parseInt(total);
-          };
+          if (this.doc.isCloudTagging) {
+            let input = _.pick(obj, [
+              'credentials',
+              'trucks',
+              'name',
+              'numBrowsers',
+              'taggingUrl'
+            ]);
 
-          const failedCb = failed => {
-            console.log('received failed', failed);
-            this.failed += parseInt(failed);
-          };
+            input.gstin = this.doc.gstin || frappe.AccountingSettings.gstin;
+            input.deviceId = frappe.deviceId;
+            input.retry = !!this.doc.permit;
 
-          frappe.events.off('total', totalCb);
-          frappe.events.off('failed', failedCb);
+            const self = this;
+            let firstTime = true;
 
-          frappe.events.on('total', totalCb);
-          frappe.events.on('failed', failedCb);
+            let total = this.total;
+            let failed = this.failed;
 
-          frappe.events.once('tag-results', async () => {
-            clearInterval(timerInterval);
-            this.loading = false;
-            frappe.events.off('total', totalCb);
-            frappe.events.off('failed', failedCb);
-            await showMessageDialog({
-              description: `${this.success} Vehicles Tagged successfully`,
+            if (input.taggingUrl) {
+              firestore
+                .collection('i3msCloudTaggingResult')
+                .where('gstin', '==', input.gstin)
+                .where('deviceId', '==', input.deviceId)
+                .onSnapshot(async function(querySnapshot) {
+                  for (let doc of querySnapshot.docs) {
+                    if (firstTime) {
+                      doc.ref.delete();
+                      continue;
+                    }
+                    const data = doc.data();
+                    if (
+                      data.name == input.name ||
+                      data.taggingUrl == input.taggingUrl ||
+                      !(input.name || input.taggingUrl)
+                    ) {
+                      self.total =
+                        (data.success || 0) + (data.failed || 0) + total;
+                      self.failed = (data.failed || 0) + failed;
+
+                      if (data.completed) {
+                        clearInterval(timerInterval);
+                        self.loading = false;
+                        await showMessageDialog({
+                          description: `${self.success} Vehicles Tagged successfully`,
+                          buttons: [{ label: 'Ok' }]
+                        });
+
+                        // delete tempTagging
+                        if (tempTaggingDoc) {
+                          await tempTaggingDoc.delete();
+                        }
+
+                        refreshPermit(obj);
+                        // if (frappe.currentUser.email != 'samba@spinbi.com') {
+                        //   self.$router.back();
+                        // }
+                      }
+                    }
+                  }
+                  firstTime = false;
+                });
+            }
+
+            console.log('Adding cloud tagging input', input);
+            input.trucks = trucks;
+            if (input.taggingUrl) {
+              await firestore.collection('i3msCloudTagging').add(input);
+            } else {
+              tempTaggingDoc = await firestore
+                .collection('tempTagging')
+                .add(input);
+              this.loading = false;
+            }
+            showMessageDialog({
+              description: `Submitted Tag request for ${input.trucks.length} for ${input.taggingUrl} Successfully`,
               buttons: [{ label: 'Ok' }]
             });
-            this.$router.back();
-          });
+          } else {
+            frappe.events.trigger('tag-vehicles', obj);
+            const totalCb = total => {
+              console.log('received total', this.total, total);
+              this.total += parseInt(total);
+            };
+
+            const failedCb = failed => {
+              console.log('received failed', failed);
+              this.failed += parseInt(failed);
+            };
+
+            frappe.events.off('total', totalCb);
+            frappe.events.off('failed', failedCb);
+
+            frappe.events.on('total', totalCb);
+            frappe.events.on('failed', failedCb);
+
+            frappe.events.once('tag-results', async () => {
+              clearInterval(timerInterval);
+              this.loading = false;
+              frappe.events.off('total', totalCb);
+              frappe.events.off('failed', failedCb);
+              await showMessageDialog({
+                description: `${this.success} Vehicles Tagged successfully`,
+                buttons: [{ label: 'Ok' }]
+              });
+
+              this.$router.back();
+            });
+          }
         } else {
           showMessageDialog({
             description: this._('All Trucks Already Tagged'),

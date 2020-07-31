@@ -11,10 +11,10 @@ module.exports = {
     'lrNumber',
     'permit',
     'truck',
-    'fuelPump',
-    'driverPhone',
-    'driverLicense',
-    'ewbno'
+    'loadQty',
+    'unloadQty',
+    'startDate',
+    'endDate'
   ],
 
   importFields: [
@@ -25,13 +25,11 @@ module.exports = {
     'loadQty',
     'unloadQty',
     'advance',
-    'discount',
     'fuel',
-    'fuelPump',
-    'driverPhone',
-    'driverLicense',
-    'ewbno',
-    'docNo'
+    'pump_name',
+    'ewb_no',
+    'docNo',
+    'driver_phoneNumber'
   ],
 
   showTitle: true,
@@ -58,12 +56,6 @@ module.exports = {
     {
       fieldname: 'lrNumber',
       label: 'LR Number',
-      placeholder: 'LR Number',
-      fieldtype: 'Data'
-    },
-    {
-      fieldname: 'docNo',
-      label: 'Invoice/Challan Number',
       fieldtype: 'Data'
     },
     {
@@ -100,11 +92,11 @@ module.exports = {
       label: 'Unloaded',
       fieldtype: 'Float'
     },
-    {
-      fieldname: 'discount',
-      label: 'Discount',
-      fieldtype: 'Currency'
-    },
+    // {
+    //   fieldname: 'discount',
+    //   label: 'Discount',
+    //   fieldtype: 'Currency'
+    // },
     {
       fieldname: 'advance',
       label: 'Advance',
@@ -116,59 +108,52 @@ module.exports = {
       fieldtype: 'Currency'
     },
     {
-      fieldname: 'fuelPump',
-      label: 'Fuel Pump',
+      fieldname: 'docNo',
+      label: 'Invoice/Challan No',
       fieldtype: 'Data'
     },
     {
-      fieldname: 'driver',
-      label: 'Driver',
-      fieldtype: 'Link',
-      target: 'Driver'
+      fieldname: 'driver_phoneNumber',
+      label: 'Driver Phone Number',
+      fieldtype: 'Data'
     },
     {
-      fieldname: 'driverPhone',
-      label: 'Driver Phone',
-      fieldtype: 'Data',
-      formula: doc => doc.driver && doc.driver.phoneNumber,
-      readOnly: true
-    },
-    {
-      fieldname: 'driverLicense',
-      label: 'Driver License',
-      fieldtype: 'Data',
-      formula: doc => doc.driver && doc.driver.license,
-      readOnly: true
-    },
-    {
-      fieldname: 'type',
-      label: 'Type',
-      fieldtype: 'Data',
-      default: 'I3MS',
-      hidden: true
-    },
-    {
-      fieldname: 'ewbno',
+      fieldname: 'ewb_no',
       label: 'Ewaybill No',
-      fieldtype: 'Data',
-      hidden: doc => doc.type != 'I3MS'
+      fieldtype: 'Data'
+    },
+    {
+      fieldname: 'pump_name',
+      label: 'Pump Name',
+      fieldtype: 'Data'
     }
+  ],
+
+  editableFields: [
+    'lrNumber',
+    'endDate',
+    'unloadQty',
+    'advance',
+    'fuel',
+    'docNo',
+    'driver_phoneNumber',
+    'ewb_no',
+    'pump_name'
   ],
 
   quickEditFields: [
     'permit',
     'truck',
-    'lrNumber',
-    'docNo',
-    'driver',
-    'ewbno',
     'startDate',
     'endDate',
     'loadQty',
     'unloadQty',
-    'discount',
+    'lrNumber',
     'advance',
     'fuel',
-    'fuelPump'
+    'docNo',
+    'driver_phoneNumber',
+    'ewb_no',
+    'pump_name'
   ]
 };

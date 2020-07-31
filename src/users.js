@@ -14,6 +14,27 @@ import voucherCodes from 'voucher-code-generator';
 import { dbPath } from '@/utils';
 import config from '@/config';
 
+async function getCompanyInfo(gstin) {
+  return firestore
+    .collection('customers')
+    .doc(gstin)
+    .get();
+}
+
+async function getAccountingSettings(gstin) {
+  return firestore
+    .collection('AccountingSettings')
+    .doc(`${gstin}_AccountingSettings`)
+    .get();
+}
+
+async function getCompanyInfoByI3msUsername(i3msUsername) {
+  return firestore
+    .collection('AccountingSettings')
+    .where('i3msUsername', '==', i3msUsername)
+    .get();
+}
+
 function waitForUser() {
   return new Promise((resolve, reject) => {
     const unsubscribe = firebaseAuth.onAuthStateChanged(
@@ -70,31 +91,31 @@ export default {
 
         if (frappe.db && !user.local) {
           console.log('Fetching spinbi user');
-          try {
-            user.local = await frappe.getDoc('SpinBiUser', user.email);
-          } catch (ex) {}
+          // try {
+          //   user.local = await frappe.getDoc('SpinBiUser', user.email);
+          // } catch (ex) {}
 
-          if (!user.local) {
-            const snapshot = await firestore
-              .collection('SpinBiUser')
-              .doc(user.email)
-              .get();
+          // if (!user.local) {
+          const snapshot = await firestore
+            .collection('SpinBiUser')
+            .doc(user.email)
+            .get();
 
-            if (snapshot && snapshot.exists) {
-              user.local = snapshot.data();
-              const companies = user.local.companies.filter(Boolean);
-              console.log('companies', companies);
-              if (companies) {
-                config.set(
-                  'files',
-                  companies.map(c => ({
-                    companyName: c,
-                    filePath: dbPath(c)
-                  }))
-                );
-              }
+          if (snapshot && snapshot.exists) {
+            user.local = snapshot.data();
+            const companies = user.local.companies.filter(Boolean);
+            console.log('companies', companies);
+            if (companies) {
+              config.set(
+                'files',
+                companies.map(c => ({
+                  companyName: c,
+                  filePath: dbPath(c)
+                }))
+              );
             }
           }
+          //}
 
           console.log('spinbiuser', user.local);
 
@@ -106,10 +127,8 @@ export default {
         if (gstin && !user.remote) {
           console.log('Fetching company info');
 
-          user.remote = await firestore
-            .collection('customers')
-            .doc(gstin)
-            .get();
+          user.remote = await getCompanyInfo(gstin);
+          user.accountingSettings = await getAccountingSettings(gstin);
 
           if (user.remote.get('billingPeriodEnd')) {
             let now = DateTime.local();
@@ -185,6 +204,13 @@ export default {
       if (fbuser.remote && fbuser.remote.exists) {
         throw new Error('This company already registered, please login');
       }
+
+      if (user.i3msUsername) {
+        const snapshot = await getCompanyInfoByI3msUsername(user.i3msUsername);
+        if (snapshot.docs.length) {
+          throw new Error('One company already registered with i3ms username');
+        }
+      }
     }
 
     await this.createNewCustomer(user);
@@ -201,10 +227,11 @@ export default {
     );
 
     await fbuser.reauthenticateWithCredential(credential);
+    await this.updateUsersWithNewCompanyNameAndGstin(user);
+
     frappe.currentUser && (frappe.currentUser.remote = null);
     fbuser = await this.getCurrentUser(user.gstin);
 
-    await this.updateUsersWithNewCompanyNameAndGstin(user);
     console.log(frappe.currentUser);
     return fbuser;
   },
@@ -262,6 +289,14 @@ export default {
   },
 
   async updateUsersWithNewCompanyNameAndGstin(user) {
+    if (
+      !frappe.AccountingSettings.gstin ||
+      !frappe.AccountingSettings.companyName
+    ) {
+      console.log('gstin/companyname not set in updateuser');
+      return;
+    }
+
     const remoteUser = await firestore
       .collection('SpinBiUser')
       .doc(user.email)

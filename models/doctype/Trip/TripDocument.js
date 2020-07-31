@@ -12,10 +12,6 @@ module.exports = class TripDocument extends Document {
       throw new Error('LR Number is required');
     }
 
-    await this.loadLink('permit');
-    const permit = this.getLink('permit');
-    this.type = permit.type;
-
     let values = await frappe.db.getAll({
       doctype: 'Trip',
       fields: ['lrNumber'],

@@ -158,6 +158,7 @@ export async function permitsDetails(args, sse, browser = i3ms) {
         name: r['Permit No.'],
         startDate: startDate,
         endDate: endDate,
+        circle: r['Circle'],
         taggingUrl: r['Tag New Vehicle'],
         vehicleDetails: r['Vehicle Details']
       };
@@ -227,10 +228,7 @@ export async function permitReport(args, sse, browser = i3ms) {
         });
 
         return {
-          tp_date: moment(tpDetails['Pass Date'], [
-            'MM/DD/YYYY hh:mm:ss A',
-            'DD MMM YYYY'
-          ]).toDate(),
+          tp_date: tpDetails['Pass Date'],
           tp_number: tpDetails['Pass Number Text'],
           tp_url: tpDetails['Pass Number'],
           truck_number: tpDetails['Truck Number'],
@@ -404,11 +402,16 @@ export async function permitDetails(permit, sse, browser = i3ms) {
     permit.trips = reportResult.trips;
     //check whether there no trips for in last one week
     const latestTrip = permit.trips.reduce((p, trip) => {
-      if (p > trip.tp_date.getTime()) {
+      const d = moment(trip.tp_date, [
+        'MM/DD/YYYY hh:mm:ss A',
+        'DD MMM YYYY'
+      ]).toDate();
+
+      if (p > d.getTime()) {
         return p;
       }
 
-      return trip.tp_date.getTime();
+      return d.getTime();
     }, 0);
 
     if (latestTrip) {
@@ -563,7 +566,7 @@ async function openTabs(taggingUrl, chunks, options, sse) {
 }
 
 export async function tagVehicles(options, sse) {
-  const { taggingUrl, trucks } = options;
+  const { taggingUrl, name: permitNumber, trucks } = options;
   let chunks = _.chunk(
     trucks,
     Math.ceil(trucks.length / (+options.numBrowsers || 4))
