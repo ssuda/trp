@@ -255,8 +255,7 @@ async function successfullyTagged(permitNo, credentials, browser = i3ms) {
 
   console.log('permitno', permitNo);
   if (/^http/i.test(permitNo)) {
-    console.log('Trying to browser', permitNo);
-    const t = await browser.tagInit(permitNo);
+    const t = await browser.gotoTagPage(permitNo);
     permitNo = t['Permit No.'];
   }
 
@@ -499,7 +498,7 @@ export async function tagVehicle(obj, vehicles, options, sse) {
 }
 
 async function tabTagging(taggingUrl, tab, chunk, options, sse) {
-  await tab.tagInit(taggingUrl);
+  await tab.gotoTagPage(taggingUrl);
 
   console.log(tab.tabNo, 'tagging chunk', chunk);
   let retries = await tagVehicle(tab, chunk, options, sse);
