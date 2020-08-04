@@ -1,12 +1,9 @@
-// Firebase App (the core Firebase SDK) is always required and must be listed first
-import * as firebase from 'firebase/app';
+import firebase from 'firebase/app';
 import frappe from 'frappejs';
 
-// Add the Firebase products that you want to use
 import 'firebase/auth';
 import 'firebase/firestore';
 
-// Firebase Config
 const firebaseConfig = {
   apiKey: 'AIzaSyAO5ubwijYz2OHReRtGRNQrgsVnDeIW6m8',
   authDomain: 'spinbi-trp.firebaseapp.com',
@@ -17,30 +14,23 @@ const firebaseConfig = {
   appId: '1:698837250119:web:f849a6c5c13b75cdb0c162'
 };
 
-// Initialize Firebase
 const firebaseApp = firebase.initializeApp(firebaseConfig);
-const firebaseAuth = firebaseApp.auth();
 const firestore = firebaseApp.firestore();
 
 firestore.enablePersistence({
   synchronizeTabs: true
 });
 
-//firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
-
-const FieldValue = firebase.firestore.FieldValue;
-const Timestamp = firebase.firestore.Timestamp;
-
-function getFirebaseProjectId() {
+function projectId() {
   return firebase.app().options.authDomain.split('.')[0];
 }
 
 const cloudfunctionsBaseUrl =
-  /*process.env.NODE_ENV === 'development'
-    ? 'http://localhost:5001/spinbi-trp/us-central1/app'
-    :*/ 'https://us-central1-' +
-  getFirebaseProjectId() +
-  '.cloudfunctions.net/app';
+  'https://us-central1-' + projectId() + '.cloudfunctions.net/app';
+
+const firebaseAuth = firebaseApp.auth();
+const FieldValue = firebase.firestore.FieldValue;
+const Timestamp = firebase.firestore.Timestamp;
 
 frappe.firebase = {
   firebaseAuth,
@@ -48,7 +38,7 @@ frappe.firebase = {
   FieldValue,
   Timestamp,
   firebase,
-  getFirebaseProjectId,
+  projectId,
   cloudfunctionsBaseUrl
 };
 
@@ -58,6 +48,6 @@ export {
   FieldValue,
   Timestamp,
   firebase,
-  getFirebaseProjectId,
+  projectId,
   cloudfunctionsBaseUrl
 };

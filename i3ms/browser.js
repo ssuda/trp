@@ -88,8 +88,8 @@ module.exports = function() {
   async function browserInstance(headless) {
     console.log('process.env.SHOW_BROWSER  = ', process.env.SHOW_BROWSER);
 
-    headless = false;
-    //process.env.SHOW_BROWSER == undefined ? true : !process.env.SHOW_BROWSER;
+    headless =
+      process.env.SHOW_BROWSER == undefined ? true : !process.env.SHOW_BROWSER;
 
     console.log('creating/connecting browser in headless mode', headless);
     if (!browser) {
