@@ -49,7 +49,6 @@ import { exportData } from '@/utils';
 import { lastMonthActivePermits } from '@/permit';
 
 import { handleErrorWithDialog } from '@/utils';
-import { readTPByPermit } from '@/i3ms-sync';
 
 export default {
   name: 'PermitActionForm',

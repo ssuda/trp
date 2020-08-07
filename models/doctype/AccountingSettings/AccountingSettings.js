@@ -1,4 +1,5 @@
 const countryList = Object.keys(require('~/fixtures/countryInfo.json')).sort();
+const frappe = require('frappejs');
 
 module.exports = {
   name: 'AccountingSettings',
@@ -146,7 +147,8 @@ module.exports = {
       fieldname: 'newPermitAlert',
       label: 'New Permit Alert',
       fieldtype: 'Check',
-      default: 1
+      default: () =>
+        frappe.AccountingSettings.email.includes('@spinbi.com') ? 0 : 1
     },
     {
       fieldname: 'lastSnapshot',

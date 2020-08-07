@@ -323,6 +323,22 @@ export function handleErrorWithDialog(e, doc) {
   throw e;
 }
 
+export async function promiseAny(...promises) {
+  return await Promise.race(
+    promises.map(
+      (p, i) =>
+        new Promise(async (r, j) => {
+          try {
+            await p;
+            r(i + 1);
+          } catch (ex) {
+            j(ex);
+          }
+        })
+    )
+  );
+}
+
 export function makePDF(html, destination) {
   const { BrowserWindow } = remote;
 

@@ -187,7 +187,7 @@ import { DateTime } from 'luxon';
     ipcRenderer.send('tag-vehicles', permit);
 
     ipcRenderer.once('tag-results', function(e, response) {
-      ipcRenderer.removeAllListeners('tag-truck-result');
+      ipcRenderer.removeAllListeners('tag-result');
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
       let finallyTagged = Object.assign(tagged, response);
@@ -208,7 +208,7 @@ import { DateTime } from 'luxon';
 
     let batchSize = 0;
 
-    ipcRenderer.on('tag-truck-result', async function(e, response) {
+    ipcRenderer.on('tag-result', async function(e, response) {
       if (!permit.name) {
         permit = await frappe.db.knex
           .select('*')

@@ -11,17 +11,17 @@ import { getMainWindowSize } from './screenSize';
 
 import {
   tagVehicles,
-  permitDetails,
-  permitsDetails,
-  permitReport,
+  getPermit,
+  twoMonthPermits,
+  permitTrips,
   newPermits,
   refreshPermits,
   releaseVehicles,
-  browserInit,
+  initializeBrowser,
   busyFlag,
   companyName,
   disconnect
-} from '../i3ms/i3ms';
+} from '../api';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isMac = process.platform === 'darwin';
@@ -62,7 +62,13 @@ async function processMessage(message, cb) {
     case 'i3ms-company':
       {
         console.log('i3ms-company is called');
-        const r = await browserInit(null, null, false, disconnectHandler, true);
+        const r = await initializeBrowser(
+          null,
+          null,
+          false,
+          disconnectHandler,
+          true
+        );
 
         if (r) {
           console.log('sending company name to browser', r);
@@ -74,7 +80,7 @@ async function processMessage(message, cb) {
     case 'permit-report':
       {
         console.log('permit-report', args.startDate, args.endDate);
-        await browserInit(
+        await initializeBrowser(
           args.credentials,
           !args.showBrowser,
           false,
@@ -82,7 +88,7 @@ async function processMessage(message, cb) {
         );
         const r = await Promise.race([
           cancelPromise,
-          permitReport(args, event.sender)
+          permitTrips(args, event.sender)
         ]);
         if (r) {
           console.log('sending permit-report results to browser', r.trips);
@@ -94,7 +100,7 @@ async function processMessage(message, cb) {
     case 'tag-vehicles':
       {
         console.log('tag-vehicles', args);
-        await browserInit(
+        await initializeBrowser(
           args.credentials,
           !args.showBrowser,
           false,
@@ -114,7 +120,7 @@ async function processMessage(message, cb) {
     case 'release-vehicles':
       {
         console.log('release-vehicles', args);
-        await browserInit(
+        await initializeBrowser(
           args.credentials,
           !args.showBrowser,
           false,
@@ -134,7 +140,7 @@ async function processMessage(message, cb) {
     case 'permit-details':
       {
         console.log('permit-details', args);
-        await browserInit(
+        await initializeBrowser(
           args.credentials,
           !args.showBrowser,
           false,
@@ -142,7 +148,7 @@ async function processMessage(message, cb) {
         );
         const r = await Promise.race([
           cancelPromise,
-          permitDetails(args, event.sender)
+          getPermit(args, event.sender)
         ]);
 
         if (r) {
@@ -158,21 +164,26 @@ async function processMessage(message, cb) {
 
         if (args.refresh) {
           for (let permit of args.permits) {
-            await browserInit(
+            await initializeBrowser(
               permit.credentials,
               !args.showBrowser,
               false,
               disconnectHandler
             );
-            await permitDetails(permit, event.sender);
+            await getPermit(permit, event.sender);
           }
           return event.sender.send('permits-details-results');
         }
 
-        await browserInit(args.credentials, false, false, disconnectHandler);
+        await initializeBrowser(
+          args.credentials,
+          false,
+          false,
+          disconnectHandler
+        );
         const r = await Promise.race([
           cancelPromise,
-          permitsDetails(args, event.sender)
+          twoMonthPermits(args, event.sender)
         ]);
         if (r) {
           console.log('sending permits-details results to browser', r);
@@ -270,7 +281,7 @@ ipcMain.on('check-for-updates', () => {
 ipcMain.on('open-browser', async (event, args) => {
   console.log('open browser called');
   await disconnect();
-  const r = await browserInit(
+  const r = await initializeBrowser(
     args.credentials,
     !args.showBrowser,
     true,

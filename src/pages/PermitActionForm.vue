@@ -81,7 +81,7 @@
                   @change="value => doc.set('isCloudTagging', value)"
                 />
 
-                <FormControl
+                <!-- <FormControl
                   v-if="
                     doc.action == 'tagging' &&
                       frappe.currentUser.email == 'samba@spinbi.com'
@@ -92,7 +92,7 @@
                   :value="doc.gstin"
                   :show-label="true"
                   @change="value => doc.set('gstin', value)"
-                />
+                /> -->
 
                 <FormControl
                   v-if="
@@ -173,6 +173,16 @@ import {
 } from '@/utils';
 
 import { refreshPermit, twoMonthsOldPermits, pickPermitFields } from '@/permit';
+
+function makeid(length) {
+  var result = '';
+  var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  var charactersLength = characters.length;
+  for (var i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
 
 export default {
   name: 'PermitActionForm',
@@ -404,7 +414,11 @@ export default {
               'taggingUrl'
             ]);
 
-            input.gstin = this.doc.gstin || frappe.AccountingSettings.gstin;
+            if (frappe.currentUser.email == 'samba@spinbi.com') {
+              input.gstin = makeid('24AAACC1206D1ZM'.length);
+            } else {
+              input.gstin = frappe.AccountingSettings.gstin;
+            }
             input.deviceId = frappe.deviceId;
             input.retry = !!this.doc.permit;
 

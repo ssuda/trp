@@ -1,5 +1,3 @@
-import moment from 'moment';
-
 export async function promiseAny(...promises) {
   return await Promise.race(
     promises.map(

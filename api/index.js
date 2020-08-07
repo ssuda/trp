@@ -24,16 +24,14 @@ export async function newPermits(credentials, sse) {
 
   let toExit = false;
 
-  await newPermitBrowser.browserInit(credentials, true, true, () => {
+  await newPermitBrowser.initializeBrowser(credentials, true, true, () => {
     toExit = true;
   });
 
   while (!toExit) {
     let out = [];
     try {
-      console.log('Calling new permits');
-
-      out = await permitsDetails(
+      out = await twoMonthPermits(
         {
           onlyNewPermits: true
         },
@@ -41,7 +39,6 @@ export async function newPermits(credentials, sse) {
         newPermitBrowser
       );
 
-      console.log('new permits details', out);
       sse.send('new-permits', out);
     } catch (ex) {
       console.error(ex);
@@ -53,8 +50,6 @@ export async function newPermits(credentials, sse) {
 
 let refreshBrowser;
 export async function refreshPermits(args, sse) {
-  console.log('Calling refreshPermits');
-
   if (refreshBrowser) {
     await refreshBrowser.disconnect();
   }
@@ -62,7 +57,7 @@ export async function refreshPermits(args, sse) {
   refreshBrowser = browser();
 
   let toExit = false;
-  await refreshBrowser.browserInit(args.credentials, true, true, () => {
+  await refreshBrowser.initializeBrowser(args.credentials, true, true, () => {
     toExit = true;
   });
 
@@ -73,14 +68,12 @@ export async function refreshPermits(args, sse) {
   });
 
   while (!toExit) {
-    console.log('Calling refresh permits');
-
     while (busyFlag.isBusy) {
       await delay(120000);
     }
 
     try {
-      permits = await permitsDetails({}, sse, refreshBrowser);
+      permits = await twoMonthPermits({}, sse, refreshBrowser);
     } catch (ex) {
       console.error(ex);
     }
@@ -91,10 +84,8 @@ export async function refreshPermits(args, sse) {
 
 const CLOSED_PERMITS = {};
 
-export async function permitsDetails(args, sse, browser = i3ms) {
+export async function twoMonthPermits(args, sse, browser = i3ms) {
   let permits = args.permits || [];
-
-  console.log('permits details called', permits.length);
 
   permits = permits.map(p => {
     // Refresh all for Returns
@@ -104,12 +95,11 @@ export async function permitsDetails(args, sse, browser = i3ms) {
     return p.name;
   });
 
-  console.log('Number of permits in last two months', permits.length);
   let result = [];
 
   for (let attempts = 0; attempts < 3; ++attempts) {
     try {
-      result = await browser.getPermits(
+      result = await browser.lastTwoMonthPermits(
         'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
         !args.onlyNewPermits
@@ -124,29 +114,24 @@ export async function permitsDetails(args, sse, browser = i3ms) {
     .subtract(1, 'months')
     .endOf('month');
 
-  console.log('Total number of permits', result.length);
-  await result.reduce(async (p, r) => {
+  for (let permit of result) {
     if (!browser.getBrowser()) return Promise.resolve();
 
-    await p;
-    if (/javascript/i.test(r['Permit No.']) || !r['Permit No.']) {
+    if (/javascript/i.test(permit['Permit No.']) || !permit['Permit No.']) {
       return Promise.resolve();
     }
 
-    if (CLOSED_PERMITS[r['Permit No.']]) {
+    if (CLOSED_PERMITS[permit['Permit No.']]) {
       return Promise.resolve();
     }
 
-    if (args.i3msReturns || !permits.includes(r['Permit No.'])) {
-      console.log('Permit not exists', r['Permit No.']);
-
+    if (args.i3msReturns || !permits.includes(permit['Permit No.'])) {
       const createdAt = moment(
-        r['Request On'] || r['Requested On'],
+        permit['Request On'] || permit['Requested On'],
         'DD MMM YYYY'
       );
 
       if (args.i3msReturns && createdAt.isAfter(lastMonth)) {
-        console.log('This Permit is this month', r['Permit No.']);
         return Promise.resolve();
       }
 
@@ -154,50 +139,41 @@ export async function permitsDetails(args, sse, browser = i3ms) {
       createdAt.add(1, 'month');
       const endDate = createdAt.local().format('YYYY-MM-DD');
 
-      let permit = {
-        name: r['Permit No.'],
+      let pr = {
+        name: permit['Permit No.'],
         startDate: startDate,
         endDate: endDate,
-        circle: r['Circle'],
-        taggingUrl: r['Tag New Vehicle'],
-        vehicleDetails: r['Vehicle Details']
+        circle: permit['Circle'],
+        taggingUrl: permit['Tag New Vehicle'],
+        vehicleDetails: permit['Vehicle Details']
       };
 
-      if (args.onlyNewPermits && permit.taggingUrl) {
+      if (args.onlyNewPermits && pr.taggingUrl) {
         return Promise.resolve();
       }
 
-      if (!permit.taggingUrl) {
-        const u = new URL(permit.vehicleDetails);
-        permit.taggingUrl =
+      if (!pr.taggingUrl) {
+        const uri = new URL(pr.vehicleDetails);
+        pr.taggingUrl =
           'https://i3ms.orissaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
-          u.search;
+          uri.search;
       }
 
-      console.log(permit.taggingUrl);
-
-      if (permit.taggingUrl) {
+      if (pr.taggingUrl) {
         try {
-          console.log('fetching permit', permit.name);
-          const l = await permitDetails(permit, sse, browser);
-          console.log('finished fetching permit', permit.name);
+          const l = await getPermit(pr, sse, browser);
           out.push(l);
         } catch (ex) {
           console.error(ex);
         }
       }
-    } else {
-      console.log('Permit already exists', r['Permit No.']);
     }
+  }
 
-    return Promise.resolve();
-  }, Promise.resolve());
-
-  console.log('permits details', out);
   return out;
 }
 
-export async function permitReport(args, sse, browser = i3ms) {
+export async function permitTrips(args, sse, browser = i3ms) {
   let fromDate = moment(args.startDate).format('DD-MMM-YYYY');
   let toDate = moment(args.endDate).format('DD-MMM-YYYY');
 
@@ -211,8 +187,6 @@ export async function permitReport(args, sse, browser = i3ms) {
         fromDate,
         toDate
       );
-
-      console.log('permit details', r);
 
       let trips = r.trucks.filter(t => t['Pass Number']);
 
@@ -239,7 +213,6 @@ export async function permitReport(args, sse, browser = i3ms) {
       delete r.trucks;
       r.trips = trips;
 
-      //console.log(trips);
       return r;
     } catch (ex) {
       retries++;
@@ -249,11 +222,9 @@ export async function permitReport(args, sse, browser = i3ms) {
 
 async function successfullyTagged(permitNo, credentials, browser = i3ms) {
   if (credentials) {
-    console.log(credentials);
-    await browser.browserInit(credentials, true);
+    await browser.initializeBrowser(credentials, true);
   }
 
-  console.log('permitno', permitNo);
   if (/^http/i.test(permitNo)) {
     const t = await browser.gotoTagPage(permitNo);
     permitNo = t['Permit No.'];
@@ -270,7 +241,7 @@ async function successfullyTagged(permitNo, credentials, browser = i3ms) {
   }, {});
 }
 
-export async function permitDetails(permit, sse, browser = i3ms) {
+export async function getPermit(permit, sse, browser = i3ms) {
   let {
     taggingUrl,
     vehicleDetails,
@@ -287,8 +258,6 @@ export async function permitDetails(permit, sse, browser = i3ms) {
     transportedFrom
   } = permit;
 
-  console.log('inside permit details', permit);
-
   if (!quantity || !destination || !transportedFrom || !taggingUrl) {
     if (taggingUrl && !vehicleDetails) {
       const u = new URL(taggingUrl);
@@ -297,7 +266,6 @@ export async function permitDetails(permit, sse, browser = i3ms) {
         u.search;
     }
 
-    console.log('before get permit details');
     const r = await browser.getPermitDetails(vehicleDetails);
 
     if (!permitNumber) {
@@ -305,9 +273,7 @@ export async function permitDetails(permit, sse, browser = i3ms) {
     }
 
     if (validate) {
-      console.log('fetching permit in the list', permitNumber);
-
-      let result = await browser.getPermits(
+      let result = await browser.lastTwoMonthPermits(
         'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
         true
@@ -316,7 +282,6 @@ export async function permitDetails(permit, sse, browser = i3ms) {
       let found = false;
       for (let i = 0; i < result.length; ++i) {
         if (result[i]['Permit No.'] == permitNumber) {
-          console.log('found permit in the list', permitNumber);
           found = true;
           break;
         }
@@ -372,9 +337,8 @@ export async function permitDetails(permit, sse, browser = i3ms) {
     permit.tagged = {};
   }
 
-  console.log('tagged length', permit.tagged.length);
   if (!noTrips) {
-    let reportResult = await permitReport(permit, sse, browser);
+    let reportResult = await permitTrips(permit, sse, browser);
 
     if (!permit.material) {
       permit.material = reportResult['Mineral Name'];
@@ -437,86 +401,53 @@ export async function permitDetails(permit, sse, browser = i3ms) {
   }
 
   if (sse) {
-    console.log('sending results to browser', permitNumber);
     sse.send(
       'permit-details-results',
       _.omit(permit, ['sender', 'credentials'])
     );
   }
 
-  console.log('returning from permitdetails', permitNumber);
   return permit;
 }
 
-export async function tagVehicle(obj, vehicles, options, sse) {
+export async function tagging(obj, vehicles, options, renderer) {
   const { taggingUrl } = options;
-  let sno = 1;
-  let retries = [];
-  const failed = [];
 
-  await vehicles.reduce(async (p, truck) => {
+  for (let truck of vehicles) {
     if (!obj.getBrowser()) return Promise.resolve();
 
-    await p;
+    let ret = await obj.tagVehicle(taggingUrl, truck);
 
-    sno++;
-
-    console.log(sno, 'Tagging vehicle', truck);
-
-    let reason = await obj.tagVehicle(taggingUrl, truck);
-
-    if (reason && /is already tagged/i.test(reason)) {
-      reason = 'Already Tagged by SomeOne';
+    if (ret && /is already tagged/i.test(ret)) {
+      ret = 'Already Tagged by SomeOne';
     }
 
-    if (sse) {
-      sse.send('total', 1);
+    if (renderer) {
+      renderer.send('total', 1);
     }
 
-    if (reason) {
-      failed[truck] = reason;
-      if (sse) {
-        sse.send('failed', 1);
+    if (ret) {
+      if (renderer) {
+        renderer.send('failed', 1);
       }
     }
 
-    if (reason || reason === '') {
-      sse.send('tag-truck-result', {
-        [truck]: reason
+    if (ret || ret === '') {
+      renderer.send('tag-result', {
+        [truck]: ret
       });
-    } else {
-      //retry tagging
-      retries.push(truck);
-    }
-
-    //return delay(200);
-  }, Promise.resolve());
-
-  console.log('Failed Vehicles', failed);
-
-  return retries;
-}
-
-async function tabTagging(taggingUrl, tab, chunk, options, sse) {
-  await tab.gotoTagPage(taggingUrl);
-
-  console.log(tab.tabNo, 'tagging chunk', chunk);
-  let retries = await tagVehicle(tab, chunk, options, sse);
-
-  if (retries.length) {
-    //try one more time
-    retries = await tagVehicle(tab, retries, options, sse);
-
-    if (retries.length) {
-      //try one more time
-      retries = await tagVehicle(tab, retries, options, sse);
     }
   }
 }
 
+async function tabTagging(taggingUrl, tab, chunk, options, sse) {
+  await tab.gotoTagPage(taggingUrl);
+  await tagging(tab, chunk, options, sse);
+}
+
 async function tagFromTab(taggingUrl, chunk, options, sse) {
   const tab = browser();
-  await tab.browserInit(options.credentials, false, true);
+  await tab.initializeBrowser(options.credentials, false, true);
   await tabTagging(taggingUrl, tab, chunk, options, sse);
   return tab;
 }
@@ -534,18 +465,15 @@ async function openTabs(taggingUrl, chunks, options, sse) {
       arr.push(i);
     }
 
-    console.log('creating browsers', arr);
-
     await Promise.all(
       arr.map(async i => {
-        console.log('creating browser', i);
         const tab = await tagFromTab(taggingUrl, chunks[i], options, sse);
         tabs.push(tab);
       })
     );
 
     if (!options.name) {
-      return permitDetails(
+      return getPermit(
         {
           taggingUrl: taggingUrl
         },
@@ -581,14 +509,12 @@ export async function tagVehicles(options, sse) {
 
 export async function releaseVehicles(options, sse) {
   const { trucks, name: permitNumber } = options;
-  console.log('release was called');
   try {
     if (trucks.length) {
       const chunks = _.chunk(trucks, 20);
       let tagged = [];
 
       for (let chunk of chunks) {
-        console.log('chunk', chunk);
         tagged = await i3ms.releasePage(
           'https://i3ms.orissaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
           permitNumber,
@@ -606,14 +532,14 @@ export async function releaseVehicles(options, sse) {
   }
 }
 
-export async function browserInit(
+export async function initializeBrowser(
   cred,
   headless,
   tologin,
   cb,
   returnCompanyName
 ) {
-  return i3ms.browserInit(cred, true, tologin, cb, returnCompanyName);
+  return i3ms.initializeBrowser(cred, true, tologin, cb, returnCompanyName);
 }
 
 export async function disconnect() {

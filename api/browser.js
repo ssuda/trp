@@ -86,12 +86,9 @@ module.exports = function() {
   let globalDisconnectHandler;
 
   async function browserInstance(headless) {
-    console.log('process.env.SHOW_BROWSER  = ', process.env.SHOW_BROWSER);
-
     headless =
       process.env.SHOW_BROWSER == undefined ? true : !process.env.SHOW_BROWSER;
 
-    console.log('creating/connecting browser in headless mode', headless);
     if (!browser) {
       browser = await puppeteer.launch({
         headless,
@@ -162,7 +159,6 @@ module.exports = function() {
     if (!browser || !page) {
       return;
     }
-    console.log('browspage called', href);
     let numAttempts = 1;
     let success = true;
 
@@ -179,7 +175,6 @@ module.exports = function() {
         break;
       } catch (ex) {
         console.error(ex);
-        console.log('Retrying', numAttempts, href);
         if (!browser || !page || /net::ERR_/i.test(ex.message)) {
           success = false;
           break;
@@ -217,16 +212,13 @@ module.exports = function() {
   }
 
   async function gotoTagPage(href) {
-    console.log('href', href);
     let retries = 0;
 
     while (retries < 3) {
       await gotoPage(href);
-      console.log('waiting for #grTrAction');
       try {
         const r = await gridData('#grTrAction');
         const v = await page.$eval('#lbtn_count', el => el.innerText);
-        console.log('Number of vehicles tagged', v);
         if (v) {
           r.tagged = +v;
         }
@@ -241,7 +233,6 @@ module.exports = function() {
   }
 
   async function tagVehicle(href, truckNo) {
-    //console.log('Trying to tag vehicle', truckNo);
     let reason = '';
     try {
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
@@ -254,7 +245,7 @@ module.exports = function() {
         truckNo
       );
 
-      await navigationClickHelper('#btnsearch'); // Clicking the link will indirectly cause a navigation
+      await navigationClickHelper('#btnsearch');
 
       const r = await promiseAny(
         page.waitForSelector('#rdo_GPS_0', { timeout: 30000 }),
@@ -283,15 +274,14 @@ module.exports = function() {
         await gotoTagPage(href);
         return tagVehicle(href, truckNo);
       }
-      console.log('failed vehicle', truckNo);
       return false;
     }
   }
 
   async function navigationClickHelper(selector, timeout = 30000) {
     return Promise.all([
-      page.waitForNavigation({ timeout }), // The promise resolves after navigation has finished
-      page.click(selector) // Clicking the link will indirectly cause a navigation
+      page.waitForNavigation({ timeout }),
+      page.click(selector)
     ]);
   }
 
@@ -307,18 +297,14 @@ module.exports = function() {
 
     while (option <= numberOfOptions) {
       try {
-        console.log(href);
         await gotoPage(href);
 
-        console.log('before selectSecondOption');
         await page.waitForSelector('#ddlTransporter');
 
         numberOfOptions = await page.$$eval(
           '#ddlTransporter option',
           options => options.length
         );
-
-        console.log('before ddlTransporter');
 
         await selectOption('#ddlTransporter', option);
 
@@ -332,8 +318,6 @@ module.exports = function() {
           page.waitForNavigation(), // The promise resolves after navigation has finished
           page.click('#btnGetVehicle') // Clicking the link will indirectly cause a navigation
         ]);
-
-        console.log('waiting for selector');
 
         await page.waitForSelector('#lstFrom');
         let r = await page.$eval('#lstFrom', el => {
@@ -351,7 +335,6 @@ module.exports = function() {
         } else {
           if (trucks) {
             for (let truckNo of trucks) {
-              console.log('releasing trucks', truckNo);
               await page.select('#lstFrom', truckNo);
               await page.click('#btnAdd');
             }
@@ -359,7 +342,6 @@ module.exports = function() {
             if (await page.$('#btnRelease')) {
               await page.click('#btnRelease');
             }
-            await delay(2000);
             r = _.difference(r, trucks);
           }
           return r;
@@ -398,20 +380,16 @@ module.exports = function() {
 
   async function getPermitDetails(href, selector) {
     await gotoPage(href);
-    console.log('before extract');
     selector || (selector = '#grTrAction');
     const result = await gridData(selector);
-    console.log(result);
     return result;
   }
 
-  async function waitForPaging(selector) {
+  async function openAll(selector) {
     await page.waitForSelector(selector);
     const text = await page.$eval(selector, el => el.innerText);
-    console.log(text);
     if (!/paging/i.test(text)) {
       await page.click(selector);
-      console.log('waiting for paging');
       await page.waitForFunction('!document.querySelector(".paging")');
     }
   }
@@ -428,18 +406,14 @@ module.exports = function() {
     const selector = '#grdRequestList';
     await page.waitForSelector(selector);
     const rows = await tableData(selector);
-    console.log(rows);
     return rows;
   }
 
   async function getPermits(href, selector, previous, attempts) {
-    console.log(href);
-
     await gotoPage(href);
 
     selector || (selector = '#grdTransporterActions');
 
-    console.log('waiting for btnAll');
     let submitButton = await promiseAny(
       page.waitForSelector('#btnsubmit'),
       page.waitForSelector('#btnSubmit')
@@ -449,18 +423,15 @@ module.exports = function() {
 
     const e = await page.$(selector);
     let rows = [];
-    console.log('element exists', !!e);
-
     if (e) {
       const out = await promiseAny(
         page.waitForXPath(
           '//*[@id="grdTransporterActions"]/tbody/tr/td[contains(text(), "No Record(s) Found")]'
         ),
-        waitForPaging('#btnAll')
+        openAll('#btnAll')
       );
 
       if (out === 2) {
-        console.log('before extract this month');
         await delay(5000);
         rows = await tableData(selector);
       }
@@ -475,8 +446,7 @@ module.exports = function() {
       await page.select('#ddlMonth', '' + month);
       await page.click(submitButton == 1 ? '#btnsubmit' : '#btnSubmit');
 
-      await waitForPaging('#btnAll');
-      console.log('before extract previous month');
+      await openAll('#btnAll');
       await delay(5000);
 
       let p = await tableData(selector);
@@ -570,7 +540,6 @@ module.exports = function() {
         .format('DD-MMM-YYYY'));
     todate || (todate = moment().format('DD-MMM-YYYY'));
 
-    console.log('waiting for navigation idle2');
     let r = 3;
 
     while (r == 3) {
@@ -581,7 +550,6 @@ module.exports = function() {
 
         await fill('#to_txt_date', todate);
 
-        console.log('Retrying in loop');
         await Promise.all([
           page.waitForNavigation({
             timeout: 120000,
@@ -702,11 +670,11 @@ module.exports = function() {
     getBrowser,
     getPage,
     companyName,
-    browserInit,
+    initializeBrowser: browserInit,
     permitVehicles,
     permitVehiclesInit,
     tpDetails,
-    getPermits,
+    lastTwoMonthPermits: getPermits,
     getNewPermits,
     transportAssignVehicles,
     getPermitDetails,
