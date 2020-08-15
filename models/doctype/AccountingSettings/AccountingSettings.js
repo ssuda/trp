@@ -147,8 +147,7 @@ module.exports = {
       fieldname: 'newPermitAlert',
       label: 'New Permit Alert',
       fieldtype: 'Check',
-      default: () =>
-        frappe.AccountingSettings.email.includes('@spinbi.com') ? 0 : 1
+      default: 0
     },
     {
       fieldname: 'lastSnapshot',

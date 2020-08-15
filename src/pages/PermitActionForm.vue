@@ -162,7 +162,7 @@ import BackLink from '@/components/BackLink';
 import _ from 'lodash';
 import isOnline from 'is-online';
 
-import sqs from '@/sqs';
+import sqsSend from '@/sqsSend';
 import { firestore } from '@/firebase';
 
 import {
@@ -429,6 +429,21 @@ export default {
             let failed = this.failed;
 
             if (input.taggingUrl) {
+              input.taggingUrl = input.taggingUrl.trim();
+
+              if (!/^http/i.test(input.taggingUrl)) {
+                input.taggingUrl =
+                  'https://i3ms.orissaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?' +
+                  input.taggingUrl;
+              } else if (input.taggingUrl.includes('VehicleDetails.aspx')) {
+                const query = input.taggingUrl.substr(
+                  input.taggingUrl.lastIndexOf('?')
+                );
+                input.taggingUrl =
+                  'https://i3ms.orissaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
+                  query;
+              }
+
               firestore
                 .collection('i3msCloudTaggingResult')
                 .where('gstin', '==', input.gstin)
@@ -474,17 +489,30 @@ export default {
             }
 
             console.log('Adding cloud tagging input', input);
-            input.trucks = trucks;
-            if (input.taggingUrl) {
-              await firestore.collection('i3msCloudTagging').add(input);
-            } else {
-              tempTaggingDoc = await firestore
-                .collection('tempTagging')
-                .add(input);
-              this.loading = false;
+            //input.trucks = trucks;
+            // if (input.taggingUrl) {
+            //   await firestore.collection('i3msCloudTagging').add(input);
+            // } else {
+            //   tempTaggingDoc = await firestore
+            //     .collection('tempTagging')
+            //     .add(input);
+            //   this.loading = false;
+            // }
+            this.loading = false;
+
+            let chunks = _.chunk(
+              trucks,
+              Math.ceil(trucks.length / input.numBrowsers)
+            );
+
+            for (let chunk of chunks) {
+              console.log('Submitting chunk');
+              input.trucks = chunk;
+              input.totalVehicles = trucks.length;
+              await sqsSend('i3ms-tag-request', input);
             }
             showMessageDialog({
-              description: `Submitted Tag request for ${input.trucks.length} for ${input.taggingUrl} Successfully`,
+              description: `Submitted Tag request for ${trucks.length} for ${input.taggingUrl} Successfully`,
               buttons: [{ label: 'Ok' }]
             });
           } else {

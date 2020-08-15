@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const _ = require('lodash');
-const moment = require('moment');
+const moment = require('moment-timezone');
+moment.tz.setDefault('Asia/Kolkata');
 const findChrome = require('chrome-finder');
 
 const { delay, promiseAny } = require('./utils');
@@ -79,11 +80,12 @@ function defaultViewport(headless) {
 }
 
 module.exports = function() {
-  // Globals
   let browser;
   let page;
   let mainUrl;
   let globalDisconnectHandler;
+  let credentials;
+  let globalHeadless;
 
   async function browserInstance(headless) {
     headless =
@@ -113,15 +115,13 @@ module.exports = function() {
   async function pageInstance() {
     credentials || (credentials = {});
 
-    const t = await browser.pages();
-    page = t[0];
+    const pages = await browser.pages();
+    page = pages[0];
 
     page.on('dialog', async dialog => {
       try {
         await dialog.accept();
-      } catch (ex) {
-        // console.error(ex);
-      }
+      } catch (ex) {}
     });
 
     page.on('response', async response => {
@@ -142,7 +142,6 @@ module.exports = function() {
     page.setDefaultNavigationTimeout(300000);
   }
 
-  // utility functions
   function fill(selector, v) {
     return page.$eval(selector, (el, v) => (el.value = v), v);
   }
@@ -153,6 +152,90 @@ module.exports = function() {
 
     const val = await page.$eval(sel, el => el.value);
     await page.select(selector, val);
+  }
+
+  function clickHelper(selector, timeout = 30000) {
+    return Promise.all([
+      page.waitForNavigation({ timeout }),
+      page.click(selector)
+    ]);
+  }
+
+  function setRadioButton(selector) {
+    return page.evaluate(selector => {
+      document.querySelector(selector).checked = true;
+    }, selector);
+  }
+
+  async function gridData(selector) {
+    await page.waitForSelector(selector);
+    let rows = await page.$$eval(`${selector} tr`, trs => {
+      return trs.map(tr => tr.innerText);
+    });
+
+    rows = rows.filter(row => !row.includes('\n'));
+    rows = rows
+      .map(row => row.split('\t').filter(t => t.trim()))
+      .filter(r => r.length >= 3);
+    rows = _.flatMap(rows);
+    rows = _.chunk(rows, 3);
+    return _.reduce(
+      rows,
+      (p, row) => {
+        p[row[0]] = row[2].toUpperCase();
+        return p;
+      },
+      {}
+    );
+  }
+
+  async function tableData(selector, txtField) {
+    await page.waitForSelector(selector);
+    return await page.$$eval(
+      `${selector} tr`,
+      (trs, txtField) => {
+        let first_row = true;
+        const headers = [];
+        const rows = [];
+        trs.forEach(tr => {
+          if (first_row) {
+            first_row = false;
+            const ths = tr.querySelectorAll('th');
+            ths.forEach(td => {
+              headers.push(td.innerText.replace(/\*/, '').trim());
+            });
+          } else {
+            const tds = tr.querySelectorAll('td');
+            const obj = {};
+            let i = 0;
+
+            tds.forEach(td => {
+              let a = td.querySelector(
+                'input[type="checkbox"],input[type="text"]'
+              );
+              if (a) {
+                if (headers[i]) {
+                  obj[headers[i]] = a.id;
+                } else {
+                  obj.select_box = a.id;
+                }
+              } else {
+                a = td.querySelector('a');
+                obj[headers[i]] = a ? a.href : td.innerText.trim();
+
+                if (a) {
+                  obj[headers[i] + ' Text'] = a.innerText.trim();
+                }
+              }
+              i++;
+            });
+            rows.push(obj);
+          }
+        });
+        return rows;
+      },
+      txtField
+    );
   }
 
   async function gotoPage(href) {
@@ -245,7 +328,7 @@ module.exports = function() {
         truckNo
       );
 
-      await navigationClickHelper('#btnsearch');
+      await clickHelper('#btnsearch');
 
       const r = await promiseAny(
         page.waitForSelector('#rdo_GPS_0', { timeout: 30000 }),
@@ -255,9 +338,9 @@ module.exports = function() {
       if (r == 1) {
         await setRadioButton('#rdo_GPS_0');
         await setRadioButton('#Rdo_VTS_0');
-        await navigationClickHelper('#Rdo_SIM_0');
+        await clickHelper('#Rdo_SIM_0');
         await page.click('#chkClick');
-        await navigationClickHelper('#btnSubmit');
+        await clickHelper('#btnSubmit');
         await delay(100);
       } else {
         reason = page.$eval('#lblMsg', el => el.innerText);
@@ -276,19 +359,6 @@ module.exports = function() {
       }
       return false;
     }
-  }
-
-  async function navigationClickHelper(selector, timeout = 30000) {
-    return Promise.all([
-      page.waitForNavigation({ timeout }),
-      page.click(selector)
-    ]);
-  }
-
-  async function setRadioButton(selector) {
-    return page.evaluate(selector => {
-      document.querySelector(selector).checked = true;
-    }, selector);
   }
 
   async function releasePage(href, permitNo, trucks) {
@@ -314,10 +384,7 @@ module.exports = function() {
           await page.select('#ddlPermitType', '2');
         }
         await fill('#txtPermitNo', permitNo);
-        const [response] = await Promise.all([
-          page.waitForNavigation(), // The promise resolves after navigation has finished
-          page.click('#btnGetVehicle') // Clicking the link will indirectly cause a navigation
-        ]);
+        await clickHelper('#btnGetVehicle');
 
         await page.waitForSelector('#lstFrom');
         let r = await page.$eval('#lstFrom', el => {
@@ -356,33 +423,10 @@ module.exports = function() {
     }
   }
 
-  async function gridData(selector) {
-    await page.waitForSelector(selector);
-    let rows = await page.$$eval(`${selector} tr`, trs => {
-      return trs.map(tr => tr.innerText);
-    });
-
-    rows = rows.filter(row => !row.includes('\n'));
-    rows = rows
-      .map(row => row.split('\t').filter(t => t.trim()))
-      .filter(r => r.length >= 3);
-    rows = _.flatMap(rows);
-    rows = _.chunk(rows, 3);
-    return _.reduce(
-      rows,
-      (p, row) => {
-        p[row[0]] = row[2].toUpperCase();
-        return p;
-      },
-      {}
-    );
-  }
-
-  async function getPermitDetails(href, selector) {
+  async function permitDetails(href, selector) {
     await gotoPage(href);
     selector || (selector = '#grTrAction');
-    const result = await gridData(selector);
-    return result;
+    return gridData(selector);
   }
 
   async function openAll(selector) {
@@ -394,22 +438,7 @@ module.exports = function() {
     }
   }
 
-  async function transportAssignVehicles(href) {
-    await gotoPage(href);
-    return gridData('#grTrAction table');
-  }
-
-  async function getNewPermits() {
-    await gotoPage(
-      'https://i3ms.orissaminerals.gov.in/i3ms/pms/NewRequestTransporter.aspx'
-    );
-    const selector = '#grdRequestList';
-    await page.waitForSelector(selector);
-    const rows = await tableData(selector);
-    return rows;
-  }
-
-  async function getPermits(href, selector, previous, attempts) {
+  async function lastTwoMonthPermits(href, selector, previousMonth) {
     await gotoPage(href);
 
     selector || (selector = '#grdTransporterActions');
@@ -421,23 +450,23 @@ module.exports = function() {
 
     await page.waitForSelector(selector);
 
-    const e = await page.$(selector);
+    const el = await page.$(selector);
     let rows = [];
-    if (e) {
-      const out = await promiseAny(
+    if (el) {
+      const r = await promiseAny(
         page.waitForXPath(
           '//*[@id="grdTransporterActions"]/tbody/tr/td[contains(text(), "No Record(s) Found")]'
         ),
         openAll('#btnAll')
       );
 
-      if (out === 2) {
+      if (r === 2) {
         await delay(5000);
         rows = await tableData(selector);
       }
     }
 
-    if (previous) {
+    if (previousMonth) {
       await page.waitForSelector('#ddlMonth');
       const month =
         moment()
@@ -449,82 +478,13 @@ module.exports = function() {
       await openAll('#btnAll');
       await delay(5000);
 
-      let p = await tableData(selector);
-      rows = rows.concat(p || []);
+      let data = await tableData(selector);
+      rows = rows.concat(data || []);
     }
     return rows;
   }
 
-  async function tableData(selector, txtField) {
-    await page.waitForSelector(selector);
-    return await page.$$eval(
-      `${selector} tr`,
-      (trs, txtField) => {
-        let first_row = true;
-        const headers = [];
-        const rows = [];
-        trs.forEach(tr => {
-          if (first_row) {
-            first_row = false;
-            const ths = tr.querySelectorAll('th');
-            ths.forEach(td => {
-              headers.push(td.innerText.replace(/\*/, '').trim());
-            });
-          } else {
-            const tds = tr.querySelectorAll('td');
-            const obj = {};
-            let i = 0;
-
-            // if (!txtField) {
-            tds.forEach(td => {
-              let a = td.querySelector(
-                'input[type="checkbox"],input[type="text"]'
-              );
-              if (a) {
-                if (headers[i]) {
-                  obj[headers[i]] = a.id;
-                } else {
-                  obj.select_box = a.id;
-                }
-              } else {
-                a = td.querySelector('a');
-                obj[headers[i]] = a ? a.href : td.innerText.trim();
-
-                if (a) {
-                  obj[headers[i] + ' Text'] = a.innerText.trim();
-                }
-              }
-              i++;
-            });
-            rows.push(obj);
-          }
-        });
-        return rows;
-      },
-      txtField
-    );
-  }
-
-  async function tpDetails(href) {
-    await gotoPage(href);
-    await page.waitForSelector('#lblgrosswt');
-
-    const result = {};
-
-    result.gross_weight = parseFloat(
-      await page.$eval('#lblgrosswt', el => el.innerText.trim())
-    );
-    result.tare_weight = parseFloat(
-      await page.$eval('#lbltarewt', el => el.innerText.trim())
-    );
-    result.transporter_name = await page.$eval('#lbltransporter', el =>
-      el.innerText.trim()
-    );
-
-    return result;
-  }
-
-  async function permitVehiclesInit(href) {
+  async function gotoPermitTripsPage(href) {
     await gotoPage(href);
   }
 
@@ -554,8 +514,8 @@ module.exports = function() {
           page.waitForNavigation({
             timeout: 120000,
             waitUntil: 'networkidle0'
-          }), // The promise resolves after navigation has finished
-          page.click('#btnsearch') // Clicking the link will indirectly cause a navigation
+          }),
+          page.click('#btnsearch')
         ]);
 
         try {
@@ -636,9 +596,7 @@ module.exports = function() {
     }
   }
 
-  let credentials, globalHeadless;
-
-  async function browserInit(cred, headless, tologin, cb, returnCompany) {
+  async function initializeBrowser(cred, headless, tologin, cb, returnCompany) {
     if (cred) {
       credentials = cred;
     }
@@ -670,14 +628,11 @@ module.exports = function() {
     getBrowser,
     getPage,
     companyName,
-    initializeBrowser: browserInit,
+    initializeBrowser,
     permitVehicles,
-    permitVehiclesInit,
-    tpDetails,
-    lastTwoMonthPermits: getPermits,
-    getNewPermits,
-    transportAssignVehicles,
-    getPermitDetails,
+    gotoPermitTripsPage,
+    lastTwoMonthPermits,
+    permitDetails,
     releasePage,
     tagVehicle,
     gotoTagPage,

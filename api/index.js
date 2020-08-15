@@ -1,4 +1,5 @@
-const moment = require('moment');
+const moment = require('moment-timezone');
+moment.tz.setDefault('Asia/Kolkata');
 require('console-stamp')(console, '[HH:MM:ss.l]');
 
 const browser = require('./browser');
@@ -266,7 +267,7 @@ export async function getPermit(permit, sse, browser = i3ms) {
         u.search;
     }
 
-    const r = await browser.getPermitDetails(vehicleDetails);
+    const r = await browser.permitDetails(vehicleDetails);
 
     if (!permitNumber) {
       permitNumber = r['Permit No.'];

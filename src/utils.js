@@ -101,10 +101,14 @@ export async function connectToRemoteDatabase() {
   await postStart();
 }
 
-const trucksRegexp = /[A-Z]{2}[0-9]{1,2}(?:[A-Z])?(?:[A-Z]*)?[0-9]{4}/gi;
+const trucksRegexp = /[A-Z]{2} ?[0-9]{1,2} ?(?:[A-Z])?(?:[A-Z]*)? ?[0-9]{3,4}/gi;
 
 export function extractTrucks(text) {
-  return [...new Set(Array.from(text.matchAll(trucksRegexp), m => m[0]))];
+  let trucks = Array.from(text.matchAll(trucksRegexp), m =>
+    m[0].replace(/ /g, '')
+  );
+  console.log('trucks', trucks.length);
+  return [...new Set(trucks)];
 }
 
 export async function connectToLocalDatabase(filePath) {
