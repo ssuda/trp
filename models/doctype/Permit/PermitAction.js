@@ -36,9 +36,9 @@ module.exports = {
     {
       fieldname: 'numBrowsers',
       label: 'Number of Browsers (1 to 20)',
-      fieldtype: 'Data',
-      default: () =>
-        frappe.AccountingSettings.email == 'samba@spinbi.com' ? 20 : 4
+      fieldtype: 'Data'
+      // default: () =>
+      //   frappe.AccountingSettings.email == 'samba@spinbi.com' ? 20 : 4
     },
     {
       fieldname: 'username',
@@ -60,9 +60,9 @@ module.exports = {
       fieldname: 'isCloudTagging',
       label: 'Tagging in Server? (Tagging will happen remotely in cloud)',
       fieldtype: 'Check',
-      placeholder: 'Tagging in Server?',
-      default: () =>
-        frappe.AccountingSettings.email == 'samba@spinbi.com' ? 1 : 0
+      placeholder: 'Tagging in Server?'
+      // default: () =>
+      //   frappe.AccountingSettings.email == 'samba@spinbi.com' ? 1 : 0
     },
     {
       fieldname: 'truckList',

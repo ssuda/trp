@@ -488,7 +488,7 @@ export async function syncDoc(data) {
 
     console.log('Syncing single', data.doctype, data, finalData);
 
-    if (data.doctype === 'AccountingSettings') {
+    if (data.doctype === 'AccountingSettings' && frappe.AccountingSettings) {
       return frappe.AccountingSettings.update(finalData);
     } else {
       return frappe.db.updateSingle(data.doctype, finalData);

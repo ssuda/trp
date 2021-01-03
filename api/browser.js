@@ -285,7 +285,7 @@ module.exports = function() {
       await page.click('#btnSubmit');
       await page.waitForNavigation({ waitUntil: 'networkidle0' });
       await delay(2000);
-      if (mainUrl) {
+      if (mainUrl && page) {
         await page.goto(mainUrl, { waitUntil: 'networkidle2' });
       }
     } catch (ex) {
@@ -468,11 +468,12 @@ module.exports = function() {
 
     if (previousMonth) {
       await page.waitForSelector('#ddlMonth');
-      const month =
-        moment()
-          .subtract(1, 'month')
-          .month() + 1;
+      const dt = moment().subtract(1, 'month');
+      const month = dt.month() + 1;
+      const year = dt.year();
+
       await page.select('#ddlMonth', '' + month);
+      await page.select('#ddlYear', '' + year);
       await page.click(submitButton == 1 ? '#btnsubmit' : '#btnSubmit');
 
       await openAll('#btnAll');
