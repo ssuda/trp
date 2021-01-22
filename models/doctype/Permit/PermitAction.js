@@ -41,6 +41,11 @@ module.exports = {
       //   frappe.AccountingSettings.email == 'samba@spinbi.com' ? 20 : 4
     },
     {
+      fieldname: 'scheduledAt',
+      label: 'Scheduled At',
+      fieldtype: 'Data'
+    },
+    {
       fieldname: 'username',
       label: 'I3MS Username',
       fieldtype: 'Data'

@@ -75,6 +75,16 @@
                   v-if="doc.action == 'tagging'"
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('scheduledAt')"
+                  :value="doc.scheduledAt"
+                  :showLabel="true"
+                  @change="value => doc.set('scheduledAt', value)"
+                />
+
+                <FormControl
+                  v-if="doc.action == 'tagging'"
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('isCloudTagging')"
                   :value="doc.isCloudTagging"
                   :showLabel="true"
@@ -169,7 +179,8 @@ import {
   handleErrorWithDialog,
   showMessageDialog,
   extractTrucks,
-  splitToChunks
+  splitToChunks,
+  delay
 } from '@/utils';
 
 import { refreshPermit, twoMonthsOldPermits, pickPermitFields } from '@/permit';
@@ -313,9 +324,9 @@ export default {
           return;
         }
 
-        if (this.doc.numBrowsers > 20) {
+        if (this.doc.numBrowsers > 100) {
           showMessageDialog({
-            message: this._('Number of browsers not more than 20')
+            message: this._('Number of browsers not more than 100')
           });
           this.loading = false;
           return;
@@ -504,6 +515,20 @@ export default {
               trucks,
               Math.ceil(trucks.length / input.numBrowsers)
             );
+
+            if (this.doc.scheduledAt) {
+              const scheduledAt = DateTime.fromFormat(
+                this.doc.scheduledAt,
+                'h:m a'
+              );
+              const diff = scheduledAt.diffNow('milliseconds');
+
+              console.log('scheduling in', diff.milliseconds);
+
+              if (diff.milliseconds > 0) {
+                await delay(diff.milliseconds);
+              }
+            }
 
             for (let chunk of chunks) {
               console.log('Submitting chunk');
