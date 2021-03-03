@@ -278,7 +278,7 @@ module.exports = function() {
         return;
       }
 
-      await page.goto('https://i3ms.orissaminerals.gov.in/Default.aspx?id=1');
+      await page.goto('https://i3ms.odishaminerals.gov.in/Default.aspx?id=1');
       await page.waitForSelector('#btnSubmit');
       await fill('#txtusr', credentials.username);
       await fill('#txtpwd', credentials.password);

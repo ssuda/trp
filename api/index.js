@@ -101,7 +101,7 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
   for (let attempts = 0; attempts < 3; ++attempts) {
     try {
       result = await browser.lastTwoMonthPermits(
-        'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
+        'https://i3ms.odishaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
         !args.onlyNewPermits
       );
@@ -156,7 +156,7 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
       if (!pr.taggingUrl) {
         const uri = new URL(pr.vehicleDetails);
         pr.taggingUrl =
-          'https://i3ms.orissaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
+          'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
           uri.search;
       }
 
@@ -183,7 +183,7 @@ export async function permitTrips(args, sse, browser = i3ms) {
   while (retries < 3) {
     try {
       let r = await browser.permitVehicles(
-        'https://i3ms.orissaminerals.gov.in/i3MS/ePassReports/PermitWiseTransportDetails.aspx?linkn=313&linkm=15&Openstate=0',
+        'https://i3ms.odishaminerals.gov.in/i3MS/ePassReports/PermitWiseTransportDetails.aspx?linkn=313&linkm=15&Openstate=0',
         args.name,
         fromDate,
         toDate
@@ -232,7 +232,7 @@ async function successfullyTagged(permitNo, credentials, browser = i3ms) {
   }
 
   const v = await browser.releasePage(
-    'https://i3ms.orissaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
+    'https://i3ms.odishaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
     permitNo
   );
 
@@ -263,7 +263,7 @@ export async function getPermit(permit, sse, browser = i3ms) {
     if (taggingUrl && !vehicleDetails) {
       const u = new URL(taggingUrl);
       vehicleDetails =
-        'https://i3ms.orissaminerals.gov.in/i3ms/pms/VehicleDetails.aspx' +
+        'https://i3ms.odishaminerals.gov.in/i3ms/pms/VehicleDetails.aspx' +
         u.search;
     }
 
@@ -275,7 +275,7 @@ export async function getPermit(permit, sse, browser = i3ms) {
 
     if (validate) {
       let result = await browser.lastTwoMonthPermits(
-        'https://i3ms.orissaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
+        'https://i3ms.odishaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
         true
       );
@@ -517,7 +517,7 @@ export async function releaseVehicles(options, sse) {
 
       for (let chunk of chunks) {
         tagged = await i3ms.releasePage(
-          'https://i3ms.orissaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
+          'https://i3ms.odishaminerals.gov.in/i3ms/PMS/ReleaseVehicle.aspx?linkn=297&linkm=15&Openstate=0',
           permitNumber,
           chunk
         );

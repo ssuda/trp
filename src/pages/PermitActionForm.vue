@@ -444,14 +444,14 @@ export default {
 
               if (!/^http/i.test(input.taggingUrl)) {
                 input.taggingUrl =
-                  'https://i3ms.orissaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?' +
+                  'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?' +
                   input.taggingUrl;
               } else if (input.taggingUrl.includes('VehicleDetails.aspx')) {
                 const query = input.taggingUrl.substr(
                   input.taggingUrl.lastIndexOf('?')
                 );
                 input.taggingUrl =
-                  'https://i3ms.orissaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
+                  'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
                   query;
               }
 
