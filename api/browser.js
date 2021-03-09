@@ -4,6 +4,7 @@ const moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Kolkata');
 const findChrome = require('chrome-finder');
 
+const vision = require('./vision');
 const { delay, promiseAny } = require('./utils');
 
 function browserArgs(headless) {
@@ -86,6 +87,7 @@ module.exports = function() {
   let globalDisconnectHandler;
   let credentials;
   let globalHeadless;
+  let captchaResolve, captchaVal;
 
   async function browserInstance(headless) {
     headless =
@@ -135,6 +137,16 @@ module.exports = function() {
         url.includes('/i3msnew1.aspx')
       ) {
         await login();
+      }
+      else if (
+        method == 'GET' &&
+        url.toLowerCase().includes('/captcha.aspx')
+      ) {
+       if (response.request().resourceType() === 'image') {
+            let content = await response.buffer();
+            captchaVal = await vision(content);
+            captchResolve();
+        }
       }
     });
 
@@ -318,6 +330,9 @@ module.exports = function() {
   async function tagVehicle(href, truckNo) {
     let reason = '';
     try {
+      let captcha = new Promise((resolve, reject) => {
+        captchaResolve = resolve;
+      });
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       await page.$eval(
         '#txtVehicleNo',
@@ -340,6 +355,8 @@ module.exports = function() {
         await setRadioButton('#Rdo_VTS_0');
         await clickHelper('#Rdo_SIM_0');
         await page.click('#chkClick');
+        await captcha;
+        await page.$eval('$txtcaptcha', e => e.value = captchaVal);
         await clickHelper('#btnSubmit');
         await delay(100);
       } else {
