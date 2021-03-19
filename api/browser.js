@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const _ = require('lodash');
 const moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Kolkata');
@@ -96,6 +96,7 @@ module.exports = function() {
     if (!browser) {
       browser = await puppeteer.launch({
         headless,
+        ignoreHTTPSErrors: true,
         args: browserArgs(headless),
         executablePath: findChrome(),
         defaultViewport: defaultViewport(headless),
@@ -148,7 +149,7 @@ module.exports = function() {
     });
 
     //page.setDefaultTimeout(300000);
-    page.setDefaultNavigationTimeout(300000);
+    page.setDefaultNavigationTimeout(600000);
   }
 
   function fill(selector, v) {
@@ -262,7 +263,7 @@ module.exports = function() {
           success = false;
           break;
         }
-        await page.goto(href, { waitUntil: 'networkidle2' });
+        await page.goto(href, { waitUntil: 'domcontentloaded' });
         success = true;
         break;
       } catch (ex) {
@@ -352,7 +353,7 @@ module.exports = function() {
         //const captchaVal = await vision(captchaImage);
         //await page.$eval('$txtcaptcha', e => e.value = captchaVal);
         await clickHelper('#btnSubmit');
-        await delay(100);
+        //await delay(100);
       } else {
         reason = page.$eval('#lblMsg', el => el.innerText);
 

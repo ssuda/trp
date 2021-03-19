@@ -408,11 +408,12 @@ export default {
         // setup auto tagging
         //frappe.events.trigger('auto-tagging');
 
-        frappe.events.trigger('open-browser', {
+        /*frappe.events.trigger('open-browser', {
           credentials,
           showBrowser: true,
           returnCompanyName: true
         });
+        */
 
         // refresh permits
         let permits = await twoMonthsOldPermits();
