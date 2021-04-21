@@ -375,35 +375,35 @@ export default {
         } else {
           obj.taggingUrl = this.doc.taggingUrl;
 
-          if (!this.doc.isCloudTagging) {
-            let ret = await new Promise((resolve, reject) => {
-              refreshPermit(
-                {
-                  ...obj,
-                  noTrips: true,
-                  validate: true
-                },
-                p => {
-                  resolve(p);
-                }
-              );
-            });
+          // if (!this.doc.isCloudTagging) {
+          //   let ret = await new Promise((resolve, reject) => {
+          //     refreshPermit(
+          //       {
+          //         ...obj,
+          //         noTrips: true,
+          //         validate: true
+          //       },
+          //       p => {
+          //         resolve(p);
+          //       }
+          //     );
+          //   });
 
-            if (!ret) {
-              showMessageDialog({
-                description: this._(
-                  'No Permit to tag vehicles, please check in i3ms'
-                ),
-                buttons: [
-                  {
-                    label: _('Ok')
-                  }
-                ]
-              });
-              this.loading = false;
-              return;
-            }
-          }
+          //   if (!ret) {
+          //     showMessageDialog({
+          //       description: this._(
+          //         'No Permit to tag vehicles, please check in i3ms'
+          //       ),
+          //       buttons: [
+          //         {
+          //           label: _('Ok')
+          //         }
+          //       ]
+          //     });
+          //     this.loading = false;
+          //     return;
+          //   }
+          // }
         }
 
         if (trucks.length) {

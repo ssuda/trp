@@ -347,11 +347,11 @@ module.exports = function() {
 
       if (r == 1) {
         await setRadioButton('#rdo_GPS_0');
-        await setRadioButton('#Rdo_VTS_0');
-        await clickHelper('#Rdo_SIM_0');
+        await clickHelper('#Rdo_VTS_0');
+        await setRadioButton('#Rdo_SIM_0');
         await page.click('#chkClick');
-        //const captchaVal = await vision(captchaImage);
-        //await page.$eval('$txtcaptcha', e => e.value = captchaVal);
+        const captchaVal = await vision(captchaImage);
+        await page.$eval('$txtcaptcha', e => (e.value = captchaVal));
         await clickHelper('#btnSubmit');
         //await delay(100);
       } else {
