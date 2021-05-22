@@ -4,7 +4,8 @@ const moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Kolkata');
 const findChrome = require('chrome-finder');
 
-const vision = require('./vision');
+//const vision = require('./vision');
+const rekognition = require('../src/rekognition');
 const { delay, promiseAny } = require('./utils');
 
 function browserArgs(headless) {
@@ -164,9 +165,9 @@ module.exports = function() {
     await page.select(selector, val);
   }
 
-  function clickHelper(selector, timeout = 30000) {
+  function clickHelper(selector, timeout = 30000, waitUntil = 'load') {
     return Promise.all([
-      page.waitForNavigation({ timeout }),
+      page.waitForNavigation({ timeout, waitUntil }),
       page.click(selector)
     ]);
   }
@@ -338,7 +339,9 @@ module.exports = function() {
         truckNo
       );
 
-      await clickHelper('#btnsearch');
+      console.log('before btnsearch');
+      await clickHelper('#btnsearch', 30000, 'networkidle2');
+      console.log('after btnsearch');
 
       const r = await promiseAny(
         page.waitForSelector('#rdo_GPS_0', { timeout: 30000 }),
@@ -350,10 +353,14 @@ module.exports = function() {
         await clickHelper('#Rdo_VTS_0');
         await setRadioButton('#Rdo_SIM_0');
         await page.click('#chkClick');
-        const captchaVal = await vision(captchaImage);
-        await page.$eval('$txtcaptcha', e => (e.value = captchaVal));
+        let captchaVal = await rekognition(captchaImage);
+        console.log('captchaVal', captchaVal);
+        await page.$eval(
+          '#txtcaptcha',
+          (e, val) => (e.value = val),
+          captchaVal
+        );
         await clickHelper('#btnSubmit');
-        //await delay(100);
       } else {
         reason = page.$eval('#lblMsg', el => el.innerText);
 
