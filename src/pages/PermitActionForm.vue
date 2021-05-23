@@ -324,9 +324,9 @@ export default {
           return;
         }
 
-        if (this.doc.numBrowsers > 10) {
+        if (this.doc.numBrowsers > 20) {
           showMessageDialog({
-            message: this._('Number of browsers not more than 10')
+            message: this._('Number of browsers not more than 20')
           });
           this.loading = false;
           return;
