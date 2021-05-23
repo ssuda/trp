@@ -340,7 +340,7 @@ module.exports = function() {
       );
 
       console.log('before btnsearch');
-      await clickHelper('#btnsearch', 30000, 'networkidle2');
+      await page.click('#btnsearch');
       console.log('after btnsearch');
 
       const r = await promiseAny(
