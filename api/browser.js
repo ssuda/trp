@@ -340,7 +340,7 @@ module.exports = function() {
       );
 
       console.log('before btnsearch');
-      await page.click('#btnsearch');
+      await clickHelper('#btnsearch');
       console.log('after btnsearch');
 
       const r = await promiseAny(

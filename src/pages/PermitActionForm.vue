@@ -72,7 +72,10 @@
 
               <div class="w-1/3">
                 <FormControl
-                  v-if="doc.action == 'tagging'"
+                  v-if="
+                    doc.action == 'tagging' &&
+                      frappe.currentUser.email == 'samba@spinbi.com'
+                  "
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('scheduledAt')"
@@ -82,7 +85,10 @@
                 />
 
                 <FormControl
-                  v-if="doc.action == 'tagging'"
+                  v-if="
+                    doc.action == 'tagging' &&
+                      !frappe.currentUser.accountingSettings.serverDisabled
+                  "
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('isCloudTagging')"
