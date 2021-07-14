@@ -7,7 +7,7 @@ const browser = require('./browser');
 const i3ms = browser();
 const _ = require('lodash');
 
-const { delay } = require('./utils');
+const { delay, promiseWithTimeout } = require('./utils');
 
 export let busyFlag = {
   isBusy: false
@@ -411,45 +411,61 @@ export async function getPermit(permit, sse, browser = i3ms) {
   return permit;
 }
 
-export async function tagging(obj, vehicles, options, renderer) {
+export async function tagging(tab, vehicles, options, renderer, tabNo) {
   const { taggingUrl } = options;
 
-  for (let truck of vehicles) {
-    if (!obj.getBrowser()) return Promise.resolve();
+  for (let count = 0; count < vehicles.length; ) {
+    if (!tab.getBrowser()) return Promise.resolve();
 
-    let ret = await obj.tagVehicle(taggingUrl, truck);
+    let truck = vehicles[count];
 
-    if (ret && /is already tagged/i.test(ret)) {
-      ret = 'Already Tagged by SomeOne';
-    }
+    console.log('Tab', tabNo, 'tagging vehicle', count);
+    try {
+      let ret = await promiseWithTimeout(
+        tab.tagVehicle(taggingUrl, truck),
+        120000
+      );
 
-    if (renderer) {
-      renderer.send('total', 1);
-    }
+      console.log('Tab', tabNo, 'tagged vehicle', count, ret);
 
-    if (ret) {
-      if (renderer) {
-        renderer.send('failed', 1);
+      if (ret && /is already tagged/i.test(ret)) {
+        ret = 'Already Tagged by SomeOne';
       }
-    }
 
-    if (ret || ret === '') {
-      renderer.send('tag-result', {
-        [truck]: ret
-      });
+      if (renderer) {
+        renderer.send('total', 1);
+      }
+
+      if (ret) {
+        if (renderer) {
+          renderer.send('failed', 1);
+        }
+      }
+
+      if (ret || ret === '') {
+        renderer.send('tag-result', {
+          [truck]: ret
+        });
+      }
+      count++;
+    } catch (ex) {
+      console.log('Tab', tabNo, 'tagged vehicle', count, ex.message);
+      await tab.gotoTagPage(taggingUrl);
     }
   }
+
+  console.log('Tab', tabNo, 'Tagging ended');
 }
 
-async function tabTagging(taggingUrl, tab, chunk, options, sse) {
+async function tabTagging(taggingUrl, tab, chunk, options, sse, tabNo) {
   await tab.gotoTagPage(taggingUrl);
-  await tagging(tab, chunk, options, sse);
+  await tagging(tab, chunk, options, sse, tabNo);
 }
 
-async function tagFromTab(taggingUrl, chunk, options, sse) {
+async function tagFromTab(taggingUrl, chunk, options, sse, tabNo) {
   const tab = browser();
   await tab.initializeBrowser(options.credentials, false, true);
-  await tabTagging(taggingUrl, tab, chunk, options, sse);
+  await tabTagging(taggingUrl, tab, chunk, options, sse, tabNo);
   return tab;
 }
 
@@ -468,12 +484,16 @@ async function openTabs(taggingUrl, chunks, options, sse) {
 
     await Promise.all(
       arr.map(async i => {
-        const tab = await tagFromTab(taggingUrl, chunks[i], options, sse);
+        const tab = await tagFromTab(taggingUrl, chunks[i], options, sse, i);
         tabs.push(tab);
       })
     );
 
+    console.log('End of tagging');
+
     if (!options.name) {
+      console.log('Fetching permit');
+
       return getPermit(
         {
           taggingUrl: taggingUrl
@@ -481,11 +501,16 @@ async function openTabs(taggingUrl, chunks, options, sse) {
         sse
       );
     }
+
+    console.log('Fetching Successfully Tagged');
+
     const tagged = await successfullyTagged(options.name, null, tabs[0]);
 
     for (let i = 0; i < numTabs; ++i) {
       await tabs[i].disconnect();
     }
+
+    console.log('Complete End of Tagging');
 
     return tagged;
   } catch (ex) {

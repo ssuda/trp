@@ -17,3 +17,23 @@ export async function promiseAny(...promises) {
 export function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+export async function promiseWithTimeout(promise, timeout) {
+  let timeoutId;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error('Request timed out'));
+    }, timeout);
+  });
+
+  let ret;
+  try {
+    ret = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timeoutId);
+    return ret;
+  } catch (ex) {
+    clearTimeout(timeoutId);
+    throw ex;
+  }
+}

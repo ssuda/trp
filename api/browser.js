@@ -149,8 +149,8 @@ module.exports = function() {
       }
     });
 
-    //page.setDefaultTimeout(300000);
-    page.setDefaultNavigationTimeout(600000);
+    page.setDefaultTimeout(120000);
+    //page.setDefaultNavigationTimeout(120000);
   }
 
   function fill(selector, v) {
@@ -165,7 +165,7 @@ module.exports = function() {
     await page.select(selector, val);
   }
 
-  function clickHelper(selector, timeout = 30000, waitUntil = 'load') {
+  function clickHelper(selector, timeout = 60000, waitUntil = 'load') {
     return Promise.all([
       page.waitForNavigation({ timeout, waitUntil }),
       page.click(selector)
@@ -301,6 +301,7 @@ module.exports = function() {
       }
     } catch (ex) {
       console.error(ex);
+      await delay(60000);
       login();
     }
   }
@@ -340,7 +341,7 @@ module.exports = function() {
       );
 
       console.log('before btnsearch');
-      await clickHelper('#btnsearch');
+      await clickHelper('#btnsearch', 120000);
       console.log('after btnsearch');
 
       const r = await promiseAny(

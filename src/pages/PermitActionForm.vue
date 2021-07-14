@@ -381,35 +381,56 @@ export default {
         } else {
           obj.taggingUrl = this.doc.taggingUrl;
 
-          // if (!this.doc.isCloudTagging) {
-          //   let ret = await new Promise((resolve, reject) => {
-          //     refreshPermit(
-          //       {
-          //         ...obj,
-          //         noTrips: true,
-          //         validate: true
-          //       },
-          //       p => {
-          //         resolve(p);
-          //       }
-          //     );
-          //   });
-
-          //   if (!ret) {
-          //     showMessageDialog({
-          //       description: this._(
-          //         'No Permit to tag vehicles, please check in i3ms'
-          //       ),
-          //       buttons: [
-          //         {
-          //           label: _('Ok')
-          //         }
-          //       ]
-          //     });
-          //     this.loading = false;
-          //     return;
-          //   }
-          // }
+          if (!this.doc.isCloudTagging) {
+            //   let ret = await new Promise((resolve, reject) => {
+            //     refreshPermit(
+            //       {
+            //         ...obj,
+            //         noTrips: true,
+            //         validate: true
+            //       },
+            //       p => {
+            //         resolve(p);
+            //       }
+            //     );
+            //   });
+            //   if (!ret) {
+            //     showMessageDialog({
+            //       description: this._(
+            //         'No Permit to tag vehicles, please check in i3ms'
+            //       ),
+            //       buttons: [
+            //         {
+            //           label: _('Ok')
+            //         }
+            //       ]
+            //     });
+            //     this.loading = false;
+            //     return;
+            //   }
+            //   try {
+            //     let taggedObj = ret.tagged ? JSON.parse(ret.tagged) : {};
+            //     let tagged = Object.keys(taggedObj);
+            //     trucks = _.difference(trucks, tagged);
+            //     this.total = tagged.length;
+            //     this.failed = tagged.filter(t => taggedObj[t]).length;
+            //     console.log(
+            //       'Trucks remaining',
+            //       taggedObj,
+            //       this.total,
+            //       this.failed,
+            //       trucks.length
+            //     );
+            //     obj = {
+            //       credentials,
+            //       trucks,
+            //       showBrowser: this.doc.showBrowser,
+            //       numBrowsers: this.doc.numBrowsers
+            //     };
+            //   } catch(ex) {
+            //     console.error(ex);
+            //   }
+          }
         }
 
         if (trucks.length) {
