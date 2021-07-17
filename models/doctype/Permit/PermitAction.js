@@ -70,6 +70,15 @@ module.exports = {
       //   frappe.AccountingSettings.email == 'samba@spinbi.com' ? 1 : 0
     },
     {
+      fieldname: 'refreshPermit',
+      label: 'Refresh Permit Before Tagging',
+      fieldtype: 'Check',
+      placeholder: 'Refresh Permit',
+      default: 1
+      // default: () =>
+      //   frappe.AccountingSettings.email == 'samba@spinbi.com' ? 1 : 0
+    },
+    {
       fieldname: 'truckList',
       label: 'Truck List',
       fieldtype: 'Link',

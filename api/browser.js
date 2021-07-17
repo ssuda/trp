@@ -362,9 +362,12 @@ module.exports = function() {
           captchaVal
         );
         await clickHelper('#btnSubmit');
+        reason = page.$eval('#lblMsg', el => el.innerText);
+        if (/something wrong|in correct captcha/i.test(reason)) {
+          return tagVehicle(href, truckNo);
+        }
       } else {
         reason = page.$eval('#lblMsg', el => el.innerText);
-
         if (/something wrong/i.test(reason)) {
           return tagVehicle(href, truckNo);
         }
@@ -444,9 +447,16 @@ module.exports = function() {
   }
 
   async function permitDetails(href, selector) {
-    await gotoPage(href);
-    selector || (selector = '#grTrAction');
-    return gridData(selector);
+    try {
+      await gotoPage(href);
+      selector || (selector = '#grTrAction');
+      return gridData(selector);
+    } catch (ex) {
+      //retry
+      await gotoPage(href);
+      selector || (selector = '#grTrAction');
+      return gridData(selector);
+    }
   }
 
   async function openAll(selector) {

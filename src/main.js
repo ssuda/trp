@@ -209,7 +209,7 @@ import { DateTime } from 'luxon';
     let batchSize = 0;
 
     ipcRenderer.on('tag-result', async function(e, response) {
-      permit = permit || {};
+      permit = permit || response || {};
 
       if (!permit.name) {
         permit = await frappe.db.knex

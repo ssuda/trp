@@ -91,6 +91,19 @@
                   "
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('refreshPermit')"
+                  :value="doc.refreshPermit"
+                  :showLabel="true"
+                  @change="value => doc.set('refreshPermit', value)"
+                />
+
+                <FormControl
+                  v-if="
+                    doc.action == 'tagging' &&
+                      !frappe.currentUser.accountingSettings.serverDisabled
+                  "
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('isCloudTagging')"
                   :value="doc.isCloudTagging"
                   :showLabel="true"
@@ -381,55 +394,50 @@ export default {
         } else {
           obj.taggingUrl = this.doc.taggingUrl;
 
-          if (!this.doc.isCloudTagging) {
-            //   let ret = await new Promise((resolve, reject) => {
-            //     refreshPermit(
-            //       {
-            //         ...obj,
-            //         noTrips: true,
-            //         validate: true
-            //       },
-            //       p => {
-            //         resolve(p);
-            //       }
-            //     );
-            //   });
-            //   if (!ret) {
-            //     showMessageDialog({
-            //       description: this._(
-            //         'No Permit to tag vehicles, please check in i3ms'
-            //       ),
-            //       buttons: [
-            //         {
-            //           label: _('Ok')
-            //         }
-            //       ]
-            //     });
-            //     this.loading = false;
-            //     return;
-            //   }
-            //   try {
-            //     let taggedObj = ret.tagged ? JSON.parse(ret.tagged) : {};
-            //     let tagged = Object.keys(taggedObj);
-            //     trucks = _.difference(trucks, tagged);
-            //     this.total = tagged.length;
-            //     this.failed = tagged.filter(t => taggedObj[t]).length;
-            //     console.log(
-            //       'Trucks remaining',
-            //       taggedObj,
-            //       this.total,
-            //       this.failed,
-            //       trucks.length
-            //     );
-            //     obj = {
-            //       credentials,
-            //       trucks,
-            //       showBrowser: this.doc.showBrowser,
-            //       numBrowsers: this.doc.numBrowsers
-            //     };
-            //   } catch(ex) {
-            //     console.error(ex);
-            //   }
+          if (!this.doc.isCloudTagging && this.doc.refreshPermit) {
+            let ret = await new Promise((resolve, reject) => {
+              refreshPermit(
+                {
+                  ...obj,
+                  noTrips: true
+                },
+                p => {
+                  resolve(p);
+                }
+              );
+            });
+            if (!ret) {
+              showMessageDialog({
+                description: this._(
+                  'No Permit to tag vehicles, please check in i3ms'
+                ),
+                buttons: [
+                  {
+                    label: _('Ok')
+                  }
+                ]
+              });
+              this.loading = false;
+              return;
+            }
+            try {
+              let taggedObj = ret.tagged || {};
+              let tagged = Object.keys(taggedObj);
+              trucks = _.difference(trucks, tagged);
+              this.total = tagged.length;
+              this.failed = tagged.filter(t => taggedObj[t]).length;
+              console.log(
+                'Trucks remaining',
+                taggedObj,
+                this.total,
+                this.failed,
+                trucks.length
+              );
+              obj.trucks = trucks;
+            } catch (ex) {
+              console.log('Error from permit details', ex);
+              console.log(ret);
+            }
           }
         }
 
