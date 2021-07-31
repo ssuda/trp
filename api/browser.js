@@ -362,12 +362,12 @@ module.exports = function() {
           captchaVal
         );
         await clickHelper('#btnSubmit');
-        reason = page.$eval('#lblMsg', el => el.innerText);
-        if (/something wrong|in correct captcha/i.test(reason)) {
+        reason = await page.$eval('#lblMsg', el => el.innerText);
+        if (/(something wrong)|(in correct captcha)/i.test(reason)) {
           return tagVehicle(href, truckNo);
         }
       } else {
-        reason = page.$eval('#lblMsg', el => el.innerText);
+        reason = await page.$eval('#lblMsg', el => el.innerText);
         if (/something wrong/i.test(reason)) {
           return tagVehicle(href, truckNo);
         }

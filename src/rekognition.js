@@ -5,8 +5,8 @@ const path = require('path');
 //AWS.config.loadFromPath(path.join(__dirname, "aws.json"));
 
 AWS.config.update({
-  accessKeyId: 'AKIA6OAJ4ZOVWWWJH7XB',
-  secretAccessKey: '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',
+  accessKeyId: 'AKIASBUPID2AZPDZJ3EC',
+  secretAccessKey: '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',
   region: 'ap-south-1'
 });
 
