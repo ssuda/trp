@@ -10,7 +10,7 @@ var sqs = new AWS.SQS({ apiVersion: '2012-11-05' });
 
 module.exports = function(queue, message, delay) {
   const params = {
-    QueueUrl: 'https://sqs.ap-south-1.amazonaws.com/992158206891/' + queue,
+    QueueUrl: 'https://sqs.ap-south-1.amazonaws.com/140960603777/' + queue,
     MessageBody: JSON.stringify(message)
   };
 
