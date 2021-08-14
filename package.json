@@ -1,7 +1,7 @@
 {
   "name": "spinbi-erp",
   "description": "SpinBi",
-  "version": "1.0.38",
+  "version": "1.0.39",
   "author": {
     "name": "SpinBi Technologies",
     "email": "samba@spinbi.com"
@@ -41,7 +41,6 @@
     "graphql": "^15.2.0",
     "graphql-tag": "^2.10.3",
     "is-online": "^8.4.0",
-    "jimp": "^0.16.1",
     "knex": "^0.21.1",
     "lodash": "^4.17.15",
     "luxon": "^1.21.3",

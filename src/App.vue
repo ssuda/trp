@@ -174,7 +174,11 @@ export default {
 
       let user;
       try {
-        user = await Users.getCurrentUser(null, true);
+        user = await Users.getCurrentUser(
+          null,
+          true,
+          config.get('lastSelectedFilePath', null)
+        );
         if (
           !setupComplete &&
           user &&
