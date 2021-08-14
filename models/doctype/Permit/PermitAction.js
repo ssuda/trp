@@ -35,7 +35,7 @@ module.exports = {
     },
     {
       fieldname: 'numBrowsers',
-      label: 'Number of Browsers (1 to 10)',
+      label: 'Number of Browsers (1 to 20)',
       fieldtype: 'Data'
       // default: () =>
       //   frappe.AccountingSettings.email == 'samba@spinbi.com' ? 20 : 4

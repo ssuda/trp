@@ -65,7 +65,7 @@ export default {
     }
   },
 
-  async getCurrentUser(gstin, refresh = false) {
+  async getCurrentUser(gstin, refresh = false, lastSelectedPath) {
     console.log('fetching remote config');
     await this.getRemoteConfig();
 
@@ -101,18 +101,19 @@ export default {
             .doc(user.email)
             .get();
 
+          let filePaths;
+
           if (snapshot && snapshot.exists) {
             user.local = snapshot.data();
             const companies = user.local.companies.filter(Boolean);
             console.log('companies', companies);
+            filePaths = companies.map(c => ({
+              companyName: c,
+              filePath: dbPath(c)
+            }));
+
             if (companies) {
-              config.set(
-                'files',
-                companies.map(c => ({
-                  companyName: c,
-                  filePath: dbPath(c)
-                }))
-              );
+              config.set('files', filePaths);
             }
           }
           //}
@@ -120,7 +121,16 @@ export default {
           console.log('spinbiuser', user.local);
 
           if (!gstin && user.local) {
-            gstin = user.local.gstin;
+            if (lastSelectedPath) {
+              let index = filePaths.findIndex(
+                f => f.filePath == lastSelectedPath
+              );
+              if (index != -1) {
+                gstin = user.local.gstins[index];
+              }
+            } else {
+              gstin = user.local.gstin;
+            }
           }
         }
 
