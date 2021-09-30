@@ -359,7 +359,7 @@ export async function getPermit(permit, sse, browser = i3ms) {
 
     if (!permit.quantity) {
       permit.quantity = parseFloat(
-        reportResult['Permit Quantity'].replace(/[^\d\.]/g, '')
+        (reportResult['Permit Quantity'] || '').replace(/[^\d\.]/g, '')
       );
     }
 
