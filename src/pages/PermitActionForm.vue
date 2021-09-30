@@ -97,6 +97,7 @@
                   @change="value => doc.set('refreshPermit', value)"
                 />
 
+                <!-- 
                 <FormControl
                   v-if="
                     doc.action == 'tagging' &&
@@ -110,7 +111,7 @@
                   @change="value => doc.set('isCloudTagging', value)"
                 />
 
-                <!-- <FormControl
+               <FormControl
                   v-if="
                     doc.action == 'tagging' &&
                       frappe.currentUser.email == 'samba@spinbi.com'
@@ -121,7 +122,7 @@
                   :value="doc.gstin"
                   :show-label="true"
                   @change="value => doc.set('gstin', value)"
-                /> -->
+                />
 
                 <FormControl
                   v-if="
@@ -146,7 +147,7 @@
                   :value="doc.password"
                   :show-label="true"
                   @change="value => doc.set('password', value)"
-                />
+                /> -->
               </div>
             </div>
           </div>
@@ -343,7 +344,7 @@ export default {
           return;
         }
 
-        if (this.doc.numBrowsers > 20) {
+        if (this.doc.numBrowsers > 10) {
           showMessageDialog({
             message: this._('Number of browsers not more than 20')
           });
