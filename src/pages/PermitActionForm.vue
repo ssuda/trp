@@ -71,6 +71,7 @@
               </div>
 
               <div class="w-1/3">
+                <!--
                 <FormControl
                   v-if="
                     doc.action == 'tagging' &&
@@ -83,6 +84,7 @@
                   :showLabel="true"
                   @change="value => doc.set('scheduledAt', value)"
                 />
+                -->
 
                 <FormControl
                   v-if="
