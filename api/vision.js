@@ -1,20 +1,23 @@
 // Imports the Google Cloud client libraries
 const path = require('path');
+const captcha_expr = require('./captcha-expression');
 
-try {
-  process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(
-    __dirname,
-    'spinbi-trp-key.json'
-  );
-} catch (ex) {
-  process.env.GOOGLE_APPLICATION_CREDENTIALS = 'spinbi-trp-key.json';
-}
+// try {
+//   process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(
+//     __dirname,
+//     'vision-key.json'
+//   );
+// } catch (ex) {
+//   process.env.GOOGLE_APPLICATION_CREDENTIALS = 'vision-key.json';
+// }
 
 const vision = require('@google-cloud/vision');
 const fs = require('fs');
 
 // Creates a client
-const client = new vision.ImageAnnotatorClient();
+const client = new vision.ImageAnnotatorClient({
+  credentials: require('./vision-key.json')
+});
 
 module.exports = async function(content) {
   const request = {
@@ -23,8 +26,8 @@ module.exports = async function(content) {
 
   const [result] = await client.textDetection(request);
   const annotation = result.fullTextAnnotation;
-  console.log(annotation.text.replace(/[^0-9]/g, ''));
-  return annotation.text.replace(/[^0-9]/g, '');
+  console.log(annotation.text);
+  return captcha_expr(annotation.text);
 };
 
 if (require.main == module) {

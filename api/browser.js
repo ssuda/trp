@@ -3,9 +3,10 @@ const _ = require('lodash');
 const moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Kolkata');
 const findChrome = require('chrome-finder');
+const crypto = require('crypto');
 
-//const vision = require('./vision');
-const rekognition = require('../src/rekognition');
+const vision = require('./vision');
+//const rekognition = require('../src/rekognition');
 const { delay, promiseAny } = require('./utils');
 
 function browserArgs(headless) {
@@ -283,13 +284,43 @@ module.exports = function() {
     return success;
   }
 
+  function generateUID(length) {
+    const buf = crypto.randomBytes(length * 2);
+    return buf
+      .toString('hex')
+      .replace(/[+/]/g, '')
+      .substring(0, length);
+  }
+
   async function login() {
     try {
       if (!page) {
         return;
       }
 
-      await page.goto('https://i3ms.odishaminerals.gov.in/Default.aspx?id=1');
+      var today = new Date();
+      var date =
+        today.getFullYear() +
+        '-' +
+        (today.getMonth() + 1) +
+        '-' +
+        today.getDate();
+      var time =
+        today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
+      var dateTime = date + ' ' + time;
+
+      let no = generateUID(256);
+      let string = '09' + no + '/' + dateTime;
+      let encodedString = Buffer.from(string).toString('base64');
+
+      console.log(
+        'Logging into ',
+        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString
+      );
+
+      await page.goto(
+        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString
+      );
       await page.waitForSelector('#btnSubmit');
       await fill('#txtusr', credentials.username);
       await fill('#txtpwd', credentials.password);
@@ -354,7 +385,7 @@ module.exports = function() {
         await clickHelper('#Rdo_VTS_0');
         await setRadioButton('#Rdo_SIM_0');
         await page.click('#chkClick');
-        let captchaVal = await rekognition(captchaImage);
+        let captchaVal = await vision(captchaImage);
         console.log('captchaVal', captchaVal);
         await page.$eval(
           '#txtcaptcha',
