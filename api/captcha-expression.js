@@ -1,8 +1,8 @@
 module.exports = function captchaSolver(text) {
-  const numbers = [...text.matchAll(/\d+/g)].map(c => c[0]);
+  const numbers = [...text.matchAll(/\d+/g)].map(c => parseInt(c[0]));
   const operator = text.match(
-    /small|first|second|third|fourth|last|middle|great|large|\-|\+|\*|\//i
-  )[0];
+    /(small|first|second|third|fourth|last|middle|great|large|\-|\+|\*|\/)/i
+  )[1].toLowerCase();
 
   console.log(numbers, operator);
   switch (operator) {
@@ -20,6 +20,9 @@ module.exports = function captchaSolver(text) {
 
     case 'large':
       return Math.max(...numbers);
+
+    case 'great':
+        return Math.max(...numbers);
 
     case 'first':
       return numbers[0];

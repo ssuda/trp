@@ -364,6 +364,14 @@ export default {
           trucks = extractTrucks(this.doc.trucks);
         }
 
+        if (trucks.length > 800) {
+          showMessageDialog({
+            message: this._('Number of vehicles not more than 800')
+          });
+          this.loading = false;
+          return;
+        }
+
         let taggedObj = permit.tagged ? JSON.parse(permit.tagged) : {};
         let tagged = Object.keys(taggedObj);
         trucks = _.difference(trucks, tagged);
