@@ -74,7 +74,7 @@ module.exports = {
       label: 'Refresh Permit Before Tagging',
       fieldtype: 'Check',
       placeholder: 'Refresh Permit',
-      default: 1
+      default: 0
       // default: () =>
       //   frappe.AccountingSettings.email == 'samba@spinbi.com' ? 1 : 0
     },
