@@ -498,7 +498,8 @@ async function openTabs(taggingUrl, chunks, options, sse) {
         {
           taggingUrl: taggingUrl
         },
-        sse
+        sse,
+        tabs[0]
       );
     }
 

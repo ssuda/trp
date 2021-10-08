@@ -1,17 +1,22 @@
 module.exports = function captchaSolver(text) {
   const numbers = [...text.matchAll(/\d+/g)].map(c => parseInt(c[0]));
-  const operator = text.match(
-    /(small|first|second|third|fourth|last|middle|great|large|\-|\+|\*|\/)/i
-  )[1].toLowerCase();
+  const operator = text
+    .match(
+      /(small|first|second|third|fourth|last|middle|great|large|\-|\+|\*|\/)/i
+    )[1]
+    .toLowerCase();
 
   console.log(numbers, operator);
   switch (operator) {
     case '+':
       return numbers[0] + numbers[1];
+
     case '-':
       return numbers[0] - numbers[1];
+
     case '*':
       return numbers[0] * numbers[1];
+
     case '/':
       return parseInt(numbers[0] / numbers[1]);
 
@@ -22,7 +27,7 @@ module.exports = function captchaSolver(text) {
       return Math.max(...numbers);
 
     case 'great':
-        return Math.max(...numbers);
+      return Math.max(...numbers);
 
     case 'first':
       return numbers[0];
@@ -37,7 +42,7 @@ module.exports = function captchaSolver(text) {
       return numbers[3];
 
     case 'middle':
-      return numbers[1];
+      return numbers[parseInt(numbers.length / 2)];
 
     case 'last':
       return numbers[numbers.length - 1];

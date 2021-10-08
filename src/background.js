@@ -100,12 +100,12 @@ async function processMessage(message, cb) {
     case 'tag-vehicles':
       {
         console.log('tag-vehicles', args);
-        await initializeBrowser(
-          args.credentials,
-          !args.showBrowser,
-          false,
-          disconnectHandler
-        );
+        // await initializeBrowser(
+        //   args.credentials,
+        //   !args.showBrowser,
+        //   false,
+        //   disconnectHandler
+        // );
         const r = await Promise.race([
           cancelPromise,
           tagVehicles(args, event.sender)
