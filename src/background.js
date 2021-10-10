@@ -41,7 +41,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 import fastq from 'fastq';
-const messageQueue = fastq(processMessage, 1);
+const messageQueue = fastq(processMessage, 2);
 
 async function processMessage(message, cb) {
   const { event, args, type } = message;
