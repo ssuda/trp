@@ -18,7 +18,8 @@ module.exports = {
       fieldname: 'username',
       label: 'User Name',
       fieldtype: 'Data',
-      required: 1
+      required: 1,
+      readOnly: 1
     },
     {
       fieldname: 'password',
