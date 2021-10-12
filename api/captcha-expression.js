@@ -42,7 +42,7 @@ module.exports = function captchaSolver(text) {
       return numbers[3];
 
     case 'middle':
-      return numbers[parseInt(numbers.length / 2)];
+      return numbers[1];
 
     case 'last':
       return numbers[numbers.length - 1];

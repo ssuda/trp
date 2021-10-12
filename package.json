@@ -52,6 +52,7 @@
     "sqlite3": "^4.2.0",
     "subscriptions-transport-ws": "^0.9.16",
     "tailwindcss": "^1.2.0",
+    "tesseract.js": "^2.1.5",
     "uuidv4": "^6.0.8",
     "voucher-code-generator": "^1.1.1",
     "vue": "^2.6.10",

@@ -5,8 +5,7 @@ moment.tz.setDefault('Asia/Kolkata');
 const findChrome = require('chrome-finder');
 const crypto = require('crypto');
 
-const vision = require('./vision');
-//const rekognition = require('../src/rekognition');
+const vision = require('./tessaract'); //require('./vision'); //require('../src/rekognition');
 const { delay, promiseAny } = require('./utils');
 
 function browserArgs(headless) {
