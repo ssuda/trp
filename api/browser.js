@@ -5,7 +5,7 @@ moment.tz.setDefault('Asia/Kolkata');
 const findChrome = require('chrome-finder');
 const crypto = require('crypto');
 
-const vision = require('./tessaract'); //require('./vision'); //require('../src/rekognition');
+const vision = require('./captch-browser'); //require('./vision'); //require('../src/rekognition');
 const { delay, promiseAny } = require('./utils');
 
 function browserArgs(headless) {
@@ -97,11 +97,11 @@ module.exports = function() {
     if (!browser) {
       browser = await puppeteer.launch({
         headless,
-        ignoreHTTPSErrors: true,
-        args: browserArgs(headless),
+        //ignoreHTTPSErrors: true,
+        //args: ['--disable-gpu'],
         executablePath: findChrome(),
-        defaultViewport: defaultViewport(headless),
-        timeout: 0
+        defaultViewport: null, //defaultViewport(headless),
+        //timeout: 0
       });
       browser.on('error', () => page.reload());
       browser.on('disconnected', disconnectHandler);
@@ -165,7 +165,7 @@ module.exports = function() {
     await page.select(selector, val);
   }
 
-  function clickHelper(selector, timeout = 60000, waitUntil = 'load') {
+  function clickHelper(selector, timeout = 60000, waitUntil = 'domcontentloaded') {
     return Promise.all([
       page.waitForNavigation({ timeout, waitUntil }),
       page.click(selector)
@@ -324,10 +324,10 @@ module.exports = function() {
       await fill('#txtusr', credentials.username);
       await fill('#txtpwd', credentials.password);
       await page.click('#btnSubmit');
-      await page.waitForNavigation({ waitUntil: 'networkidle0' });
-      await delay(2000);
+      await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+      //await delay(2000);
       if (mainUrl && page) {
-        await page.goto(mainUrl, { waitUntil: 'networkidle2' });
+        await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
       }
     } catch (ex) {
       console.error(ex);
@@ -357,9 +357,11 @@ module.exports = function() {
     }
   }
 
-  async function tagVehicle(href, truckNo) {
+  async function tagVehicle(href, truckNo, renderer) {
     let reason = '';
     try {
+      console.log('before waiting for txtVehicleNo');
+
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       await page.$eval(
         '#txtVehicleNo',
@@ -381,25 +383,31 @@ module.exports = function() {
 
       if (r == 1) {
         await setRadioButton('#rdo_GPS_0');
+        console.log('before waiting for VTS');
+
         await clickHelper('#Rdo_VTS_0');
         await setRadioButton('#Rdo_SIM_0');
         await page.click('#chkClick');
-        let captchaVal = await vision(captchaImage);
+        let captchaVal = await vision(captchaImage, renderer);
         console.log('captchaVal', captchaVal);
         await page.$eval(
           '#txtcaptcha',
           (e, val) => (e.value = val),
           captchaVal
         );
+        console.log('before btnsubmit');
+
         await clickHelper('#btnSubmit');
+        console.log('after btnsubmit');
+
         reason = await page.$eval('#lblMsg', el => el.innerText);
         if (/(something wrong)|(in correct captcha)/i.test(reason)) {
-          return tagVehicle(href, truckNo);
+          return tagVehicle(href, truckNo, renderer);
         }
       } else {
         reason = await page.$eval('#lblMsg', el => el.innerText);
         if (/something wrong/i.test(reason)) {
-          return tagVehicle(href, truckNo);
+          return tagVehicle(href, truckNo, renderer);
         }
       }
 
@@ -408,7 +416,7 @@ module.exports = function() {
       console.error(ex);
       if (/(execution context)|(network|timeout)/i.test(ex.message)) {
         await gotoTagPage(href);
-        return tagVehicle(href, truckNo);
+        return tagVehicle(href, truckNo, renderer);
       }
       return false;
     }

@@ -422,7 +422,7 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
     console.log('Tab', tabNo, 'tagging vehicle', count);
     try {
       let ret = await promiseWithTimeout(
-        tab.tagVehicle(taggingUrl, truck),
+        tab.tagVehicle(taggingUrl, truck, renderer),
         120000
       );
 

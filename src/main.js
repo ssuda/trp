@@ -5,7 +5,7 @@ import coreModels from 'frappejs/models';
 import FeatherIcon from 'frappejs/ui/components/FeatherIcon';
 import outsideClickDirective from 'frappejs/ui/plugins/outsideClickDirective';
 import models from '../models';
-import { ipcRenderer } from 'electron';
+import { ipcMain, ipcRenderer } from 'electron';
 import { firestore } from '@/firebase';
 
 // vue imports
@@ -24,6 +24,7 @@ import Document from 'frappejs/model/document';
 import { FieldValue } from '@/firebase';
 import { normalizeCompanyName } from './utils';
 import { DateTime } from 'luxon';
+import tessaract from '../api/tessaract';
 
 (async () => {
   frappe.isServer = true;
@@ -172,6 +173,16 @@ import { DateTime } from 'luxon';
 
   ipcRenderer.on('permits-details-results', e => {
     frappe.events.trigger('permits-details-results', e);
+  });
+
+  ipcRenderer.on('captcha', async (evt, payload) => {
+    console.log('Received captcha image from background', payload);
+    const resp = await tessaract(payload.image);
+    evt.sender.send('captcha-response', {data: resp, id: payload.id});
+  });
+
+  ipcRenderer.on('sample', async (evt, data) => {
+    console.log('Received sample data', data);
   });
 
   frappe.events.on('permit-details', args => {

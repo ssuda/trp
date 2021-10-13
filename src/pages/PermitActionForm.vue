@@ -24,14 +24,14 @@
             </h1>
             <div class="flex justify-between mt-2">
               <div class="w-1/3">
-                <!-- <FormControl
+                <FormControl
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('showBrowser')"
                   :value="doc.showBrowser"
                   :showLabel="true"
                   @change="value => doc.set('showBrowser', value)"
-                /> -->
+                />
 
                 <FormControl
                   class="mt-4 text-base"
@@ -326,7 +326,6 @@ export default {
         frappe.events.trigger('permits-details', {
           credentials,
           permits,
-          showBrowser: this.doc.showBrowser
         });
 
         frappe.events.once('permits-details-results', async () => {
@@ -367,12 +366,16 @@ export default {
           trucks = extractTrucks(this.doc.trucks);
         }
 
-        if (trucks.length > 800) {
-          showMessageDialog({
-            message: this._('Number of vehicles not more than 800')
-          });
-          this.loading = false;
-          return;
+        // if (trucks.length > 800) {
+        //   showMessageDialog({
+        //     message: this._('Number of vehicles not more than 800')
+        //   });
+        //   this.loading = false;
+        //   return;
+        // }
+
+        if (this.doc.showBrowser) {
+          frappe.events.trigger('show-browser');
         }
 
         let taggedObj = permit.tagged ? JSON.parse(permit.tagged) : {};
@@ -393,7 +396,6 @@ export default {
         let obj = {
           credentials,
           trucks,
-          showBrowser: this.doc.showBrowser,
           numBrowsers: this.doc.numBrowsers
         };
 
@@ -614,6 +616,9 @@ export default {
                 buttons: [{ label: 'Ok' }]
               });
 
+          if (this.doc.showBrowser) {
+          frappe.events.trigger('hide-browser');
+        }
               this.$router.back();
             });
           }
@@ -638,7 +643,6 @@ export default {
             credentials,
             ...permit,
             trucks,
-            showBrowser: this.doc.showBrowser
           });
 
           frappe.events.once('release-vehicles-results', async () => {
@@ -666,7 +670,6 @@ export default {
         refreshPermit(
           {
             ...permit,
-            showBrowser: this.doc.showBrowser
           },
           async () => {
             this.loading = false;

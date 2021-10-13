@@ -31,7 +31,7 @@ module.exports = {
       fieldname: 'showBrowser',
       label: 'Show Browsers',
       fieldtype: 'Check',
-      default: 1
+      default: 0
     },
     {
       fieldname: 'numBrowsers',
