@@ -1,10 +1,11 @@
-const { createWorker, PSM, OEM } = require('tesseract.js');
+const { createScheduler, createWorker, PSM, OEM } = require('tesseract.js');
 //var Jimp = require('jimp');
 const captcha_expr = require('./captcha-expression');
 
-const worker = createWorker();
+const scheduler = createScheduler();
 
-const init = async image => {
+async function addWorker() {
+  const worker = createWorker();
   await worker.load();
   await worker.loadLanguage('eng');
   await worker.initialize('eng');
@@ -13,12 +14,20 @@ const init = async image => {
     tessedit_pageseg_mode: PSM.SINGLE_LINE,
     tessedit_ocr_engine_mode: OEM.TESSERACT_LSTM_COMBINED
   });
+  scheduler.addWorker(worker);
 };
 
+let initialized = false;
+
 module.exports = async image => {
+  if (!initialized) {
+    await addWorker();
+    await addWorker();
+    initialized = true;
+  }
   const {
     data: { text }
-  } = await worker.recognize(image);
+  } = await scheduler.addJob('recognize', image);
   console.log(text);
   return captcha_expr(text);
 };
@@ -26,7 +35,6 @@ module.exports = async image => {
 if (require.main === module) {
   const axios = require('axios');
   (async () => {
-    await init();
     for (let i = 0; i < 20; i++) {
       const resp = await axios.get(
         'https://i3ms.odishaminerals.gov.in/i3ms/pms/Captcha.aspx',
@@ -35,7 +43,7 @@ if (require.main === module) {
       let captchaVal = await module.exports(resp.data);
       console.log('CaptchaVal', captchaVal);
     }
-    await worker.terminate();
+    await scheduler.terminate();
   })();
 }
 
