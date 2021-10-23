@@ -271,12 +271,12 @@ function createSettingsWindow(tab = 'General') {
   settingsWindow.loadURL(`${winURL}#/settings/${tab}`);
 }
 
-ipcMain.on('check-for-updates', () => {
-  if (!isDevelopment && !checkedForUpdate) {
-    autoUpdater.checkForUpdatesAndNotify();
-    checkedForUpdate = true;
-  }
-});
+// ipcMain.on('check-for-updates', () => {
+//   if (!isDevelopment && !checkedForUpdate) {
+//     autoUpdater.checkForUpdatesAndNotify();
+//     checkedForUpdate = true;
+//   }
+// });
 
 ipcMain.on('open-browser', async (event, args) => {
   console.log('open browser called');

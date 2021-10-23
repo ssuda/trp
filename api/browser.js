@@ -97,7 +97,7 @@ module.exports = function() {
     if (!browser) {
       browser = await puppeteer.launch({
         headless,
-        //ignoreHTTPSErrors: true,
+        ignoreHTTPSErrors: true,
         //args: ['--disable-gpu'],
         executablePath: findChrome(),
         defaultViewport: null, //defaultViewport(headless),

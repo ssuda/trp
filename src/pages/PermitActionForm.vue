@@ -99,7 +99,7 @@
                   @change="value => doc.set('refreshPermit', value)"
                 />
 
-                <!-- 
+             
                 <FormControl
                   v-if="
                     doc.action == 'tagging' &&
@@ -112,7 +112,7 @@
                   :showLabel="true"
                   @change="value => doc.set('isCloudTagging', value)"
                 />
-
+   <!-- 
                <FormControl
                   v-if="
                     doc.action == 'tagging' &&
@@ -125,7 +125,7 @@
                   :show-label="true"
                   @change="value => doc.set('gstin', value)"
                 />
-
+-->
                 <FormControl
                   v-if="
                     doc.action == 'tagging' &&
@@ -149,7 +149,7 @@
                   :value="doc.password"
                   :show-label="true"
                   @change="value => doc.set('password', value)"
-                /> -->
+                /> 
               </div>
             </div>
           </div>
@@ -196,6 +196,7 @@ import isOnline from 'is-online';
 
 import sqsSend from '@/sqsSend';
 import { firestore } from '@/firebase';
+import  {SSE} from 'sse.js';
 
 import {
   handleErrorWithDialog,
@@ -206,6 +207,8 @@ import {
 } from '@/utils';
 
 import { refreshPermit, twoMonthsOldPermits, pickPermitFields } from '@/permit';
+
+import axios from 'axios';
 
 function makeid(length) {
   var result = '';
@@ -277,6 +280,17 @@ export default {
 
   methods: {
     async onClick() {
+
+      const totalCb = total => {
+        console.log('received total', this.total, total);
+        this.total += parseInt(total);
+      };
+
+      const failedCb = failed => {
+        console.log('received failed', failed);
+        this.failed += parseInt(failed);
+      };
+
       let tempTaggingDoc;
 
       this.loading = true;
@@ -345,13 +359,13 @@ export default {
           return;
         }
 
-        if (this.doc.numBrowsers > 10) {
-          showMessageDialog({
-            message: this._('Number of browsers not more than 20')
-          });
-          this.loading = false;
-          return;
-        }
+        // if (this.doc.numBrowsers > 10) {
+        //   showMessageDialog({
+        //     message: this._('Number of browsers not more than 20')
+        //   });
+        //   this.loading = false;
+        //   return;
+        // }
 
         let trucks;
 
@@ -503,48 +517,49 @@ export default {
                   query;
               }
 
-              firestore
-                .collection('i3msCloudTaggingResult')
-                .where('gstin', '==', input.gstin)
-                .where('deviceId', '==', input.deviceId)
-                .onSnapshot(async function(querySnapshot) {
-                  for (let doc of querySnapshot.docs) {
-                    if (firstTime) {
-                      doc.ref.delete();
-                      continue;
-                    }
-                    const data = doc.data();
-                    if (
-                      data.name == input.name ||
-                      data.taggingUrl == input.taggingUrl ||
-                      !(input.name || input.taggingUrl)
-                    ) {
-                      self.total =
-                        (data.success || 0) + (data.failed || 0) + total;
-                      self.failed = (data.failed || 0) + failed;
+              // firestore
+              //   .collection('i3msCloudTaggingResult')
+              //   .where('gstin', '==', input.gstin)
+              //   .where('deviceId', '==', input.deviceId)
+              //   .onSnapshot(async function(querySnapshot) {
+              //     for (let doc of querySnapshot.docs) {
+              //       if (firstTime) {
+              //         doc.ref.delete();
+              //         continue;
+              //       }
+              //       const data = doc.data();
+              //       if (
+              //         data.name == input.name ||
+              //         data.taggingUrl == input.taggingUrl ||
+              //         !(input.name || input.taggingUrl)
+              //       ) {
+              //         self.total =
+              //           (data.success || 0) + (data.failed || 0) + total;
+              //         self.failed = (data.failed || 0) + failed;
 
-                      if (data.completed) {
-                        clearInterval(timerInterval);
-                        self.loading = false;
-                        await showMessageDialog({
-                          description: `${self.success} Vehicles Tagged successfully`,
-                          buttons: [{ label: 'Ok' }]
-                        });
+              //         if (data.completed) {
+              //           clearInterval(timerInterval);
+              //           self.loading = false;
+              //           await showMessageDialog({
+              //             description: `${self.success} Vehicles Tagged successfully`,
+              //             buttons: [{ label: 'Ok' }]
+              //           });
 
-                        // delete tempTagging
-                        if (tempTaggingDoc) {
-                          await tempTaggingDoc.delete();
-                        }
+              //           // delete tempTagging
+              //           if (tempTaggingDoc) {
+              //             await tempTaggingDoc.delete();
+              //           }
 
-                        refreshPermit(obj);
-                        // if (frappe.currentUser.email != 'samba@spinbi.com') {
-                        //   self.$router.back();
-                        // }
-                      }
-                    }
-                  }
-                  firstTime = false;
-                });
+              //           refreshPermit(obj);
+              //           // if (frappe.currentUser.email != 'samba@spinbi.com') {
+              //           //   self.$router.back();
+              //           // }
+              //         }
+              //       }
+              //     }
+              //     firstTime = false;
+              //   });
+            
             }
 
             console.log('Adding cloud tagging input', input);
@@ -557,12 +572,11 @@ export default {
             //     .add(input);
             //   this.loading = false;
             // }
-            this.loading = false;
 
-            let chunks = _.chunk(
-              trucks,
-              Math.ceil(trucks.length / input.numBrowsers)
-            );
+            // let chunks = _.chunk(
+            //   trucks,
+            //   Math.ceil(trucks.length / input.numBrowsers)
+            // );
 
             if (this.doc.scheduledAt) {
               const scheduledAt = DateTime.fromFormat(
@@ -578,28 +592,48 @@ export default {
               }
             }
 
-            for (let chunk of chunks) {
-              console.log('Submitting chunk');
-              input.trucks = chunk;
-              input.totalVehicles = trucks.length;
-              await sqsSend('i3ms-tag-request', input);
-            }
+            console.log('input', input);
+            var source = new SSE('http://96.126.106.209:3000/tagging', {
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              payload: JSON.stringify(input)});
+            source.addEventListener('message', async function(e) {
+              // Assuming we receive JSON-encoded data payloads:
+              var payload = JSON.parse(e.data);
+              console.log(payload);
+              switch(payload.event) {
+                case 'total':
+                  totalCb(payload.data);
+                  break;
+
+                case 'failed':
+                  failedCb(payload.data);
+                  break;
+
+                case 'ended':
+                  this.loading = false;
+                  await showMessageDialog({
+                    description: `${this.success} Vehicles Tagged successfully`,
+                    buttons: [{ label: 'Ok' }]
+                  });
+                  break;
+              }
+            });
+            source.stream();
+
+            // for (let chunk of chunks) {
+            //   console.log('Submitting chunk');
+            //   input.trucks = chunk;
+            //   input.totalVehicles = trucks.length;
+            //   await sqsSend('i3ms-tag-request', input);
+            // }
             showMessageDialog({
               description: `Submitted Tag request for ${trucks.length} for ${input.taggingUrl} Successfully`,
               buttons: [{ label: 'Ok' }]
             });
           } else {
             frappe.events.trigger('tag-vehicles', obj);
-            const totalCb = total => {
-              console.log('received total', this.total, total);
-              this.total += parseInt(total);
-            };
-
-            const failedCb = failed => {
-              console.log('received failed', failed);
-              this.failed += parseInt(failed);
-            };
-
             frappe.events.off('total', totalCb);
             frappe.events.off('failed', failedCb);
 

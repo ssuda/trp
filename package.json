@@ -50,6 +50,7 @@
     "portal-vue": "^2.1.6",
     "puppeteer-core": "^10.4.0",
     "sqlite3": "^4.2.0",
+    "sse.js": "^0.5.0",
     "subscriptions-transport-ws": "^0.9.16",
     "tailwindcss": "^1.2.0",
     "tesseract.js": "^2.1.5",
