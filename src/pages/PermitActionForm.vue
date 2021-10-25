@@ -99,7 +99,7 @@
                   @change="value => doc.set('refreshPermit', value)"
                 />
 
-             
+                <!-- 
                 <FormControl
                   v-if="
                     doc.action == 'tagging' &&
@@ -112,7 +112,7 @@
                   :showLabel="true"
                   @change="value => doc.set('isCloudTagging', value)"
                 />
-   <!-- 
+  
                <FormControl
                   v-if="
                     doc.action == 'tagging' &&
@@ -125,7 +125,6 @@
                   :show-label="true"
                   @change="value => doc.set('gstin', value)"
                 />
--->
                 <FormControl
                   v-if="
                     doc.action == 'tagging' &&
@@ -150,6 +149,7 @@
                   :show-label="true"
                   @change="value => doc.set('password', value)"
                 /> 
+                -->
               </div>
             </div>
           </div>
@@ -196,7 +196,7 @@ import isOnline from 'is-online';
 
 import sqsSend from '@/sqsSend';
 import { firestore } from '@/firebase';
-import  {SSE} from 'sse.js';
+import { SSE } from 'sse.js';
 
 import {
   handleErrorWithDialog,
@@ -280,7 +280,6 @@ export default {
 
   methods: {
     async onClick() {
-
       const totalCb = total => {
         console.log('received total', this.total, total);
         this.total += parseInt(total);
@@ -339,7 +338,7 @@ export default {
 
         frappe.events.trigger('permits-details', {
           credentials,
-          permits,
+          permits
         });
 
         frappe.events.once('permits-details-results', async () => {
@@ -559,7 +558,6 @@ export default {
               //     }
               //     firstTime = false;
               //   });
-            
             }
 
             console.log('Adding cloud tagging input', input);
@@ -597,12 +595,13 @@ export default {
               headers: {
                 'Content-Type': 'application/json'
               },
-              payload: JSON.stringify(input)});
+              payload: JSON.stringify(input)
+            });
             source.addEventListener('message', async function(e) {
               // Assuming we receive JSON-encoded data payloads:
               var payload = JSON.parse(e.data);
               console.log(payload);
-              switch(payload.event) {
+              switch (payload.event) {
                 case 'total':
                   totalCb(payload.data);
                   break;
@@ -650,9 +649,9 @@ export default {
                 buttons: [{ label: 'Ok' }]
               });
 
-          if (this.doc.showBrowser) {
-          frappe.events.trigger('hide-browser');
-        }
+              if (this.doc.showBrowser) {
+                frappe.events.trigger('hide-browser');
+              }
               this.$router.back();
             });
           }
@@ -676,7 +675,7 @@ export default {
           frappe.events.trigger('release-vehicles', {
             credentials,
             ...permit,
-            trucks,
+            trucks
           });
 
           frappe.events.once('release-vehicles-results', async () => {
@@ -703,7 +702,7 @@ export default {
         //call permit refresh
         refreshPermit(
           {
-            ...permit,
+            ...permit
           },
           async () => {
             this.loading = false;

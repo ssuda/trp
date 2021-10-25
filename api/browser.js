@@ -98,9 +98,16 @@ module.exports = function() {
       browser = await puppeteer.launch({
         headless,
         ignoreHTTPSErrors: true,
-        //args: ['--disable-gpu'],
+        waitForInitialPage: false,
+        args: [
+          "--proxy-server='direct://'",
+          '--proxy-bypass-list=*',
+          '--disable-extensions',
+          '--no-sandbox',
+          '--disable-setuid-sandbox'
+        ],
         executablePath: findChrome(),
-        defaultViewport: null, //defaultViewport(headless),
+        defaultViewport: null //defaultViewport(headless),
         //timeout: 0
       });
       browser.on('error', () => page.reload());
@@ -165,7 +172,11 @@ module.exports = function() {
     await page.select(selector, val);
   }
 
-  function clickHelper(selector, timeout = 60000, waitUntil = 'domcontentloaded') {
+  function clickHelper(
+    selector,
+    timeout = 60000,
+    waitUntil = 'domcontentloaded'
+  ) {
     return Promise.all([
       page.waitForNavigation({ timeout, waitUntil }),
       page.click(selector)
