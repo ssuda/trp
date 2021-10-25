@@ -23,7 +23,7 @@ let initialized = false;
 async function initialize() {
   if (!initialized) {
     console.log('initializing tesseract');
-    for(let i = 0; i < 5; ++i) {
+    for(let i = 0; i < 20; ++i) {
       await addWorker();
     }
     initialized = true;
@@ -31,13 +31,11 @@ async function initialize() {
   }
 }
 
-(async() => {
-  initialize();
-})();
+let initializePromise = initialize();
 
 module.exports = async image => {
   if (!initialized) {
-    await initialize();
+    await initializePromise;
   }
   
   const {
