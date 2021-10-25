@@ -331,19 +331,30 @@ module.exports = function() {
       await page.goto(
         'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString
       );
+      
       await page.waitForSelector('#btnSubmit');
       await fill('#txtusr', credentials.username);
       await fill('#txtpwd', credentials.password);
       await page.click('#btnSubmit');
-      await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
       //await delay(2000);
-      if (mainUrl && page) {
-        await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
+      //check 
+      await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+      let url = await page.url();
+      console.log('loggedin', url);
+
+      if (url.includes('/Default.aspx')) {
+        console.log('Calling login() again');
+        return login();
+      } else {
+        if (mainUrl && page) {
+          console.log('Going to url', mainUrl);
+          await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
+        }
       }
     } catch (ex) {
       console.error(ex);
       await delay(60000);
-      login();
+      return login();
     }
   }
 
@@ -425,7 +436,8 @@ module.exports = function() {
       return reason;
     } catch (ex) {
       console.error(ex);
-      if (/(execution context)|(network|timeout)/i.test(ex.message)) {
+      let url = page.url();
+      if (!url.includes('TransporterAssignVehicleNew.aspx')) {
         await gotoTagPage(href);
         return tagVehicle(href, truckNo, renderer);
       }
