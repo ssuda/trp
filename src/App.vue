@@ -420,11 +420,11 @@ export default {
         */
 
         // refresh permits
-        // let permits = await twoMonthsOldPermits();
-        // frappe.events.trigger('refresh-permits', {
-        //   credentials,
-        //   permits
-        // });
+        let permits = await twoMonthsOldPermits();
+        frappe.events.trigger('refresh-permits', {
+          credentials,
+          permits
+        });
       } else if (!online) {
         while (!online) {
           await delay(120000);
