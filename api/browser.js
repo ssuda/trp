@@ -81,7 +81,10 @@ function defaultViewport(headless) {
   };
 }
 
-module.exports = function() {
+module.exports = function(tabNo) {
+  if (tabNo === undefined) {
+    tabNo = 'Main'
+  }
   let browser;
   let page;
   let mainUrl;
@@ -323,7 +326,7 @@ module.exports = function() {
       let string = '09' + no + '/' + dateTime;
       let encodedString = Buffer.from(string).toString('base64');
 
-      console.log(
+      console.log('Tab', tabNo,
         'Logging into ',
         'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString
       );
@@ -336,18 +339,25 @@ module.exports = function() {
       await fill('#txtusr', credentials.username);
       await fill('#txtpwd', credentials.password);
       await page.click('#btnSubmit');
-      //await delay(2000);
-      //check 
-      await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+      await delay(100);
       let url = await page.url();
-      console.log('loggedin', url);
+      if (url.includes('/Default.aspx')) {
+        console.log('Tab', tabNo,'Calling login() again');
+        return login();
+      }
+      //check 
+      console.log('Tab', tabNo,'Before loggedin');
+      await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+      url = await page.url();
 
       if (url.includes('/Default.aspx')) {
-        console.log('Calling login() again');
+        console.log('Tab', tabNo,'Calling login() again');
         return login();
       } else {
+        console.log('Tab', tabNo,'loggedin', url);
+
         if (mainUrl && page) {
-          console.log('Going to url', mainUrl);
+          console.log('Tab', tabNo,'Going to url', mainUrl);
           await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
         }
       }
@@ -382,7 +392,7 @@ module.exports = function() {
   async function tagVehicle(href, truckNo, renderer) {
     let reason = '';
     try {
-      console.log('before waiting for txtVehicleNo');
+      console.log('Tab', tabNo,'before waiting for txtVehicleNo');
 
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       await page.$eval(
@@ -394,9 +404,9 @@ module.exports = function() {
         truckNo
       );
 
-      console.log('before btnsearch');
+      console.log('Tab', tabNo,'before btnsearch');
       await clickHelper('#btnsearch', 120000);
-      console.log('after btnsearch');
+      console.log('Tab', tabNo,'after btnsearch');
 
       const r = await promiseAny(
         page.waitForSelector('#rdo_GPS_0', { timeout: 30000 }),
@@ -405,22 +415,22 @@ module.exports = function() {
 
       if (r == 1) {
         await setRadioButton('#rdo_GPS_0');
-        console.log('before waiting for VTS');
+        console.log('Tab', tabNo,'before waiting for VTS');
 
         await clickHelper('#Rdo_VTS_0');
         await setRadioButton('#Rdo_SIM_0');
         await page.click('#chkClick');
         let captchaVal = await vision(captchaImage, renderer);
-        console.log('captchaVal', captchaVal);
+        console.log('Tab', tabNo,'captchaVal', captchaVal);
         await page.$eval(
           '#txtcaptcha',
           (e, val) => (e.value = val),
           captchaVal
         );
-        console.log('before btnsubmit');
+        console.log('Tab', tabNo,'before btnsubmit');
 
         await clickHelper('#btnSubmit');
-        console.log('after btnsubmit');
+        console.log('Tab', tabNo,'after btnsubmit');
 
         reason = await page.$eval('#lblMsg', el => el.innerText);
         if (/(something wrong)|(in correct captcha)/i.test(reason)) {
@@ -437,7 +447,8 @@ module.exports = function() {
     } catch (ex) {
       console.error(ex);
       let url = page.url();
-      if (!url.includes('TransporterAssignVehicleNew.aspx')) {
+      if (!url.includes('TransporterAssignVehicleNew.aspx')
+        || (/(execution context)|(network|timeout)/i.test(ex.message))) {
         await gotoTagPage(href);
         return tagVehicle(href, truckNo, renderer);
       }

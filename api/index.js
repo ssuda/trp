@@ -463,7 +463,7 @@ async function tabTagging(taggingUrl, tab, chunk, options, sse, tabNo) {
 }
 
 async function tagFromTab(taggingUrl, chunk, options, sse, tabNo) {
-  const tab = browser();
+  const tab = browser(tabNo);
   await tab.initializeBrowser(options.credentials, false, true);
   await tabTagging(taggingUrl, tab, chunk, options, sse, tabNo);
   return tab;

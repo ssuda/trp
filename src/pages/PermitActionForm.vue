@@ -99,7 +99,7 @@
                   @change="value => doc.set('refreshPermit', value)"
                 />
 
-                <!-- 
+              
                 <FormControl
                   v-if="
                     doc.action == 'tagging' &&
@@ -149,7 +149,7 @@
                   :show-label="true"
                   @change="value => doc.set('password', value)"
                 /> 
-                -->
+                
               </div>
             </div>
           </div>

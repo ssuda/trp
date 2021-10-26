@@ -19,7 +19,6 @@ module.exports = {
       label: 'User Name',
       fieldtype: 'Data',
       required: 1,
-      readOnly: 1
     },
     {
       fieldname: 'password',
