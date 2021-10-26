@@ -5,7 +5,15 @@ module.exports = {
   pluginOptions: {
     electronBuilder: {
       nodeIntegration: true, // this may or may not be necessary - you can try without it
-      externals: ['@google-cloud/vision', 'yaku'] // this excludes the node-pty from the front end
+      externals: ['@google-cloud/vision', 'yaku', 'tesseract.js'], // this excludes the node-pty from the front end
+      builderOptions: {
+        extraResources: [
+          {
+              "from": "data",
+              "to": "data"
+          }
+      ]
+      }
     }
   },
   pages: {

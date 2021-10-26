@@ -103,11 +103,11 @@ module.exports = function(tabNo) {
         ignoreHTTPSErrors: true,
         waitForInitialPage: false,
         args: [
-          "--proxy-server='direct://'",
-          '--proxy-bypass-list=*',
+          '--auto-detect=false',
+          "--no-proxy-server",
           '--disable-extensions',
           '--no-sandbox',
-          '--disable-setuid-sandbox'
+          '--disable-setuid-sandbox',
         ],
         executablePath: findChrome(),
         defaultViewport: null //defaultViewport(headless),
@@ -161,6 +161,7 @@ module.exports = function(tabNo) {
 
     page.setDefaultTimeout(120000);
     //page.setDefaultNavigationTimeout(120000);
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36')
   }
 
   function fill(selector, v) {
@@ -339,15 +340,24 @@ module.exports = function(tabNo) {
       await fill('#txtusr', credentials.username);
       await fill('#txtpwd', credentials.password);
       await page.click('#btnSubmit');
-      await delay(100);
-      let url = await page.url();
-      if (url.includes('/Default.aspx')) {
-        console.log('Tab', tabNo,'Calling login() again');
-        return login();
+
+      let r = await Promise.race(
+        [
+          page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+          delay(200),
+        ]
+      )
+
+      if (r == 2) {
+        let url = await page.url();
+        if (url.includes('/Default.aspx')) {
+          console.log('Tab', tabNo,'Calling login() again');
+          return login();
+        }
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
       }
       //check 
       console.log('Tab', tabNo,'Before loggedin');
-      await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
       url = await page.url();
 
       if (url.includes('/Default.aspx')) {

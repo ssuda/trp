@@ -1,20 +1,47 @@
 const {createScheduler, createWorker, PSM, OEM } = require('tesseract.js');
 //var Jimp = require('jimp');
+const path = require('path');
+const process = require('process');
 const captcha_expr = require('./captcha-expression');
-
 const scheduler = createScheduler();
 
 async function addWorker() {
-  const worker = createWorker();
+  const dataPath =
+  process.env.NODE_ENV === 'development'
+    ? path.join(__dirname, '../../data')
+    : path.join(process.resourcesPath, 'data');
+
+  console.log('loading from', dataPath);
+  const worker = createWorker({
+    //workerPath: window.location.origin + '/data/worker.min.js',
+    cachePath: dataPath,
+    cacheMethod: 'readOnly',
+    logger: m => console.log(m),
+    //corePath: window.location.origin + '/data/tesseract-core.wasm.js',
+  });
+
+  console.log('worker created');
 
   await worker.load();
+
+  console.log('worker loaded');
+
   await worker.loadLanguage('eng');
+
+  console.log('worker language loaded');
+
   await worker.initialize('eng');
+
+  console.log('worker language initialized');
+
   await worker.setParameters({
     //tessedit_char_whitelist: '0123456789',
     tessedit_pageseg_mode: PSM.SINGLE_LINE,
     tessedit_ocr_engine_mode: OEM.TESSERACT_LSTM_COMBINED
   });
+
+  console.log('worker setparameters');
+
   scheduler.addWorker(worker);
 };
 
@@ -24,7 +51,11 @@ async function initialize() {
   if (!initialized) {
     console.log('initializing tesseract');
     for(let i = 0; i < 5; ++i) {
-      await addWorker();
+      try {
+        await addWorker();
+      } catch(ex) {
+        console.log(ex);
+      }
     }
     initialized = true;
     console.log('initialized tesseract');
