@@ -11,11 +11,12 @@ async function addWorker() {
     ? path.join(__dirname, '../../data')
     : path.join(process.resourcesPath, 'data');
 
-  console.log('loading from', dataPath);
+  console.log('loading from', dataPath,  window.location.origin + '/data');
   const worker = createWorker({
     //workerPath: window.location.origin + '/data/worker.min.js',
-    cachePath: dataPath,
-    cacheMethod: 'readOnly',
+    //langPath: window.location.origin + '/data',
+    //cachePath: dataPath,
+    //cacheMethod: 'readOnly',
     logger: m => console.log(m),
     //corePath: window.location.origin + '/data/tesseract-core.wasm.js',
   });
