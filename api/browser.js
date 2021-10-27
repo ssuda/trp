@@ -306,7 +306,12 @@ module.exports = function(tabNo) {
       .substring(0, length);
   }
 
-  async function login() {
+  async function login(retry) {
+    
+    if (!retry) {
+      retry = 0;
+    }
+
     try {
       if (!page) {
         return;
@@ -341,34 +346,42 @@ module.exports = function(tabNo) {
       await fill('#txtpwd', credentials.password);
       await page.click('#btnSubmit');
 
-      let r = await Promise.race(
+      let r = await promiseAny(
         [
+
           page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-          delay(200),
+          delay(1000),
         ]
       )
 
+      console.log('return from race', r);
       if (r == 2) {
         let url = await page.url();
         if (url.includes('/Default.aspx')) {
-          console.log('Tab', tabNo,'Calling login() again');
+          console.log('Tab', tabNo,'Calling login() again', url);
           return login();
         }
         await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
       }
+
       //check 
       console.log('Tab', tabNo,'Before loggedin');
-      url = await page.url();
+      let url = await page.url();
 
       if (url.includes('/Default.aspx')) {
         console.log('Tab', tabNo,'Calling login() again');
         return login();
       } else {
-        console.log('Tab', tabNo,'loggedin', url);
+        console.log('Tab', tabNo,'loggedin');
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
 
         if (mainUrl && page) {
           console.log('Tab', tabNo,'Going to url', mainUrl);
-          await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
+          try {
+            await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
+          } catch(ex) {
+            await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
+          }
         }
       }
     } catch (ex) {
