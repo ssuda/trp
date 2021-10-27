@@ -141,6 +141,11 @@ import tessaract from '../api/tessaract';
     ipcRenderer.send('open-browser', args);
   });
 
+  frappe.events.on('open-tabs', args => {
+    console.log('open tabs called');
+    ipcRenderer.send('open-tabs', args);
+  });
+
   frappe.events.on('show-browser', args => {
     console.log('show browser called');
     ipcRenderer.send('show-browser', args);

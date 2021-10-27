@@ -10,11 +10,14 @@ const { delay, promiseAny } = require('./utils');
 
 function browserArgs(headless) {
   const result = [
+    '--auto-detect=false',
+    "--no-proxy-server",
     '--disable-background-timer-throttling',
     '--disable-breakpad',
     '--disable-client-side-phishing-detection',
     '--disable-cloud-import',
     '--disable-default-apps',
+    '--enable-gpu-rasterization',
     '--disable-dev-shm-usage',
     '--disable-extensions',
     '--disable-gesture-typing',
@@ -48,6 +51,8 @@ function browserArgs(headless) {
     '--password-store=basic',
     '--prerender-from-omnibox=disabled',
     '--use-gl=swiftshader',
+    '--enable-lazy-image-loading',
+    '--enable-quic',
     '--use-mock-keychain',
     '--autoplay-policy=user-gesture-required',
     '--disable-background-networking',
@@ -61,11 +66,11 @@ function browserArgs(headless) {
     '--ignore-gpu-blacklist'
   ];
 
-  if (headless === true) {
-    result.push('--single-process');
-  } else {
-    result.push('--start-maximized');
-  }
+  // if (headless === true) {
+  //   result.push('--single-process');
+  // } else {
+  //   result.push('--start-maximized');
+  // }
 
   return result;
 }
@@ -94,14 +99,15 @@ module.exports = function(tabNo) {
   let captchaImage;
 
   async function browserInstance(headless) {
-    headless =
-      process.env.SHOW_BROWSER == undefined ? true : !process.env.SHOW_BROWSER;
+    // headless =
+    //   process.env.SHOW_BROWSER == undefined ? true : !process.env.SHOW_BROWSER;
 
     if (!browser) {
       browser = await puppeteer.launch({
         headless,
         ignoreHTTPSErrors: true,
         waitForInitialPage: false,
+        //args: browserArgs(),
         args: [
           '--auto-detect=false',
           "--no-proxy-server",
@@ -130,7 +136,12 @@ module.exports = function(tabNo) {
     credentials || (credentials = {});
 
     const pages = await browser.pages();
-    page = pages[0];
+    
+    if (pages.length) {
+      page = pages[0];
+    } else {
+      page = await browser.newPage();
+    }
 
     page.on('dialog', async dialog => {
       try {
@@ -312,6 +323,11 @@ module.exports = function(tabNo) {
       retry = 0;
     }
 
+    if (retry > 10) {
+      console.log('password wrong');
+      return;
+    }
+
     try {
       if (!page) {
         return;
@@ -359,21 +375,22 @@ module.exports = function(tabNo) {
         let url = await page.url();
         if (url.includes('/Default.aspx')) {
           console.log('Tab', tabNo,'Calling login() again', url);
-          return login();
+          return login(retry + 1);
         }
         await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
       }
 
       //check 
       console.log('Tab', tabNo,'Before loggedin');
+      //await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+      await delay(5000);
       let url = await page.url();
 
       if (url.includes('/Default.aspx')) {
         console.log('Tab', tabNo,'Calling login() again');
-        return login();
+        return login(retry  + 1);
       } else {
         console.log('Tab', tabNo,'loggedin');
-        await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
 
         if (mainUrl && page) {
           console.log('Tab', tabNo,'Going to url', mainUrl);
@@ -387,7 +404,7 @@ module.exports = function(tabNo) {
     } catch (ex) {
       console.error(ex);
       await delay(60000);
-      return login();
+      return login(retry + 1);
     }
   }
 

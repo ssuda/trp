@@ -372,9 +372,9 @@ export default {
             });
           }
 
-          if (process.env.NODE_ENV !== 'development') {
+          //if (process.env.NODE_ENV !== 'development') {
             this.openBrowser();
-          }
+          //}
           this.activeScreen = 'Desk';
         } else {
           this.activeScreen = 'LoginRegister';
@@ -418,6 +418,11 @@ export default {
           returnCompanyName: true
         });
         */
+
+        frappe.events.trigger('open-tabs', {
+          numBrowsers: 10,
+          credentials,
+        });
 
         // refresh permits
         // let permits = await twoMonthsOldPermits();

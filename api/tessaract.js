@@ -12,14 +12,21 @@ async function addWorker() {
     : path.join(process.resourcesPath, 'data');
 
   console.log('loading from', dataPath,  window.location.origin + '/data');
-  const worker = createWorker({
-    //workerPath: window.location.origin + '/data/worker.min.js',
-    //langPath: window.location.origin + '/data',
-    //cachePath: dataPath,
-    //cacheMethod: 'readOnly',
-    logger: m => console.log(m),
-    //corePath: window.location.origin + '/data/tesseract-core.wasm.js',
-  });
+
+  let worker;
+
+  if ( process.env.NODE_ENV !== 'development') {
+    worker = createWorker({
+      //workerPath: window.location.origin + '/data/worker.min.js',
+      langPath: dataPath,//window.location.origin + '/data',
+      cachePath: dataPath,
+      cacheMethod: 'readOnly',
+      //logger: m => console.log(m),
+      //corePath: window.location.origin + '/data/tesseract-core.wasm.js',
+    });
+  } else {
+    worker = createWorker();
+  }
 
   console.log('worker created');
 

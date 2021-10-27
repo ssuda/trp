@@ -20,7 +20,8 @@ import {
   initializeBrowser,
   busyFlag,
   companyName,
-  disconnect
+  disconnect,
+  openTabs
 } from '../api';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -292,6 +293,11 @@ ipcMain.on('open-browser', async (event, args) => {
   if (args.returnCompanyName && r) {
     event.sender.send('i3ms-company-name', r);
   }
+});
+
+ipcMain.on('open-tabs', async (event, args) => {
+  console.log('open tabs called');
+  await openTabs(args.numBrowsers, args.credentials);
 });
 
 ipcMain.on('close-browser', async () => {

@@ -462,30 +462,31 @@ async function tabTagging(taggingUrl, tab, chunk, options, sse, tabNo) {
   await tagging(tab, chunk, options, sse, tabNo);
 }
 
+let tabs = [];
+
 async function tagFromTab(taggingUrl, chunk, options, sse, tabNo) {
-  const tab = browser(tabNo);
-  await tab.initializeBrowser(options.credentials, false, true);
+  const tab = tabs[tabNo];
   await tabTagging(taggingUrl, tab, chunk, options, sse, tabNo);
-  return tab;
 }
 
-async function openTabs(taggingUrl, chunks, options, sse) {
+async function openTab(tabNo, credentials) {
+  const tab = browser(tabNo);
+  tabs.push(tab);
+  await tab.initializeBrowser(credentials, false, true);
+}
+
+export function openTabs(numTabs, credentials) {
+  for (let i = 0; i < numTabs; ++i) {
+    openTab(i, credentials);
+  }
+}
+
+async function tagFromTabs(taggingUrl, chunks, options, sse) {
   try {
-    let tabs = [];
-    let numTabs = +options.numBrowsers || 4;
-
-    numTabs = chunks.length > numTabs ? numTabs : chunks.length;
-
-    let arr = [];
-
-    for (let i = 0; i < numTabs; ++i) {
-      arr.push(i);
-    }
 
     await Promise.all(
-      arr.map(async i => {
-        const tab = await tagFromTab(taggingUrl, chunks[i], options, sse, i);
-        tabs.push(tab);
+      tabs.map(async (_, i) => {
+        await tagFromTab(taggingUrl, chunks[i], options, sse, i);
       })
     );
 
@@ -507,9 +508,9 @@ async function openTabs(taggingUrl, chunks, options, sse) {
 
     const tagged = await successfullyTagged(options.name, null, tabs[0]);
 
-    for (let i = 0; i < numTabs; ++i) {
-      await tabs[i].disconnect();
-    }
+    // for (let i = 0; i < numTabs; ++i) {
+    //   await tabs[i].disconnect();
+    // }
 
     console.log('Complete End of Tagging');
 
@@ -523,11 +524,11 @@ export async function tagVehicles(options, sse) {
   const { taggingUrl, name: permitNumber, trucks } = options;
   let chunks = _.chunk(
     trucks,
-    Math.ceil(trucks.length / (+options.numBrowsers || 4))
+    Math.ceil(trucks.length / (+options.numBrowsers || 10))
   );
   try {
     if (trucks.length) {
-      return openTabs(taggingUrl, chunks, options, sse);
+      return tagFromTabs(taggingUrl, chunks, options, sse);
     }
   } catch (ex) {
     console.error(ex);
