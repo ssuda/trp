@@ -230,7 +230,7 @@ import tessaract from '../api/tessaract';
           .first();
       }
 
-      console.log('received failed from main process', response);
+      console.log('received tag-result from main process', response);
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
       let finallyTagged = Object.assign(tagged, response);

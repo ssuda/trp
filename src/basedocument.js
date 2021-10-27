@@ -135,11 +135,13 @@ module.exports = class BaseDocument extends Observable {
         });
       }
 
-      console.log('Syncing to firestore', this.doctype, obj);
-      firestore
-        .collection(this.doctype)
-        .doc(key)
-        .set(obj, setOptions);
+      if (this.doctype !=  'Trip') {
+        console.log('Syncing to firestore', this.doctype, obj);
+        firestore
+          .collection(this.doctype)
+          .doc(key)
+          .set(obj, setOptions);
+      }
     }
   }
 
