@@ -13,6 +13,8 @@ module.exports = class BaseDocument extends Observable {
   // trigger methods on the class if they match
   // with the trigger name
   async trigger(event, params) {
+    console.log('triggered', (this._turnOffSync || frappe._turnOffSync || this.meta.turnOffSync), event);
+
     if (this[event]) {
       await this[event](params);
     }
@@ -39,6 +41,8 @@ module.exports = class BaseDocument extends Observable {
       accountingSettings.companyName ||
       this.companyName ||
       (frappe.currentUser && frappe.currentUser.companyName);
+
+    console.log('gstin and name', gstin, this.name, event);
 
     if (!gstin || !this.name) {
       return;
@@ -69,13 +73,17 @@ module.exports = class BaseDocument extends Observable {
           _deleted: true
         });
     } else if (event === 'afterUpdate' || event === 'afterInsert') {
+      console.log('Before Syncing to firestore', this.doctype);
+
       if (
-        this.doctype === 'Trip' &&
+        this.doctype === 'Trip'  || this.doctype == 'Permit'
+        /*&&
         this.type == 'I3MS' &&
         !(
           this.meta.editableFields &&
           this.meta.editableFields.some(f => this[f])
         )
+        */
       ) {
         return;
       }
@@ -135,13 +143,11 @@ module.exports = class BaseDocument extends Observable {
         });
       }
 
-      if (this.doctype !=  'Trip') {
-        console.log('Syncing to firestore', this.doctype, obj);
-        firestore
-          .collection(this.doctype)
-          .doc(key)
-          .set(obj, setOptions);
-      }
+      console.log('Syncing to firestore', this.doctype, key, obj, setOptions);
+      firestore
+        .collection(this.doctype)
+        .doc(key)
+        .set(obj, setOptions);
     }
   }
 

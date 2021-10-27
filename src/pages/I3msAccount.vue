@@ -96,7 +96,8 @@ export default {
   methods: {
     async setValue(field, value) {
       this.statusText = _('Saving...');
-      await this.doc.set(field, value);
+      await frappe.AccountingSettings.update({ [field]: value });
+      //await this.doc.set(field, value);
       await delay(1000);
       this.statusText = _('Saved');
     }

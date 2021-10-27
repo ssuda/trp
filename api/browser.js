@@ -380,6 +380,7 @@ module.exports = function(tabNo) {
         await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
       }
 
+      await delay(2000);
       //check 
       console.log('Tab', tabNo,'Before loggedin');
       //await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
