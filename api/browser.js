@@ -364,6 +364,7 @@ module.exports = function(tabNo) {
         await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
       }
 
+      await delay(5000);
       //check 
       console.log('Tab', tabNo,'Before loggedin');
       let url = await page.url();
@@ -373,7 +374,7 @@ module.exports = function(tabNo) {
         return login();
       } else {
         console.log('Tab', tabNo,'loggedin');
-        await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+        //await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
 
         if (mainUrl && page) {
           console.log('Tab', tabNo,'Going to url', mainUrl);
