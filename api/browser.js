@@ -364,7 +364,7 @@ module.exports = function(tabNo) {
         await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
       }
 
-      await delay(5000);
+      await delay(2000);
       //check 
       console.log('Tab', tabNo,'Before loggedin');
       let url = await page.url();
