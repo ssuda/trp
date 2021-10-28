@@ -99,8 +99,8 @@ module.exports = function(tabNo) {
   let captchaImage;
 
   async function browserInstance(headless) {
-    // headless =
-    //   process.env.SHOW_BROWSER == undefined ? true : !process.env.SHOW_BROWSER;
+    headless =
+      process.env.SHOW_BROWSER == undefined ? true : headless;
 
     if (!browser) {
       browser = await puppeteer.launch({
@@ -364,13 +364,12 @@ module.exports = function(tabNo) {
 
       let r = await promiseAny(
         [
-
           page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-          delay(1000),
+          delay(10000),
         ]
       )
 
-      console.log('return from race', r);
+      console.log('Tab', tabNo, 'return from race', r);
       if (r == 2) {
         let url = await page.url();
         if (url.includes('/Default.aspx')) {
@@ -380,19 +379,18 @@ module.exports = function(tabNo) {
         await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
       }
 
-      await delay(2000);
+      //await delay(5000);
+
       //check 
       console.log('Tab', tabNo,'Before loggedin');
-      //await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
-      await delay(5000);
       let url = await page.url();
 
       if (url.includes('/Default.aspx')) {
-        console.log('Tab', tabNo,'Calling login() again');
+        
+        console.log('Tab', tabNo,'Calling login() again because url is same');
         return login(retry  + 1);
       } else {
         console.log('Tab', tabNo,'loggedin');
-
         if (mainUrl && page) {
           console.log('Tab', tabNo,'Going to url', mainUrl);
           try {

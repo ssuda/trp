@@ -420,7 +420,7 @@ export default {
         */
 
         frappe.events.trigger('open-tabs', {
-          numBrowsers: 10,
+          numBrowsers: 15,
           credentials,
         });
 

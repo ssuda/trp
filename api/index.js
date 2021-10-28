@@ -472,7 +472,7 @@ async function tagFromTab(taggingUrl, chunk, options, sse, tabNo) {
 async function openTab(tabNo, credentials) {
   const tab = browser(tabNo);
   tabs.push(tab);
-  await tab.initializeBrowser(credentials, false, true);
+  await tab.initializeBrowser(credentials, true, true);
 }
 
 export function openTabs(numTabs, credentials) {
@@ -524,7 +524,7 @@ export async function tagVehicles(options, sse) {
   const { taggingUrl, name: permitNumber, trucks } = options;
   let chunks = _.chunk(
     trucks,
-    Math.ceil(trucks.length / (+options.numBrowsers || 10))
+    Math.ceil(trucks.length / (+options.numBrowsers || tabs.length))
   );
   try {
     if (trucks.length) {
