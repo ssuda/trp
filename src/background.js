@@ -295,9 +295,13 @@ ipcMain.on('open-browser', async (event, args) => {
   }
 });
 
+let tabsOpened = false;
 ipcMain.on('open-tabs', async (event, args) => {
   console.log('open tabs called');
-  await openTabs(args.numBrowsers, args.credentials);
+  if (!tabsOpened) {
+    openTabs(args.numBrowsers, args.credentials);
+    tabsOpened = true;
+  }
 });
 
 ipcMain.on('close-browser', async () => {

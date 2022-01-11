@@ -476,17 +476,25 @@ async function openTab(tabNo, credentials) {
 }
 
 export function openTabs(numTabs, credentials) {
-  for (let i = 0; i < numTabs; ++i) {
-    openTab(i, credentials);
-  }
+  // for (let i = 0; i < numTabs; ++i) {
+  //   openTab(i, credentials);
+  // }
+  return Promise.all(
+    [...Array(numTabs).keys()].map(i => {
+      return openTab(i, credentials);
+    })
+  );
 }
 
 async function tagFromTabs(taggingUrl, chunks, options, sse) {
   try {
+    if (!tabs.length) {
+      await openTabs(options.numBrowsers || 15, options.credentials);
+    }
 
     await Promise.all(
-      tabs.map(async (_, i) => {
-        await tagFromTab(taggingUrl, chunks[i], options, sse, i);
+      tabs.map((_, i) => {
+        return tagFromTab(taggingUrl, chunks[i], options, sse, i);
       })
     );
 

@@ -10,13 +10,13 @@ const { delay, promiseAny } = require('./utils');
 
 function browserArgs(headless) {
   const result = [
+    '--disable-features=ScriptStreaming',
     '--auto-detect=false',
-    "--no-proxy-server",
+    '--no-proxy-server',
     '--disable-background-timer-throttling',
     '--disable-breakpad',
     '--disable-client-side-phishing-detection',
     '--disable-cloud-import',
-    '--disable-default-apps',
     '--enable-gpu-rasterization',
     '--disable-dev-shm-usage',
     '--disable-extensions',
@@ -41,6 +41,7 @@ function browserArgs(headless) {
     '--enable-tcp-fast-open',
     '--enable-webgl',
     '--hide-scrollbars',
+    '--disable-features=site-per-process',
     '--metrics-recording-only',
     '--mute-audio',
     '--no-default-browser-check',
@@ -58,19 +59,27 @@ function browserArgs(headless) {
     '--disable-background-networking',
     '--disable-backgrounding-occluded-windows',
     '--disable-component-update',
+    '--disable-component-extensions-with-background-pages',
     '--disable-domain-reliability',
     '--disable-features=AudioServiceOutOfProcess',
     '--disable-ipc-flooding-protection',
     '--disable-renderer-backgrounding',
+    '--js-flags=--random-seed=1157259157',
+    '--enable-automation',
+    '--disable-device-discovery-notifications',
     '--disk-cache-size=33554432',
-    '--ignore-gpu-blacklist'
+    '--ignore-gpu-blacklist',
+    '--disable-default-apps',
+    '--no-default-browser-check',
+    '--use-fake-device-for-media-stream',
+    '--allow-running-insecure-content'
   ];
 
-  // if (headless === true) {
-  //   result.push('--single-process');
-  // } else {
-  //   result.push('--start-maximized');
-  // }
+  if (headless === true) {
+    result.push('--single-process');
+  } else {
+    result.push('--start-maximized');
+  }
 
   return result;
 }
@@ -88,7 +97,7 @@ function defaultViewport(headless) {
 
 module.exports = function(tabNo) {
   if (tabNo === undefined) {
-    tabNo = 'Main'
+    tabNo = 'Main';
   }
   let browser;
   let page;
@@ -100,21 +109,23 @@ module.exports = function(tabNo) {
 
   async function browserInstance(headless) {
     headless =
-      process.env.SHOW_BROWSER == undefined ? true : headless;
+      process.env.SHOW_BROWSER !== undefined
+        ? !JSON.parse(process.env.SHOW_BROWSER.toLowerCase())
+        : headless;
 
     if (!browser) {
       browser = await puppeteer.launch({
         headless,
         ignoreHTTPSErrors: true,
         waitForInitialPage: false,
-        //args: browserArgs(),
-        args: [
-          '--auto-detect=false',
-          "--no-proxy-server",
-          '--disable-extensions',
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-        ],
+        args: browserArgs(),
+        // args: [
+        //   '--auto-detect=false',
+        //   "--no-proxy-server",
+        //   '--disable-extensions',
+        //   '--no-sandbox',
+        //   '--disable-setuid-sandbox',
+        // ],
         executablePath: findChrome(),
         defaultViewport: null //defaultViewport(headless),
         //timeout: 0
@@ -136,7 +147,7 @@ module.exports = function(tabNo) {
     credentials || (credentials = {});
 
     const pages = await browser.pages();
-    
+
     if (pages.length) {
       page = pages[0];
     } else {
@@ -172,7 +183,12 @@ module.exports = function(tabNo) {
 
     page.setDefaultTimeout(120000);
     //page.setDefaultNavigationTimeout(120000);
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36')
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'
+    );
+    // await page.addScriptTag({
+    //   content:
+    // })
   }
 
   function fill(selector, v) {
@@ -318,7 +334,6 @@ module.exports = function(tabNo) {
   }
 
   async function login(retry) {
-    
     if (!retry) {
       retry = 0;
     }
@@ -348,7 +363,9 @@ module.exports = function(tabNo) {
       let string = '09' + no + '/' + dateTime;
       let encodedString = Buffer.from(string).toString('base64');
 
-      console.log('Tab', tabNo,
+      console.log(
+        'Tab',
+        tabNo,
         'Logging into ',
         'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString
       );
@@ -356,24 +373,22 @@ module.exports = function(tabNo) {
       await page.goto(
         'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString
       );
-      
+
       await page.waitForSelector('#btnSubmit');
       await fill('#txtusr', credentials.username);
       await fill('#txtpwd', credentials.password);
       await page.click('#btnSubmit');
 
-      let r = await promiseAny(
-        [
-          page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-          delay(10000),
-        ]
-      )
+      let r = await promiseAny([
+        page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+        delay(10000)
+      ]);
 
       console.log('Tab', tabNo, 'return from race', r);
       if (r == 2) {
         let url = await page.url();
         if (url.includes('/Default.aspx')) {
-          console.log('Tab', tabNo,'Calling login() again', url);
+          console.log('Tab', tabNo, 'Calling login() again', url);
           return login(retry + 1);
         }
         await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
@@ -381,21 +396,20 @@ module.exports = function(tabNo) {
 
       //await delay(5000);
 
-      //check 
-      console.log('Tab', tabNo,'Before loggedin');
+      //check
+      console.log('Tab', tabNo, 'Before loggedin');
       let url = await page.url();
 
       if (url.includes('/Default.aspx')) {
-        
-        console.log('Tab', tabNo,'Calling login() again because url is same');
-        return login(retry  + 1);
+        console.log('Tab', tabNo, 'Calling login() again because url is same');
+        return login(retry + 1);
       } else {
-        console.log('Tab', tabNo,'loggedin');
+        console.log('Tab', tabNo, 'loggedin');
         if (mainUrl && page) {
-          console.log('Tab', tabNo,'Going to url', mainUrl);
+          console.log('Tab', tabNo, 'Going to url', mainUrl);
           try {
             await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
-          } catch(ex) {
+          } catch (ex) {
             await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
           }
         }
@@ -431,7 +445,7 @@ module.exports = function(tabNo) {
   async function tagVehicle(href, truckNo, renderer) {
     let reason = '';
     try {
-      console.log('Tab', tabNo,'before waiting for txtVehicleNo');
+      console.log('Tab', tabNo, 'before waiting for txtVehicleNo');
 
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       await page.$eval(
@@ -443,9 +457,9 @@ module.exports = function(tabNo) {
         truckNo
       );
 
-      console.log('Tab', tabNo,'before btnsearch');
+      console.log('Tab', tabNo, 'before btnsearch');
       await clickHelper('#btnsearch', 120000);
-      console.log('Tab', tabNo,'after btnsearch');
+      console.log('Tab', tabNo, 'after btnsearch');
 
       const r = await promiseAny(
         page.waitForSelector('#rdo_GPS_0', { timeout: 30000 }),
@@ -454,22 +468,22 @@ module.exports = function(tabNo) {
 
       if (r == 1) {
         await setRadioButton('#rdo_GPS_0');
-        console.log('Tab', tabNo,'before waiting for VTS');
+        console.log('Tab', tabNo, 'before waiting for VTS');
 
         await clickHelper('#Rdo_VTS_0');
         await setRadioButton('#Rdo_SIM_0');
         await page.click('#chkClick');
         let captchaVal = await vision(captchaImage, renderer);
-        console.log('Tab', tabNo,'captchaVal', captchaVal);
+        console.log('Tab', tabNo, 'captchaVal', captchaVal);
         await page.$eval(
           '#txtcaptcha',
           (e, val) => (e.value = val),
           captchaVal
         );
-        console.log('Tab', tabNo,'before btnsubmit');
+        console.log('Tab', tabNo, 'before btnsubmit');
 
         await clickHelper('#btnSubmit');
-        console.log('Tab', tabNo,'after btnsubmit');
+        console.log('Tab', tabNo, 'after btnsubmit');
 
         reason = await page.$eval('#lblMsg', el => el.innerText);
         if (/(something wrong)|(in correct captcha)/i.test(reason)) {
@@ -486,8 +500,10 @@ module.exports = function(tabNo) {
     } catch (ex) {
       console.error(ex);
       let url = page.url();
-      if (!url.includes('TransporterAssignVehicleNew.aspx')
-        || (/(execution context)|(network|timeout)/i.test(ex.message))) {
+      if (
+        !url.includes('TransporterAssignVehicleNew.aspx') ||
+        /(execution context)|(network|timeout)/i.test(ex.message)
+      ) {
         await gotoTagPage(href);
         return tagVehicle(href, truckNo, renderer);
       }

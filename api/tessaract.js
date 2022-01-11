@@ -1,4 +1,4 @@
-const {createScheduler, createWorker, PSM, OEM } = require('tesseract.js');
+const { createScheduler, createWorker, PSM, OEM } = require('tesseract.js');
 //var Jimp = require('jimp');
 const path = require('path');
 const process = require('process');
@@ -7,20 +7,20 @@ const scheduler = createScheduler();
 
 async function addWorker() {
   const dataPath =
-  process.env.NODE_ENV === 'development'
-    ? path.join(__dirname, '../../data')
-    : path.join(process.resourcesPath, 'data');
+    process.env.NODE_ENV === 'development'
+      ? path.join(__dirname, '../../data')
+      : path.join(process.resourcesPath, 'data');
 
-  console.log('loading from', dataPath,  window.location.origin + '/data');
+  console.log('loading from', dataPath, window.location.origin + '/data');
 
   let worker;
 
-  if ( process.env.NODE_ENV !== 'development') {
+  if (process.env.NODE_ENV !== 'development') {
     worker = createWorker({
       //workerPath: window.location.origin + '/data/worker.min.js',
-      langPath: dataPath,//window.location.origin + '/data',
+      langPath: dataPath, //window.location.origin + '/data',
       cachePath: dataPath,
-      cacheMethod: 'readOnly',
+      cacheMethod: 'readOnly'
       //logger: m => console.log(m),
       //corePath: window.location.origin + '/data/tesseract-core.wasm.js',
     });
@@ -51,17 +51,17 @@ async function addWorker() {
   console.log('worker setparameters');
 
   scheduler.addWorker(worker);
-};
+}
 
 let initialized = false;
 
 async function initialize() {
   if (!initialized) {
     console.log('initializing tesseract');
-    for(let i = 0; i < 5; ++i) {
+    for (let i = 0; i < 1; ++i) {
       try {
         await addWorker();
-      } catch(ex) {
+      } catch (ex) {
         console.log(ex);
       }
     }
@@ -70,13 +70,16 @@ async function initialize() {
   }
 }
 
-let initializePromise = initialize();
+let initializePromise;
 
 module.exports = async image => {
   if (!initialized) {
+    if (!initializePromise) {
+      initializePromise = initialize();
+    }
     await initializePromise;
   }
-  
+
   const {
     data: { text }
   } = await scheduler.addJob('recognize', image);
