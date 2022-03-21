@@ -469,19 +469,17 @@ async function tagFromTab(taggingUrl, chunk, options, sse, tabNo) {
   await tabTagging(taggingUrl, tab, chunk, options, sse, tabNo);
 }
 
-async function openTab(tabNo, credentials) {
+async function openTab(tabNo, credentials, headless) {
   const tab = browser(tabNo);
   tabs.push(tab);
-  await tab.initializeBrowser(credentials, true, true);
+  await tab.initializeBrowser(credentials, headless, !!credentials);
 }
 
-export function openTabs(numTabs, credentials) {
-  // for (let i = 0; i < numTabs; ++i) {
-  //   openTab(i, credentials);
-  // }
+export function openTabs(numTabs, credentials, headless = true) {
+  console.log('open tabs called in api/index.js');
   return Promise.all(
     [...Array(numTabs).keys()].map(i => {
-      return openTab(i, credentials);
+      return openTab(i, credentials, headless);
     })
   );
 }
@@ -489,7 +487,7 @@ export function openTabs(numTabs, credentials) {
 async function tagFromTabs(taggingUrl, chunks, options, sse) {
   try {
     if (!tabs.length) {
-      await openTabs(options.numBrowsers || 15, options.credentials);
+      await openTabs(options.numBrowsers || 10, options.credentials, options.showBrowser);
     }
 
     await Promise.all(

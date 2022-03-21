@@ -24,16 +24,16 @@
             </h1>
             <div class="flex justify-between mt-2">
               <div class="w-1/3">
-                <FormControl
+                <!-- <FormControl
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('showBrowser')"
                   :value="doc.showBrowser"
                   :showLabel="true"
                   @change="value => doc.set('showBrowser', value)"
-                />
+                /> -->
 
-                <FormControl
+                <!-- <FormControl
                   class="mt-4 text-base"
                   input-class="bg-gray-100 px-3 py-2 text-base"
                   :df="meta.getField('numBrowsers')"
@@ -41,7 +41,7 @@
                   :showLabel="true"
                   v-if="doc.action == 'tagging'"
                   @change="value => doc.set('numBrowsers', value)"
-                />
+                /> -->
 
                 <FormControl
                   v-if="doc.action == 'tagging' && !doc.permit"
@@ -358,13 +358,14 @@ export default {
           return;
         }
 
-        // if (this.doc.numBrowsers > 10) {
-        //   showMessageDialog({
-        //     message: this._('Number of browsers not more than 20')
-        //   });
-        //   this.loading = false;
-        //   return;
-        // }
+        if (this.doc.numBrowsers && this.doc.numBrowsers != frappe.AccountingSettings.numBrowsers) {
+           frappe.AccountingSettings.update('numBrowsers', this.doc.numBrowsers);
+          // showMessageDialog({
+          //   message: this._('Number of browsers not more than 20')
+          // });
+          // this.loading = false;
+          // return;
+        }
 
         let trucks;
 

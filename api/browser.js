@@ -12,7 +12,11 @@ function browserArgs(headless) {
   const result = [
     '--disable-features=ScriptStreaming',
     '--auto-detect=false',
-    '--no-proxy-server',
+    //'--no-proxy-server',
+    '--enable-blink-features=HTMLImports',
+    '--proxy-server="direct://"',
+    '--proxy-bypass-list=*',
+    '--ignore-certificate-errors',
     '--disable-background-timer-throttling',
     '--disable-breakpad',
     '--disable-client-side-phishing-detection',
@@ -39,7 +43,9 @@ function browserArgs(headless) {
     '--enable-async-dns',
     '--enable-simple-cache-backend',
     '--enable-tcp-fast-open',
+    '--disable-web-security',
     '--enable-webgl',
+    //'--auto-open-devtools-for-tabs',
     '--hide-scrollbars',
     '--disable-features=site-per-process',
     '--metrics-recording-only',
@@ -51,7 +57,7 @@ function browserArgs(headless) {
     '--no-zygote',
     '--password-store=basic',
     '--prerender-from-omnibox=disabled',
-    '--use-gl=swiftshader',
+   // '--use-gl=swiftshader',
     '--enable-lazy-image-loading',
     '--enable-quic',
     '--use-mock-keychain',
@@ -72,7 +78,9 @@ function browserArgs(headless) {
     '--disable-default-apps',
     '--no-default-browser-check',
     '--use-fake-device-for-media-stream',
-    '--allow-running-insecure-content'
+    '--allow-running-insecure-content',
+    "--disable-web-security",
+   // '--disable-gl-drawing-for-tests', // BEST OPTION EVER! Disables GL drawing operations which produce pixel output. With this the GL output will not be correct but tests will run faster.
   ];
 
   if (headless === true) {
@@ -96,6 +104,9 @@ function defaultViewport(headless) {
 }
 
 module.exports = function(tabNo) {
+  let log = (...args) => console.log('Tab', tabNo, ...args);
+  let error = (...args) => console.error('Tab', tabNo, ...args);
+
   if (tabNo === undefined) {
     tabNo = 'Main';
   }
@@ -115,20 +126,24 @@ module.exports = function(tabNo) {
 
     if (!browser) {
       browser = await puppeteer.launch({
+        dumpio: false,
+        //product: 'firefox',
         headless,
         ignoreHTTPSErrors: true,
         waitForInitialPage: false,
-        args: browserArgs(),
-        // args: [
+        //ignoreDefaultArgs: true,
+        args: browserArgs(false),
+        //  args: [
         //   '--auto-detect=false',
-        //   "--no-proxy-server",
-        //   '--disable-extensions',
+        //  "--no-proxy-server",
+        // '--disable-extensions',
         //   '--no-sandbox',
         //   '--disable-setuid-sandbox',
-        // ],
+        //  ],
+        //executablePath: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe', //findChrome(),
         executablePath: findChrome(),
-        defaultViewport: null //defaultViewport(headless),
-        //timeout: 0
+        defaultViewport: defaultViewport(headless),
+        timeout: 0
       });
       browser.on('error', () => page.reload());
       browser.on('disconnected', disconnectHandler);
@@ -154,6 +169,16 @@ module.exports = function(tabNo) {
       page = await browser.newPage();
     }
 
+    await page.setRequestInterception(true)
+
+    page.on('request', async (request) => {
+     if (request.url().includes('verisign.com')) {
+      await request.abort()
+     } else {
+      await request.continue()
+     }
+    })
+
     page.on('dialog', async dialog => {
       try {
         await dialog.accept();
@@ -161,23 +186,28 @@ module.exports = function(tabNo) {
     });
 
     page.on('response', async response => {
-      const url = response.url();
-      const type = response.request().resourceType();
-      const method = response.request().method();
+      try {
+        const url = response.url();
+        const type = response.request().resourceType();
+        const method = response.request().method();
 
-      if (
-        type == 'document' &&
-        method == 'GET' &&
-        url.includes('/i3msnew1.aspx')
-      ) {
-        await login();
-      } else if (
-        method == 'GET' &&
-        url.toLowerCase().includes('/captcha.aspx')
-      ) {
-        if (response.request().resourceType() === 'image') {
-          captchaImage = await response.buffer();
-        }
+        if (
+          type == 'document' &&
+          method == 'GET' &&
+          url.includes('/i3msnew1.aspx')
+        ) {
+         log('calling login from page response');
+          await login();
+        } else if (
+          method == 'GET' &&
+          url.toLowerCase().includes('/captcha.aspx') &&
+          response.request().resourceType() === 'image') {
+            captchaImage = await response.buffer();
+          }
+      } catch(ex) {
+       log(method, url);
+        error(ex);
+        captchaImage = 'Error';
       }
     });
 
@@ -310,7 +340,7 @@ module.exports = function(tabNo) {
         success = true;
         break;
       } catch (ex) {
-        console.error(ex);
+        error(ex);
         if (!browser || !page || /net::ERR_/i.test(ex.message)) {
           success = false;
           break;
@@ -333,6 +363,7 @@ module.exports = function(tabNo) {
       .substring(0, length);
   }
 
+  let newLoginInProgress = false;
   async function login(retry) {
     if (!retry) {
       retry = 0;
@@ -367,9 +398,11 @@ module.exports = function(tabNo) {
         'Tab',
         tabNo,
         'Logging into ',
-        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString
+        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString,
+        retry
       );
 
+      newLoginInProgress = true;
       await page.goto(
         'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString
       );
@@ -377,46 +410,64 @@ module.exports = function(tabNo) {
       await page.waitForSelector('#btnSubmit');
       await fill('#txtusr', credentials.username);
       await fill('#txtpwd', credentials.password);
+
+      const httpResponseWeWaitForPromise = page.waitForResponse('https://i3ms.odishaminerals.gov.in/Dashboard_TR.aspx');
+
       await page.click('#btnSubmit');
 
+      newLoginInProgress = false;
+
       let r = await promiseAny([
-        page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-        delay(10000)
+        httpResponseWeWaitForPromise,
+        delay(30000)
       ]);
 
-      console.log('Tab', tabNo, 'return from race', r);
-      if (r == 2) {
-        let url = await page.url();
-        if (url.includes('/Default.aspx')) {
-          console.log('Tab', tabNo, 'Calling login() again', url);
-          return login(retry + 1);
-        }
-        await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+      if (newLoginInProgress) {
+        return;
       }
 
-      //await delay(5000);
+     log('return from race', r);
+      if (r == 2) {
+         log('Calling login() again because of timeout');
+          return login(retry + 1);
+      }
 
-      //check
-      console.log('Tab', tabNo, 'Before loggedin');
+      await delay(5000);
+      // try {
+      //   await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 });
+      // } catch(ex) {
+      // }
+
+      if (newLoginInProgress) {
+        return;
+      }
+
+     log('Before loggedin');
       let url = await page.url();
 
+      if (newLoginInProgress) {
+        return;
+      }
+
       if (url.includes('/Default.aspx')) {
-        console.log('Tab', tabNo, 'Calling login() again because url is same');
+       log('Calling login() again because url is same');
         return login(retry + 1);
       } else {
-        console.log('Tab', tabNo, 'loggedin');
+       log('loggedin');
         if (mainUrl && page) {
-          console.log('Tab', tabNo, 'Going to url', mainUrl);
+         log('Going to url', mainUrl);
           try {
             await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
           } catch (ex) {
             await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
           }
         }
-      }
+     }
     } catch (ex) {
-      console.error(ex);
-      await delay(60000);
+      error(ex.message);
+      if (!/(execution context)|(network|timeout|net::ERR)/i.test(ex.message)) {
+        await delay(60000);
+      }
       return login(retry + 1);
     }
   }
@@ -445,7 +496,7 @@ module.exports = function(tabNo) {
   async function tagVehicle(href, truckNo, renderer) {
     let reason = '';
     try {
-      console.log('Tab', tabNo, 'before waiting for txtVehicleNo');
+     log('before waiting for txtVehicleNo');
 
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       await page.$eval(
@@ -457,9 +508,9 @@ module.exports = function(tabNo) {
         truckNo
       );
 
-      console.log('Tab', tabNo, 'before btnsearch');
+     log('before btnsearch');
       await clickHelper('#btnsearch', 120000);
-      console.log('Tab', tabNo, 'after btnsearch');
+     log('after btnsearch');
 
       const r = await promiseAny(
         page.waitForSelector('#rdo_GPS_0', { timeout: 30000 }),
@@ -468,22 +519,25 @@ module.exports = function(tabNo) {
 
       if (r == 1) {
         await setRadioButton('#rdo_GPS_0');
-        console.log('Tab', tabNo, 'before waiting for VTS');
-
+       log('before waiting for VTS');
         await clickHelper('#Rdo_VTS_0');
         await setRadioButton('#Rdo_SIM_0');
         await page.click('#chkClick');
+        if (captchaImage == 'Error') {
+         log('Loading captcha image error, reloading page');
+          await gotoTagPage(href);
+          return tagVehicle(href, truckNo, renderer);
+        }
         let captchaVal = await vision(captchaImage, renderer);
-        console.log('Tab', tabNo, 'captchaVal', captchaVal);
+       log('captchaVal', captchaVal);
         await page.$eval(
           '#txtcaptcha',
           (e, val) => (e.value = val),
           captchaVal
         );
-        console.log('Tab', tabNo, 'before btnsubmit');
-
+       log('before btnsubmit');
         await clickHelper('#btnSubmit');
-        console.log('Tab', tabNo, 'after btnsubmit');
+       log('after btnsubmit');
 
         reason = await page.$eval('#lblMsg', el => el.innerText);
         if (/(something wrong)|(in correct captcha)/i.test(reason)) {
@@ -498,8 +552,8 @@ module.exports = function(tabNo) {
 
       return reason;
     } catch (ex) {
-      console.error(ex);
       let url = page.url();
+      error(ex.message, url);
       if (
         !url.includes('TransporterAssignVehicleNew.aspx') ||
         /(execution context)|(network|timeout)/i.test(ex.message)
@@ -564,7 +618,7 @@ module.exports = function(tabNo) {
           return r;
         }
       } catch (ex) {
-        console.error(ex);
+        error(ex);
         if (!browser || !page) {
           break;
         }
@@ -695,13 +749,13 @@ module.exports = function(tabNo) {
             };
           }
         } catch (ex) {
-          console.error(ex);
+          error(ex);
           return {
             trucks: []
           };
         }
       } catch (ex) {
-        console.error(ex);
+        error(ex);
       }
 
       const result = await gridData('#tabdata');
@@ -727,6 +781,7 @@ module.exports = function(tabNo) {
   }
 
   async function openBrowser(headless) {
+    console.log('open browser is called');
     if (globalHeadless != headless) {
       await disconnect();
       globalHeadless = headless;
@@ -755,6 +810,7 @@ module.exports = function(tabNo) {
   }
 
   async function initializeBrowser(cred, headless, tologin, cb, returnCompany) {
+    console.log('initializeBrowser called');
     if (cred) {
       credentials = cred;
     }

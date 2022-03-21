@@ -154,6 +154,18 @@ module.exports = {
       label: 'Snapshot',
       fieldtype: 'Date',
       hidden: 1
+    },
+    {
+      fieldname: 'numBrowsers',
+      label: 'Num Browsers',
+      fieldtype: 'Data',
+      default: 10
+    },
+    {
+      fieldname: 'showBrowser',
+      label: 'Show Browsers',
+      fieldtype: 'Check',
+      default: 0
     }
   ],
   quickEditFields: [

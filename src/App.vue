@@ -420,8 +420,9 @@ export default {
         */
 
         frappe.events.trigger('open-tabs', {
-          numBrowsers: 15,
+          numBrowsers: +frappe.AccountingSettings.numBrowsers,
           credentials,
+          showBrowser: !!frappe.AccountingSettings.showBrowser,
         });
 
         // refresh permits

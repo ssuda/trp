@@ -58,7 +58,7 @@ let initialized = false;
 async function initialize() {
   if (!initialized) {
     console.log('initializing tesseract');
-    for (let i = 0; i < 1; ++i) {
+    for (let i = 0; i < 4; ++i) {
       try {
         await addWorker();
       } catch (ex) {

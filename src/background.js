@@ -297,9 +297,9 @@ ipcMain.on('open-browser', async (event, args) => {
 
 let tabsOpened = false;
 ipcMain.on('open-tabs', async (event, args) => {
-  console.log('open tabs called');
+  console.log('open tabs called', args.numBrowsers);
   if (!tabsOpened) {
-    openTabs(args.numBrowsers, args.credentials);
+    openTabs(args.numBrowsers, args.credentials, !args.showBrowser);
     tabsOpened = true;
   }
 });

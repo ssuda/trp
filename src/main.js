@@ -142,7 +142,7 @@ import tessaract from '../api/tessaract';
   });
 
   frappe.events.on('open-tabs', args => {
-    console.log('open tabs called');
+    console.log('open tabs called', args.numBrowsers);
     ipcRenderer.send('open-tabs', args);
   });
 

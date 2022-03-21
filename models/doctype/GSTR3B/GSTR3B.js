@@ -44,7 +44,7 @@ module.exports = {
       formula: doc => doc.getJson(),
       required: 1,
       readOnly: 1,
-      rows: 15
+      rows: 10
     }
   ],
   layout: [

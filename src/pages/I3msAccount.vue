@@ -37,6 +37,24 @@
                   :show-label="true"
                   @change="value => setValue('i3msPassword', value)"
                 />
+
+                 <FormControl
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('numBrowsers')"
+                  :value="doc.numBrowsers"
+                  :show-label="true"
+                  @change="value => setValue('numBrowsers',  value)"
+                />
+
+                <FormControl
+                  class="mt-4 text-base"
+                  input-class="bg-gray-100 px-3 py-2 text-base"
+                  :df="meta.getField('showBrowser')"
+                  :value="doc.showBrowser"
+                  :show-label="true"
+                  @change="value => setValue('showBrowser',  value)"
+                />
               </div>
             </div>
 
