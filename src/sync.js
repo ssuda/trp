@@ -134,14 +134,15 @@ async function syncFromFirebase() {
 
   for (let model of models) {
     if (
-      [
-        'Tax',
-        'Currency',
-        'GetStarted',
-        'SetupWizard',
-        'LoginRegister',
-        'PermitAction'
-      ].includes(model)
+      model != 'Truck List'
+      // [
+      //   'Tax',
+      //   'Currency',
+      //   'GetStarted',
+      //   'SetupWizard',
+      //   'LoginRegister',
+      //   'PermitAction'
+      // ].includes(model)
     ) {
       continue;
     }

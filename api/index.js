@@ -421,30 +421,34 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
 
     console.log('Tab', tabNo, 'tagging vehicle', count);
     try {
-      let ret = await promiseWithTimeout(
+      let {reason, name} = await promiseWithTimeout(
         tab.tagVehicle(taggingUrl, truck, renderer),
         120000
       );
 
-      console.log('Tab', tabNo, 'tagged vehicle', count, ret);
+      console.log('Tab', tabNo, 'tagged vehicle', count, reason);
 
-      if (ret && /is already tagged/i.test(ret)) {
-        ret = 'Already Tagged by SomeOne';
+      if (reason && /is already tagged/i.test(reason)) {
+        reason = 'Already Tagged by SomeOne';
       }
 
       if (renderer) {
         renderer.send('total', 1);
       }
 
-      if (ret) {
+      if (reason) {
         if (renderer) {
           renderer.send('failed', 1);
         }
       }
 
-      if (ret || ret === '') {
+      if (reason || reason === '') {
         renderer.send('tag-result', {
-          [truck]: ret
+          name,
+          taggingUrl,
+          truck: {
+            [truck]: reason
+          }
         });
       }
       count++;

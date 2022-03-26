@@ -8,7 +8,7 @@ module.exports = class Permit extends BaseDocument {
       this.type == 'I3MS' &&
       (!this.quantity ||
         !this.startDate ||
-        !this.vehicleDetails ||
+        !this.taggingUrl ||
         this._turnOffSync)
     ) {
       refreshPermit(this);
@@ -16,6 +16,9 @@ module.exports = class Permit extends BaseDocument {
   }
 
   async getNumberOfTrips() {
+    if (!this.source) {
+      return 0;
+    }
     console.log('getNumberOfTrips called');
 
     let { count, sum } = (
@@ -34,6 +37,9 @@ module.exports = class Permit extends BaseDocument {
   }
 
   getNumberOfTagged() {
+    if (!this.source) {
+      return 0;
+    }
     console.log(this.tagged);
     const tagged = JSON.parse(this.tagged || '{}');
 
@@ -45,6 +51,10 @@ module.exports = class Permit extends BaseDocument {
   }
 
   async getQuantityDelivered() {
+    if (!this.source) {
+      return 0;
+    }
+
     console.log('getQuantityDelivered called');
     let { count, sum } = (
       await frappe.db

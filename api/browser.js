@@ -186,17 +186,16 @@ module.exports = function(tabNo) {
     });
 
     page.on('response', async response => {
+      const url = response.url();
+      const type = response.request().resourceType();
+      const method = response.request().method();
       try {
-        const url = response.url();
-        const type = response.request().resourceType();
-        const method = response.request().method();
-
         if (
           type == 'document' &&
           method == 'GET' &&
           url.includes('/i3msnew1.aspx')
         ) {
-         log('calling login from page response');
+          log('calling login from page response');
           await login();
         } else if (
           method == 'GET' &&
@@ -205,9 +204,8 @@ module.exports = function(tabNo) {
             captchaImage = await response.buffer();
           }
       } catch(ex) {
-       log(method, url);
+        log(method, url);
         error(ex);
-        captchaImage = 'Error';
       }
     });
 
@@ -322,7 +320,7 @@ module.exports = function(tabNo) {
   }
 
   async function gotoPage(href) {
-    if (!browser || !page) {
+    if (!browser || !page || !href) {
       return;
     }
     let numAttempts = 1;
@@ -496,7 +494,9 @@ module.exports = function(tabNo) {
   async function tagVehicle(href, truckNo, renderer) {
     let reason = '';
     try {
-     log('before waiting for txtVehicleNo');
+      log('before waiting for txtVehicleNo');
+
+      captchaImage = 'Error';
 
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       await page.$eval(
@@ -540,17 +540,19 @@ module.exports = function(tabNo) {
        log('after btnsubmit');
 
         reason = await page.$eval('#lblMsg', el => el.innerText);
-        if (/(something wrong)|(in correct captcha)/i.test(reason)) {
+        if (/(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(reason)) {
           return tagVehicle(href, truckNo, renderer);
         }
       } else {
         reason = await page.$eval('#lblMsg', el => el.innerText);
-        if (/something wrong/i.test(reason)) {
+        if (/(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(reason)) {
           return tagVehicle(href, truckNo, renderer);
         }
       }
 
-      return reason;
+      let permitName = await page.$eval('#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)', el => el.innerText);
+      console.log('permitname', permitName);
+      return {reason, name: permitName.trim()};
     } catch (ex) {
       let url = page.url();
       error(ex.message, url);
@@ -561,7 +563,10 @@ module.exports = function(tabNo) {
         await gotoTagPage(href);
         return tagVehicle(href, truckNo, renderer);
       }
-      return false;
+
+      let permitName = await page.$eval('#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)', el => el.innerText);
+      console.log('permitname', permitName);
+      return {reason: false, name: permitName};
     }
   }
 
@@ -627,16 +632,19 @@ module.exports = function(tabNo) {
     }
   }
 
+  function permitDataFromTable(selector) {
+    selector || (selector = '#grTrAction');
+    return gridData(selector);
+  }
+
   async function permitDetails(href, selector) {
     try {
       await gotoPage(href);
-      selector || (selector = '#grTrAction');
-      return gridData(selector);
+      return permitDataFromTable(selector);
     } catch (ex) {
       //retry
       await gotoPage(href);
-      selector || (selector = '#grTrAction');
-      return gridData(selector);
+      return permitDataFromTable(selector);
     }
   }
 

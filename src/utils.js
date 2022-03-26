@@ -196,6 +196,12 @@ export function dbPath(companyName) {
   return path.join(remote.getGlobal('userData'), `${companyName}.db`);
 }
 
+export function companyNameFromLastSelectedFilePath() {
+  let path = config.get('lastSelectedFilePath', null)
+  return path.replace(remote.getGlobal('userData') + '/', '').replace('.db', '');
+}
+
+
 export function allDBPaths() {
   const files = fs
     .readdirSync(remote.getGlobal('userData'))

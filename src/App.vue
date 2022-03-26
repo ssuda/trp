@@ -350,7 +350,7 @@ export default {
             console.error(ex);
           }
 
-          //SetupSync();
+          SetupSync();
 
           if (comingFromSetupWizard && !isLogin) {
             // showMessageDialog({

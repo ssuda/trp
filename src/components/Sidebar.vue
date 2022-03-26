@@ -59,7 +59,7 @@ import { remote } from 'electron';
 import frappe from 'frappejs';
 import glob from 'glob';
 
-import { dbPath, allDBPaths } from '@/utils';
+import { dbPath, allDBPaths, companyNameFromLastSelectedFilePath } from '@/utils';
 
 import sidebarConfig from '../sidebarConfig';
 import WindowControls from './WindowControls';
@@ -90,7 +90,7 @@ export default {
     },
 
     companyName() {
-      return frappe.AccountingSettings.companyName;
+      return companyNameFromLastSelectedFilePath();
     },
 
     companyField() {

@@ -48,7 +48,7 @@ module.exports = class BaseDocument extends Observable {
       return;
     }
 
-    let key = `${gstin}_${this.name.replace(/[ \/]/g, '_')}`;
+    let key = `${gstin}_${this.name.replace(/[ /]/g, '_')}`;
 
     if (event === 'afterDelete') {
       if (this.doctype == 'SpinBiUser') {

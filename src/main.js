@@ -225,20 +225,20 @@ import tessaract from '../api/tessaract';
     let batchSize = 0;
 
     ipcRenderer.on('tag-result', async function(e, response) {
-      permit = permit || response || {};
+      permit = permit || {};
 
       if (!permit.name) {
-        permit = await frappe.db.knex
-          .select('*')
-          .from('Permit')
-          .where('taggingUrl', permit.taggingUrl)
-          .first();
+        permit = await frappe.getNewDoc('Permit');
+        permit.set({
+          name: response.name,
+          taggingUrl: response.taggingUrl,
+        });
       }
 
       console.log('received tag-result from main process', response);
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
-      let finallyTagged = Object.assign(tagged, response);
+      let finallyTagged = Object.assign(tagged, response.truck);
       permit.tagged = JSON.stringify(finallyTagged);
 
       batchSize++;
