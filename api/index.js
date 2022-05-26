@@ -421,7 +421,7 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
 
     console.log('Tab', tabNo, 'tagging vehicle', count);
     try {
-      let {reason, name} = await promiseWithTimeout(
+      let { reason, name } = await promiseWithTimeout(
         tab.tagVehicle(taggingUrl, truck, renderer),
         120000
       );
@@ -491,7 +491,11 @@ export function openTabs(numTabs, credentials, headless = true) {
 async function tagFromTabs(taggingUrl, chunks, options, sse) {
   try {
     if (!tabs.length) {
-      await openTabs(options.numBrowsers || 10, options.credentials, options.showBrowser);
+      await openTabs(
+        options.numBrowsers || 10,
+        options.credentials,
+        options.showBrowser
+      );
     }
 
     await Promise.all(

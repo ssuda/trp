@@ -57,7 +57,7 @@ function browserArgs(headless) {
     '--no-zygote',
     '--password-store=basic',
     '--prerender-from-omnibox=disabled',
-   // '--use-gl=swiftshader',
+    // '--use-gl=swiftshader',
     '--enable-lazy-image-loading',
     '--enable-quic',
     '--use-mock-keychain',
@@ -79,8 +79,8 @@ function browserArgs(headless) {
     '--no-default-browser-check',
     '--use-fake-device-for-media-stream',
     '--allow-running-insecure-content',
-    "--disable-web-security",
-   // '--disable-gl-drawing-for-tests', // BEST OPTION EVER! Disables GL drawing operations which produce pixel output. With this the GL output will not be correct but tests will run faster.
+    '--disable-web-security'
+    // '--disable-gl-drawing-for-tests', // BEST OPTION EVER! Disables GL drawing operations which produce pixel output. With this the GL output will not be correct but tests will run faster.
   ];
 
   if (headless === true) {
@@ -169,15 +169,15 @@ module.exports = function(tabNo) {
       page = await browser.newPage();
     }
 
-    await page.setRequestInterception(true)
+    await page.setRequestInterception(true);
 
-    page.on('request', async (request) => {
-     if (request.url().includes('verisign.com')) {
-      await request.abort()
-     } else {
-      await request.continue()
-     }
-    })
+    page.on('request', async request => {
+      if (request.url().includes('verisign.com')) {
+        await request.abort();
+      } else {
+        await request.continue();
+      }
+    });
 
     page.on('dialog', async dialog => {
       try {
@@ -200,10 +200,11 @@ module.exports = function(tabNo) {
         } else if (
           method == 'GET' &&
           url.toLowerCase().includes('/captcha.aspx') &&
-          response.request().resourceType() === 'image') {
-            captchaImage = await response.buffer();
-          }
-      } catch(ex) {
+          response.request().resourceType() === 'image'
+        ) {
+          captchaImage = await response.buffer();
+        }
+      } catch (ex) {
         log(method, url);
         error(ex);
       }
@@ -409,25 +410,24 @@ module.exports = function(tabNo) {
       await fill('#txtusr', credentials.username);
       await fill('#txtpwd', credentials.password);
 
-      const httpResponseWeWaitForPromise = page.waitForResponse('https://i3ms.odishaminerals.gov.in/Dashboard_TR.aspx');
+      const httpResponseWeWaitForPromise = page.waitForResponse(
+        'https://i3ms.odishaminerals.gov.in/Dashboard_TR.aspx'
+      );
 
       await page.click('#btnSubmit');
 
       newLoginInProgress = false;
 
-      let r = await promiseAny([
-        httpResponseWeWaitForPromise,
-        delay(30000)
-      ]);
+      let r = await promiseAny([httpResponseWeWaitForPromise, delay(30000)]);
 
       if (newLoginInProgress) {
         return;
       }
 
-     log('return from race', r);
+      log('return from race', r);
       if (r == 2) {
-         log('Calling login() again because of timeout');
-          return login(retry + 1);
+        log('Calling login() again because of timeout');
+        return login(retry + 1);
       }
 
       await delay(5000);
@@ -440,7 +440,7 @@ module.exports = function(tabNo) {
         return;
       }
 
-     log('Before loggedin');
+      log('Before loggedin');
       let url = await page.url();
 
       if (newLoginInProgress) {
@@ -448,19 +448,19 @@ module.exports = function(tabNo) {
       }
 
       if (url.includes('/Default.aspx')) {
-       log('Calling login() again because url is same');
+        log('Calling login() again because url is same');
         return login(retry + 1);
       } else {
-       log('loggedin');
+        log('loggedin');
         if (mainUrl && page) {
-         log('Going to url', mainUrl);
+          log('Going to url', mainUrl);
           try {
             await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
           } catch (ex) {
             await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
           }
         }
-     }
+      }
     } catch (ex) {
       error(ex.message);
       if (!/(execution context)|(network|timeout|net::ERR)/i.test(ex.message)) {
@@ -508,51 +508,71 @@ module.exports = function(tabNo) {
         truckNo
       );
 
-     log('before btnsearch');
+      log('before btnsearch');
       await clickHelper('#btnsearch', 120000);
-     log('after btnsearch');
+      log('after btnsearch');
 
       const r = await promiseAny(
-        page.waitForSelector('#rdo_GPS_0', { timeout: 30000 }),
+        page.waitForSelector('#Rdo_VTS_0', { timeout: 30000 }),
         page.waitForSelector('#lblMsg')
       );
 
       if (r == 1) {
-        await setRadioButton('#rdo_GPS_0');
-       log('before waiting for VTS');
-        await clickHelper('#Rdo_VTS_0');
-        await setRadioButton('#Rdo_SIM_0');
+        let vtsStatus = await page.$eval('#Rdo_VTS_0', el => el.innerText);
+        vtsStatus = vtsStatus.toLowerCase().trim();
+
+        log('vtsstatus', vtsStatus);
+
+        if (vtsStatus === 'no') {
+          log('vts not active returning false');
+          return { reason: 'Vehicle VTU Status Not Received From ORSAC.', name: permitName };
+        }
+        //await setRadioButton('#Rdo_VTS_0');
+        //await clickHelper('#RDO_GPSSTS_0');
+        log('before waiting for SIM');
+        await clickHelper('#Rdo_SIM_0');
         await page.click('#chkClick');
         if (captchaImage == 'Error') {
-         log('Loading captcha image error, reloading page');
+          log('Loading captcha image error, reloading page');
           await gotoTagPage(href);
           return tagVehicle(href, truckNo, renderer);
         }
         let captchaVal = await vision(captchaImage, renderer);
-       log('captchaVal', captchaVal);
+        log('captchaVal', captchaVal);
         await page.$eval(
           '#txtcaptcha',
           (e, val) => (e.value = val),
           captchaVal
         );
-       log('before btnsubmit');
+        log('before btnsubmit');
         await clickHelper('#btnSubmit');
-       log('after btnsubmit');
+        log('after btnsubmit');
 
         reason = await page.$eval('#lblMsg', el => el.innerText);
-        if (/(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(reason)) {
+        if (
+          /(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(
+            reason
+          )
+        ) {
           return tagVehicle(href, truckNo, renderer);
         }
       } else {
         reason = await page.$eval('#lblMsg', el => el.innerText);
-        if (/(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(reason)) {
+        if (
+          /(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(
+            reason
+          )
+        ) {
           return tagVehicle(href, truckNo, renderer);
         }
       }
 
-      let permitName = await page.$eval('#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)', el => el.innerText);
+      let permitName = await page.$eval(
+        '#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)',
+        el => el.innerText
+      );
       console.log('permitname', permitName);
-      return {reason, name: permitName.trim()};
+      return { reason, name: permitName.trim() };
     } catch (ex) {
       let url = page.url();
       error(ex.message, url);
@@ -564,9 +584,12 @@ module.exports = function(tabNo) {
         return tagVehicle(href, truckNo, renderer);
       }
 
-      let permitName = await page.$eval('#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)', el => el.innerText);
+      let permitName = await page.$eval(
+        '#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)',
+        el => el.innerText
+      );
       console.log('permitname', permitName);
-      return {reason: false, name: permitName};
+      return { reason: false, name: permitName };
     }
   }
 
