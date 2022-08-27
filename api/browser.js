@@ -498,6 +498,12 @@ module.exports = function(tabNo) {
 
       captchaImage = 'Error';
 
+      let permitName = await page.$eval(
+        '#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)',
+        el => el.innerText
+      );
+      console.log('permitname', permitName);
+      
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       await page.$eval(
         '#txtVehicleNo',
@@ -518,17 +524,26 @@ module.exports = function(tabNo) {
       );
 
       if (r == 1) {
-        let vtsStatus = await page.$eval('#Rdo_VTS_0', el => el.innerText);
-        vtsStatus = vtsStatus.toLowerCase().trim();
+        // let vtsStatus = await page.$eval('#Rdo_VTS_0', el => el.innerText);
+        // vtsStatus = vtsStatus.toLowerCase().trim();
 
-        log('vtsstatus', vtsStatus);
+        // log('vtsstatus', vtsStatus);
 
-        if (vtsStatus === 'no') {
-          log('vts not active returning false');
-          return { reason: 'Vehicle VTU Status Not Received From ORSAC.', name: permitName };
-        }
-        //await setRadioButton('#Rdo_VTS_0');
-        //await clickHelper('#RDO_GPSSTS_0');
+        // if (vtsStatus === 'no') {
+        //   log('vts not active returning false');
+        //   return {
+        //     reason: 'Vehicle VTU Status Not Received From ORSAC.',
+        //     name: permitName
+        //   };
+        // }
+        await setRadioButton('#rdo_GPS_0');
+        await clickHelper('#Rdo_VTS_0');
+        // if (!(await page.$('#Rdo_SIM_0'))) {
+        //   return {
+        //     reason: 'Vehicle VTU Status Not Received From ORSAC.',
+        //     name: permitName
+        //   };
+        // }
         log('before waiting for SIM');
         await clickHelper('#Rdo_SIM_0');
         await page.click('#chkClick');
@@ -567,11 +582,7 @@ module.exports = function(tabNo) {
         }
       }
 
-      let permitName = await page.$eval(
-        '#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)',
-        el => el.innerText
-      );
-      console.log('permitname', permitName);
+     
       return { reason, name: permitName.trim() };
     } catch (ex) {
       let url = page.url();
