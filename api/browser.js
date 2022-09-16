@@ -524,20 +524,18 @@ module.exports = function(tabNo) {
       );
 
       if (r == 1) {
-        // let vtsStatus = await page.$eval('#Rdo_VTS_0', el => el.innerText);
-        // vtsStatus = vtsStatus.toLowerCase().trim();
+        let gpsStatus = await page.$eval('#RDO_GPSSTS_0', el => el.checked);
+        log('gpsStatus', gpsStatus);
 
-        // log('vtsstatus', vtsStatus);
-
-        // if (vtsStatus === 'no') {
-        //   log('vts not active returning false');
-        //   return {
-        //     reason: 'Vehicle VTU Status Not Received From ORSAC.',
-        //     name: permitName
-        //   };
-        // }
-        await setRadioButton('#rdo_GPS_0');
-        await clickHelper('#Rdo_VTS_0');
+        if (gpsStatus) {
+          log('vts not active returning false');
+          return {
+            reason: 'Inactive VTS',
+            name: permitName
+          };
+        }
+        //await setRadioButton('#RDO_GPSSTS_0');
+        //await clickHelper('#Rdo_VTS_0');
         // if (!(await page.$('#Rdo_SIM_0'))) {
         //   return {
         //     reason: 'Vehicle VTU Status Not Received From ORSAC.',
