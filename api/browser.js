@@ -524,10 +524,10 @@ module.exports = function(tabNo) {
       );
 
       if (r == 1) {
-        let gpsStatus = await page.$eval('#RDO_GPSSTS_0', el => el.checked);
+        let gpsStatus = await page.$eval('#RDO_GPSSTS_0', el => el.parentElement.textContent);
         log('gpsStatus', gpsStatus);
 
-        if (gpsStatus) {
+        if (gpsStatus.toLowerCase() == 'no') {
           log('vts not active returning false');
           return {
             reason: 'Inactive VTS',
