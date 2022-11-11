@@ -324,6 +324,9 @@ module.exports = function(tabNo) {
     if (!browser || !page || !href) {
       return;
     }
+
+    href = decodeURI(href)
+
     let numAttempts = 1;
     let success = true;
 
@@ -503,7 +506,7 @@ module.exports = function(tabNo) {
         el => el.innerText
       );
       console.log('permitname', permitName);
-      
+
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       await page.$eval(
         '#txtVehicleNo',
@@ -524,18 +527,18 @@ module.exports = function(tabNo) {
       );
 
       if (r == 1) {
-        let gpsStatus = await page.$eval('#RDO_GPSSTS_0', el => el.parentElement.textContent);
-        log('gpsStatus', gpsStatus);
+        // let gpsStatus = await page.$eval('#RDO_GPSSTS_0', el => el.parentElement.textContent);
+        // log('gpsStatus', gpsStatus);
 
-        if (gpsStatus.toLowerCase() == 'no') {
-          log('vts not active returning false');
-          return {
-            reason: 'Inactive VTS',
-            name: permitName
-          };
-        }
-        //await setRadioButton('#RDO_GPSSTS_0');
-        //await clickHelper('#Rdo_VTS_0');
+        // if (gpsStatus.toLowerCase() == 'no') {
+        //   log('vts not active returning false');
+        //   return {
+        //     reason: 'Inactive VTS',
+        //     name: permitName
+        //   };
+        // }
+        await setRadioButton('#rdo_GPS_0');
+        await clickHelper('#Rdo_VTS_0');
         // if (!(await page.$('#Rdo_SIM_0'))) {
         //   return {
         //     reason: 'Vehicle VTU Status Not Received From ORSAC.',
@@ -543,7 +546,7 @@ module.exports = function(tabNo) {
         //   };
         // }
         log('before waiting for SIM');
-        await clickHelper('#Rdo_SIM_0');
+        await setRadioButton('#Rdo_SIM_0');
         await page.click('#chkClick');
         if (captchaImage == 'Error') {
           log('Loading captcha image error, reloading page');
@@ -580,7 +583,7 @@ module.exports = function(tabNo) {
         }
       }
 
-     
+
       return { reason, name: permitName.trim() };
     } catch (ex) {
       let url = page.url();
