@@ -537,6 +537,7 @@ module.exports = function(tabNo) {
         //     name: permitName
         //   };
         // }
+        //await setRadioButton('#RDO_GPSSTS_0');
         await setRadioButton('#rdo_GPS_0');
         await clickHelper('#Rdo_VTS_0');
         // if (!(await page.$('#Rdo_SIM_0'))) {
