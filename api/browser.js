@@ -232,15 +232,17 @@ module.exports = function(tabNo) {
     await page.select(selector, val);
   }
 
-  function clickHelper(
+  async function clickHelper(
     selector,
     timeout = 60000,
-    waitUntil = 'domcontentloaded'
+    waitUntil = 'load'
   ) {
-    return Promise.all([
-      page.waitForNavigation({ timeout, waitUntil }),
-      page.click(selector)
-    ]);
+      await page.evaluate((selector) => {
+        document.querySelector(selector).click();
+      }, selector);
+
+      await page.waitForSelector('#btnsearch', {timeout});
+      //await page.waitForNavigation({ timeout, waitUntil })
   }
 
   function setRadioButton(selector) {
@@ -527,7 +529,7 @@ module.exports = function(tabNo) {
       );
 
       if (r == 1) {
-        // let gpsStatus = await page.$eval('#RDO_GPSSTS_0', el => el.parentElement.textContent);
+        // let gpsStatus = await page.$eval('#Rdo_VTS_0', el => el.parentElement.textContent);
         // log('gpsStatus', gpsStatus);
 
         // if (gpsStatus.toLowerCase() == 'no') {
@@ -538,6 +540,7 @@ module.exports = function(tabNo) {
         //   };
         // }
         //await setRadioButton('#RDO_GPSSTS_0');
+        //await clickHelper('#rdo_GPS_0');
         await setRadioButton('#rdo_GPS_0');
         await clickHelper('#Rdo_VTS_0');
         // if (!(await page.$('#Rdo_SIM_0'))) {
@@ -547,7 +550,9 @@ module.exports = function(tabNo) {
         //   };
         // }
         log('before waiting for SIM');
-        await setRadioButton('#Rdo_SIM_0');
+        await clickHelper('#Rdo_SIM_0');
+        //await setRadioButton('#Rdo_SIM_0');
+
         await page.click('#chkClick');
         if (captchaImage == 'Error') {
           log('Loading captcha image error, reloading page');

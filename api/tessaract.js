@@ -1,88 +1,17 @@
-const { createScheduler, createWorker, PSM, OEM } = require('tesseract.js');
-//var Jimp = require('jimp');
-const path = require('path');
-const process = require('process');
-const captcha_expr = require('./captcha-expression');
-const scheduler = createScheduler();
+const tesseract = require("./tesseract")
+const captcha_expr = require('./captcha-expression')
 
-async function addWorker() {
-  const dataPath =
-    process.env.NODE_ENV === 'development'
-      ? path.join(__dirname, '../../data')
-      : path.join(process.resourcesPath, 'data');
-
-  console.log('loading from', dataPath, window.location.origin + '/data');
-
-  let worker;
-
-  if (process.env.NODE_ENV !== 'development') {
-    worker = createWorker({
-      //workerPath: window.location.origin + '/data/worker.min.js',
-      langPath: dataPath, //window.location.origin + '/data',
-      cachePath: dataPath,
-      cacheMethod: 'readOnly'
-      //logger: m => console.log(m),
-      //corePath: window.location.origin + '/data/tesseract-core.wasm.js',
-    });
-  } else {
-    worker = createWorker();
-  }
-
-  console.log('worker created');
-
-  await worker.load();
-
-  console.log('worker loaded');
-
-  await worker.loadLanguage('eng');
-
-  console.log('worker language loaded');
-
-  await worker.initialize('eng');
-
-  console.log('worker language initialized');
-
-  await worker.setParameters({
-    //tessedit_char_whitelist: '0123456789',
-    tessedit_pageseg_mode: PSM.SINGLE_LINE,
-    tessedit_ocr_engine_mode: OEM.TESSERACT_LSTM_COMBINED
-  });
-
-  console.log('worker setparameters');
-
-  scheduler.addWorker(worker);
+const config = {
+  lang: "eng", // default
+  oem: 3,
+  psm: 7,
+  binary: 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 }
-
-let initialized = false;
-
-async function initialize() {
-  if (!initialized) {
-    console.log('initializing tesseract');
-    for (let i = 0; i < 4; ++i) {
-      try {
-        await addWorker();
-      } catch (ex) {
-        console.log(ex);
-      }
-    }
-    initialized = true;
-    console.log('initialized tesseract');
-  }
-}
-
-let initializePromise;
 
 module.exports = async image => {
-  if (!initialized) {
-    if (!initializePromise) {
-      initializePromise = initialize();
-    }
-    await initializePromise;
-  }
-
-  const {
-    data: { text }
-  } = await scheduler.addJob('recognize', image);
+  image = image.replace('data:image/png;base64,', '')
+  image = Buffer(image, 'base64');
+  const text = await tesseract.recognize(image, config)
   const val = captcha_expr(text);
   console.log(text, val);
   return val;
