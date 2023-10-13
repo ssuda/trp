@@ -6,7 +6,7 @@
 </template>
 <script>
 import frappe from 'frappejs';
-import numberFormat from 'frappejs/utils/numberFormat.js';
+import numberFormat from 'frappejs/utils/format';
 
 export default {
   name: 'ListCell',

@@ -234,14 +234,14 @@ module.exports = function(tabNo) {
 
   async function clickHelper(
     selector,
-    timeout = 60000,
-    waitUntil = 'load'
+    timeout=60000,
+    waitFor=null
   ) {
       await page.evaluate((selector) => {
         document.querySelector(selector).click();
       }, selector);
 
-      await page.waitForSelector('#btnsearch', {timeout});
+      await page.waitForSelector(waitFor || selector, {timeout});
       //await page.waitForNavigation({ timeout, waitUntil })
   }
 
@@ -327,7 +327,7 @@ module.exports = function(tabNo) {
       return;
     }
 
-    href = decodeURI(href)
+    href = decodeURI(href);
 
     let numAttempts = 1;
     let success = true;
@@ -496,20 +496,23 @@ module.exports = function(tabNo) {
     }
   }
 
-  async function tagVehicle(href, truckNo, renderer) {
+  async function tagVehicle(href, truckNo, renderer, options) {
     let reason = '';
     try {
       log('before waiting for txtVehicleNo');
 
       captchaImage = 'Error';
 
+      await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
+
       let permitName = await page.$eval(
-        '#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)',
+        '#grTrAction .valueBlack',
         el => el.innerText
       );
+
+      options.name = permitName;
       console.log('permitname', permitName);
 
-      await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
       await page.$eval(
         '#txtVehicleNo',
         (el, truckNo) => {
@@ -557,7 +560,7 @@ module.exports = function(tabNo) {
         if (captchaImage == 'Error') {
           log('Loading captcha image error, reloading page');
           await gotoTagPage(href);
-          return tagVehicle(href, truckNo, renderer);
+          return tagVehicle(href, truckNo, renderer, options);
         }
         let captchaVal = await vision(captchaImage, renderer);
         log('captchaVal', captchaVal);
@@ -567,7 +570,7 @@ module.exports = function(tabNo) {
           captchaVal
         );
         log('before btnsubmit');
-        await clickHelper('#btnSubmit');
+        await clickHelper('#btnSubmit', 120000, '#btnsearch');
         log('after btnsubmit');
 
         reason = await page.$eval('#lblMsg', el => el.innerText);
@@ -576,7 +579,7 @@ module.exports = function(tabNo) {
             reason
           )
         ) {
-          return tagVehicle(href, truckNo, renderer);
+          return tagVehicle(href, truckNo, renderer, options);
         }
       } else {
         reason = await page.$eval('#lblMsg', el => el.innerText);
@@ -585,7 +588,7 @@ module.exports = function(tabNo) {
             reason
           )
         ) {
-          return tagVehicle(href, truckNo, renderer);
+          return tagVehicle(href, truckNo, renderer, options);
         }
       }
 
@@ -599,11 +602,11 @@ module.exports = function(tabNo) {
         /(execution context)|(network|timeout)/i.test(ex.message)
       ) {
         await gotoTagPage(href);
-        return tagVehicle(href, truckNo, renderer);
+        return tagVehicle(href, truckNo, renderer, options);
       }
 
       let permitName = await page.$eval(
-        '#grTrAction > tbody > tr > td > table > tbody > tr:nth-child(1) > td:nth-child(3)',
+        '#grTrAction .valueBlack',
         el => el.innerText
       );
       console.log('permitname', permitName);
@@ -636,6 +639,7 @@ module.exports = function(tabNo) {
         await fill('#txtPermitNo', permitNo);
         await clickHelper('#btnGetVehicle');
 
+        console.log('waiting for  1stFrom');
         await page.waitForSelector('#lstFrom');
         let r = await page.$eval('#lstFrom', el => {
           const arr = [];

@@ -58,7 +58,7 @@
 import Button from '@/components/Button';
 import Users from '@/users';
 import frappe from 'frappejs';
-import numberFormat from 'frappejs/utils/numberFormat';
+import numberFormat from 'frappejs/utils/format';
 import PageHeader from '@/components/PageHeader';
 import { DateTime } from 'luxon';
 

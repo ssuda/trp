@@ -85,7 +85,7 @@ import PeriodSelector from './PeriodSelector';
 import SectionHeader from './SectionHeader';
 import TripStats from '../../../reports/Trip/Trip';
 import { getDatesAndPeriodicity } from './getDatesAndPeriodicity';
-import numberFormat from 'frappejs/utils/numberFormat.js';
+import numberFormat from 'frappejs/utils/format';
 
 export default {
   name: 'TripStats',

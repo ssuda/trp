@@ -422,7 +422,7 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
     console.log('Tab', tabNo, 'tagging vehicle', count);
     try {
       let { reason, name } = await promiseWithTimeout(
-        tab.tagVehicle(taggingUrl, truck, renderer),
+        tab.tagVehicle(taggingUrl, truck, renderer, options),
         120000
       );
 
@@ -504,21 +504,21 @@ async function tagFromTabs(taggingUrl, chunks, options, sse) {
       })
     );
 
-    console.log('End of tagging');
+    // console.log('End of tagging');
 
-    if (!options.name) {
-      console.log('Fetching permit');
+    // if (!options.name) {
+    //   console.log('Fetching permit');
 
-      return getPermit(
-        {
-          taggingUrl: taggingUrl
-        },
-        sse,
-        tabs[0]
-      );
-    }
+    //   return getPermit(
+    //     {
+    //       taggingUrl: taggingUrl
+    //     },
+    //     sse,
+    //     tabs[0]
+    //   );
+    // }
 
-    console.log('Fetching Successfully Tagged');
+    console.log('Fetching Successfully Tagged', options.name);
 
     const tagged = await successfullyTagged(options.name, null, tabs[0]);
 

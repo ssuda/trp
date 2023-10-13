@@ -1,7 +1,7 @@
 {
   "name": "spinbi-erp",
   "description": "SpinBi",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "author": {
     "name": "SpinBi Technologies",
     "email": "samba@spinbi.com"
@@ -30,6 +30,7 @@
     "chrome-finder": "^1.0.7",
     "console-stamp": "^0.2.9",
     "core-js": "^3.4.3",
+    "csvjson-csv2json": "^5.0.6",
     "electron-store": "^5.1.0",
     "fastq": "^1.8.0",
     "file-saver": "^2.0.2",
@@ -48,7 +49,7 @@
     "moment-timezone": "^0.5.31",
     "node-machine-id": "^1.1.12",
     "portal-vue": "^2.1.6",
-    "puppeteer-core": "^13.5.1",
+    "puppeteer-core": "^18.0.0",
     "sqlite3": "^4.2.0",
     "sse.js": "^0.5.0",
     "subscriptions-transport-ws": "^0.9.16",
@@ -63,6 +64,8 @@
     "vuejs-paginate": "^2.1.0"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@babel/plugin-proposal-private-methods": "^7.18.6",
     "@vue/cli-plugin-babel": "^4.1.0",
     "@vue/cli-plugin-eslint": "^4.1.0",
     "@vue/cli-plugin-router": "^4.1.0",

@@ -1,5 +1,5 @@
 const frappe = require('frappejs');
-const numberFormat = require('frappejs/utils/numberFormat.js');
+const numberFormat = require('frappejs/utils/format');
 
 const { DateTime } = require('luxon');
 
