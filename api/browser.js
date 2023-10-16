@@ -232,17 +232,13 @@ module.exports = function(tabNo) {
     await page.select(selector, val);
   }
 
-  async function clickHelper(
-    selector,
-    timeout=60000,
-    waitFor=null
-  ) {
-      await page.evaluate((selector) => {
-        document.querySelector(selector).click();
-      }, selector);
+  async function clickHelper(selector, timeout = 60000, waitFor = null) {
+    await page.evaluate(selector => {
+      document.querySelector(selector).click();
+    }, selector);
 
-      await page.waitForSelector(waitFor || selector, {timeout});
-      //await page.waitForNavigation({ timeout, waitUntil })
+    await page.waitForSelector(waitFor || selector, { timeout });
+    //await page.waitForNavigation({ timeout, waitUntil })
   }
 
   function setRadioButton(selector) {
@@ -476,6 +472,7 @@ module.exports = function(tabNo) {
   }
 
   async function gotoTagPage(href) {
+    href = decodeURIComponent(href);
     let retries = 0;
 
     while (retries < 3) {
@@ -591,7 +588,6 @@ module.exports = function(tabNo) {
           return tagVehicle(href, truckNo, renderer, options);
         }
       }
-
 
       return { reason, name: permitName.trim() };
     } catch (ex) {
