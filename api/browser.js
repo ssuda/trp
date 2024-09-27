@@ -538,13 +538,14 @@ module.exports = function(tabNo) {
 
       log('before btnsearch');
       await clickHelper('#btnsearch', 120000);
-      log('after btnsearch');
 
       const r = await promiseAny(
         page.waitForSelector('#Rdo_VTS_0', { timeout: 30000 }),
         page.waitForSelector('#lblMsg'),
         page.waitForSelector('#lblVehicleVldInfo')
       );
+
+      log('after btnsearch', r);
 
       if (r == 1) {
         // let gpsStatus = await page.$eval('#Rdo_VTS_0', el => el.parentElement.textContent);
@@ -598,8 +599,13 @@ module.exports = function(tabNo) {
         }
       } else if (r == 3) {
         reason = await page.$eval('#lblVehicleVldInfo', el => el.innerText);
+        log('vehicle', truckNo, reason);
       } else {
         reason = await page.$eval('#lblMsg', el => el.innerText);
+        if (!reason) {
+          reason = await page.$eval('#lblVehicleVldInfo', el => el.innerText);
+        }
+
         if (
           /(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(
             reason
