@@ -1,7 +1,7 @@
 {
   "name": "spinbi-erp",
   "description": "SpinBi",
-  "version": "1.1.8",
+  "version": "1.1.10",
   "author": {
     "name": "SpinBi Technologies",
     "email": "samba@spinbi.com"
@@ -49,7 +49,8 @@
     "moment-timezone": "^0.5.31",
     "node-machine-id": "^1.1.12",
     "portal-vue": "^2.1.6",
-    "puppeteer-core": "^18.0.5",
+    "puppeteer": "^18.1.0",
+    "puppeteer-core": "^18.1.0",
     "sqlite3": "^4.2.0",
     "sse.js": "^0.5.0",
     "subscriptions-transport-ws": "^0.9.16",

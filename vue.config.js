@@ -7,6 +7,7 @@ module.exports = {
       nodeIntegration: true, // this may or may not be necessary - you can try without it
       externals: [
         '@google-cloud/vision',
+        'puppeteer',
         'puppeteer-core',
         'yaku',
         'tesseract.js'

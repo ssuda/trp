@@ -1,8 +1,8 @@
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 const _ = require('lodash');
 const moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Kolkata');
-const findChrome = require('chrome-finder');
+//const findChrome = require('chrome-finder');
 const crypto = require('crypto');
 
 const vision = require('./captch-browser'); //require('./vision'); //require('../src/rekognition');
@@ -119,6 +119,15 @@ module.exports = function(tabNo) {
   let captchaImage;
 
   async function browserInstance(headless) {
+    // const browserFetcher = puppeteer.createBrowserFetcher();
+    // const localChromiums = await browserFetcher.localRevisions();
+
+    // if (!localChromiums.length) {
+    //   return console.error('Can\'t find installed Chromium');
+    // }
+
+    // const { executablePath } = await browserFetcher.revisionInfo(localChromiums[0]);
+
     headless =
       process.env.SHOW_BROWSER !== undefined
         ? !JSON.parse(process.env.SHOW_BROWSER.toLowerCase())
@@ -141,7 +150,7 @@ module.exports = function(tabNo) {
         //   '--disable-setuid-sandbox',
         //  ],
         //executablePath: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe', //findChrome(),
-        executablePath: findChrome(),
+        //executablePath,//findChrome(),
         defaultViewport: defaultViewport(headless),
         timeout: 0
       });
@@ -323,7 +332,9 @@ module.exports = function(tabNo) {
       return;
     }
 
+
     href = decodeURI(href);
+    let referer = await page.url();
 
     let numAttempts = 1;
     let success = true;
@@ -336,7 +347,10 @@ module.exports = function(tabNo) {
           success = false;
           break;
         }
-        await page.goto(href, { waitUntil: 'domcontentloaded' });
+        await page.goto(href, {
+          referer,
+          waitUntil: 'domcontentloaded'
+        });
         success = true;
         break;
       } catch (ex) {
@@ -404,7 +418,10 @@ module.exports = function(tabNo) {
 
       newLoginInProgress = true;
       await page.goto(
-        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString
+        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString,
+        {
+          referer: 'https://i3ms.odishaminerals.gov.in/i3msnew1.aspx'
+        }
       );
 
       await page.waitForSelector('#btnSubmit');
@@ -541,7 +558,7 @@ module.exports = function(tabNo) {
         // }
         //await setRadioButton('#RDO_GPSSTS_0');
         //await clickHelper('#rdo_GPS_0');
-        await setRadioButton('#rdo_GPS_0');
+        await clickHelper('#rdo_GPS_0');
         await clickHelper('#Rdo_VTS_0');
         // if (!(await page.$('#Rdo_SIM_0'))) {
         //   return {

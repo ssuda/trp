@@ -1,7 +1,7 @@
 productName: SpinBi ERP
 appId: com.spinbi.trp
 copyright: Copyright © 2020 SpinBi Technologies,
-asarUnpack: "node_modules/puppeteer/.local-chromium/**/*"
+asar: false
 win:
   target:
       - target: nsis
