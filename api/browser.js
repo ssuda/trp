@@ -525,7 +525,8 @@ module.exports = function(tabNo) {
 
       const r = await promiseAny(
         page.waitForSelector('#Rdo_VTS_0', { timeout: 30000 }),
-        page.waitForSelector('#lblMsg')
+        page.waitForSelector('#lblMsg'),
+        page.waitForSelector('#lblVehicleVldInfo')
       );
 
       if (r == 1) {
@@ -578,6 +579,8 @@ module.exports = function(tabNo) {
         ) {
           return tagVehicle(href, truckNo, renderer, options);
         }
+      } else if (r == 3) {
+        reason = await page.$eval('#lblVehicleVldInfo', el => el.innerText);
       } else {
         reason = await page.$eval('#lblMsg', el => el.innerText);
         if (
