@@ -44,6 +44,7 @@ import tessaract from '../api/tessaract';
 
   async function savePermit(permit) {
     console.log('Got result from i3ms', permit);
+    let isNew = true;
 
     if (!permit) {
       return;
@@ -55,6 +56,7 @@ import tessaract from '../api/tessaract';
     try {
       const currentDoc = frappe.getDoc('Permit', permit.name);
       oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
+      isNew = false;
     } catch (ex) {}
 
     tagged = Object.assign(oldTagged, tagged);
@@ -116,6 +118,7 @@ import tessaract from '../api/tessaract';
       console.log('before permit update', doc, changed);
       await doc.update();
     }
+    return isNew;
   }
 
   frappe.events.on('reload-main-window', () => {
@@ -352,23 +355,40 @@ import tessaract from '../api/tessaract';
       ipcRenderer.send('auto-tagging', credentials);
 
       ipcRenderer.on('new-permits', async (e, permits) => {
+        //filter out permits today(startDate), replace DateTime with moment
+
+        permits = permits.filter(p => {
+          const startDate = moment(p.startDate, 'YYYY-MM-DD');
+          const today = moment();
+          return startDate.isSame(today, 'day');
+        });
+
         console.log('Received new permits', permits);
+        let permit;
 
         for (let i = 0; i < permits.length; ++i) {
-          savePermit(permits[i]);
+          const isNew = await savePermit(permits[i]);
+          if (isNew) {
+            console.log('New permit saved', permits[i].name);
+            permit = permits[i];
+            break;
+          }
         }
 
         //find docs;
         let autoTags = docs.filter(doc => {
-          let permit = permits.find(
-            p =>
-              p.source.toUpperCase() == doc.source.toUpperCase() &&
-              (!doc.transportedFrom ||
-                doc.transportedFrom.toUpperCase() ==
-                  p.transportedFrom.toUpperCase())
-          );
+          // let permit = permits.find(
+          //   p =>
+          //     p.source.toUpperCase() == doc.source.toUpperCase() &&
+          //     (!doc.transportedFrom ||
+          //       doc.transportedFrom.toUpperCase() ==
+          //         p.transportedFrom.toUpperCase())
+          // );
 
-          if (permit) {
+          if (permit.source.toUpperCase() == doc.source.toUpperCase() &&
+            (!doc.transportedFrom ||
+            doc.transportedFrom.toUpperCase() ==
+              permit.transportedFrom.toUpperCase())) {
             doc.permit = permit;
             return true;
           }
@@ -401,9 +421,30 @@ import tessaract from '../api/tessaract';
           console.log('AutoTagging', autoTags);
 
           if (process.env.NODE_ENV !== 'development') {
-            for (let i = 0; i < autoTags.length; ++i) {
-              await tagPermit(autoTags[i]);
-            }
+              const permit = autoTags[0].permit;
+
+              try {
+                const doc = await frappe.getNewDoc('PermitAction');
+                doc.set({
+                  label: _('Tagging'),
+                  action: 'tagging',
+                  buttonText: _('Tagging'),
+                  permit
+                });
+
+                router.push({
+                  name: 'PermitAction',
+                  params: {
+                    name: doc.name
+                  }
+                });
+              } catch (ex) {
+                console.error(ex);
+              }
+
+            // for (let i = 0; i < autoTags.length; ++i) {
+            //   await tagPermit(autoTags[i]);
+            // }
           }
         }
       });
