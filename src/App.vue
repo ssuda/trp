@@ -409,9 +409,7 @@ export default {
           password: frappe.AccountingSettings.i3msPassword
         };
 
-        // setup auto tagging
-        //frappe.events.trigger('auto-tagging');
-
+       
         /*frappe.events.trigger('open-browser', {
           credentials,
           showBrowser: true,
@@ -424,6 +422,9 @@ export default {
           credentials,
           showBrowser: !!frappe.AccountingSettings.showBrowser,
         });
+
+        // setup auto tagging
+        frappe.events.trigger('auto-tagging');
 
         // refresh permits
         // let permits = await twoMonthsOldPermits();

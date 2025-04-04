@@ -7,6 +7,7 @@ import outsideClickDirective from 'frappejs/ui/plugins/outsideClickDirective';
 import models from '../models';
 import { ipcMain, ipcRenderer } from 'electron';
 import { firestore } from '@/firebase';
+import moment from 'moment';
 
 // vue imports
 import Vue from 'vue';
@@ -54,10 +55,12 @@ import tessaract from '../api/tessaract';
     let oldTagged = {};
 
     try {
-      const currentDoc = frappe.getDoc('Permit', permit.name);
+      const currentDoc = await frappe.getDoc('Permit', permit.name);
       oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
       isNew = false;
-    } catch (ex) {}
+    } catch (ex) { 
+      console.log('Permit not found', ex);
+    }
 
     tagged = Object.assign(oldTagged, tagged);
 
@@ -68,7 +71,7 @@ import tessaract from '../api/tessaract';
       ..._.omit(permit, ['tagged', 'trips']),
       delivered: trips.reduce((p, t) => p + +t.load_carrying, 0),
       numTrips: trips.length,
-      tagged: JSON.stringify(tagged)
+      tagged: JSON.stringify(tagged),
     });
 
     if (permit.trips) {
@@ -118,6 +121,8 @@ import tessaract from '../api/tessaract';
       console.log('before permit update', doc, changed);
       await doc.update();
     }
+
+    console.log('returning from savepermit', isNew);
     return isNew;
   }
 
@@ -186,7 +191,7 @@ import tessaract from '../api/tessaract';
   ipcRenderer.on('captcha', async (evt, payload) => {
     console.log('Received captcha image from background', payload);
     const resp = await tessaract(payload.image);
-    evt.sender.send('captcha-response', {data: resp, id: payload.id});
+    evt.sender.send('captcha-response', { data: resp, id: payload.id });
   });
 
   ipcRenderer.on('sample', async (evt, data) => {
@@ -205,7 +210,7 @@ import tessaract from '../api/tessaract';
     console.log('received tagvehicles', permit);
     ipcRenderer.send('tag-vehicles', permit);
 
-    ipcRenderer.once('tag-results', function(e, response) {
+    ipcRenderer.once('tag-results', function (e, response) {
       ipcRenderer.removeAllListeners('tag-result');
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
@@ -227,7 +232,7 @@ import tessaract from '../api/tessaract';
 
     let batchSize = 0;
 
-    ipcRenderer.on('tag-result', async function(e, response) {
+    ipcRenderer.on('tag-result', async function (e, response) {
       permit = permit || {};
 
       if (!permit.name) {
@@ -252,7 +257,7 @@ import tessaract from '../api/tessaract';
               .collection('customers')
               .doc(frappe.AccountingSettings.gstin)
               .get();
-          } catch (ex) {}
+          } catch (ex) { }
         }
 
         if (!frappe.currentUser.remote) {
@@ -275,7 +280,7 @@ import tessaract from '../api/tessaract';
   frappe.events.on('release-vehicles', permit => {
     ipcRenderer.send('release-vehicles', permit);
 
-    ipcRenderer.once('release-vehicles-results', function(e, response) {
+    ipcRenderer.once('release-vehicles-results', function (e, response) {
       console.log(
         'Updating permit after release',
         Object.keys(response).length
@@ -356,39 +361,41 @@ import tessaract from '../api/tessaract';
 
       ipcRenderer.on('new-permits', async (e, permits) => {
         //filter out permits today(startDate), replace DateTime with moment
+        const today = moment();
 
         permits = permits.filter(p => {
           const startDate = moment(p.startDate, 'YYYY-MM-DD');
-          const today = moment();
+          console.log('startDAte', today, startDate, startDate.isSame(today, 'day'));
           return startDate.isSame(today, 'day');
         });
 
+        if (frappe.isTagging) {
+          console.log('Already Tagging');
+          return;
+        }
+
         console.log('Received new permits', permits);
-        let permit;
+        let newPermits = [];
 
         for (let i = 0; i < permits.length; ++i) {
           const isNew = await savePermit(permits[i]);
           if (isNew) {
             console.log('New permit saved', permits[i].name);
-            permit = permits[i];
-            break;
+            newPermits.push(permits[i]);
           }
         }
 
         //find docs;
         let autoTags = docs.filter(doc => {
-          // let permit = permits.find(
-          //   p =>
-          //     p.source.toUpperCase() == doc.source.toUpperCase() &&
-          //     (!doc.transportedFrom ||
-          //       doc.transportedFrom.toUpperCase() ==
-          //         p.transportedFrom.toUpperCase())
-          // );
+          let permit = newPermits.find(
+            p =>
+              p.source.toUpperCase() == doc.source.toUpperCase() &&
+              (!doc.transportedFrom ||
+                doc.transportedFrom.toUpperCase() ==
+                  p.transportedFrom.toUpperCase())
+          );
 
-          if (permit.source.toUpperCase() == doc.source.toUpperCase() &&
-            (!doc.transportedFrom ||
-            doc.transportedFrom.toUpperCase() ==
-              permit.transportedFrom.toUpperCase())) {
+          if (permit) {
             doc.permit = permit;
             return true;
           }
@@ -420,32 +427,34 @@ import tessaract from '../api/tessaract';
 
           console.log('AutoTagging', autoTags);
 
-          if (process.env.NODE_ENV !== 'development') {
-              const permit = autoTags[0].permit;
+          //if (process.env.NODE_ENV !== 'development') {
+            const permit = autoTags[0].permit;
 
-              try {
-                const doc = await frappe.getNewDoc('PermitAction');
-                doc.set({
-                  label: _('Tagging'),
-                  action: 'tagging',
-                  buttonText: _('Tagging'),
-                  permit
-                });
+            try {
+              const doc = frappe.getNewDoc('PermitAction');
+              await doc.set({
+                label: _('Tagging'),
+                action: 'tagging',
+                buttonText: _('Tagging'),
+                permit: permit.name,
+                truckList: autoTags[0].truckList,
+                isCloudTagging: true
+              });
 
-                router.push({
-                  name: 'PermitAction',
-                  params: {
-                    name: doc.name
-                  }
-                });
-              } catch (ex) {
-                console.error(ex);
-              }
+              router.push({
+                name: 'PermitAction',
+                params: {
+                  name: doc.name
+                }
+              });
+            } catch (ex) {
+              console.error(ex);
+            }
 
             // for (let i = 0; i < autoTags.length; ++i) {
             //   await tagPermit(autoTags[i]);
             // }
-          }
+          //}
         }
       });
     }

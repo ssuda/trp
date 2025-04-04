@@ -69,6 +69,7 @@ module.exports = {
       fieldname: 'quantity',
       label: 'Quantity',
       fieldtype: 'Float',
+      default: 0,
       hidden: doc => doc.type == 'I3MS'
     },
     {
@@ -129,6 +130,7 @@ module.exports = {
       fieldname: 'delivered',
       label: 'Delivered',
       fieldtype: 'Float',
+      default: 0,
       readOnly: true,
       formula: doc => doc.getQuantityDelivered()
     }

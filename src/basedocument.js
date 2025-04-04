@@ -26,7 +26,7 @@ module.exports = class BaseDocument extends Observable {
     }
 
     if (
-      ['Tax', 'Currency', 'GetStarted', 'SingleValue'].includes(this.doctype)
+      ['Tax', 'Currency', 'GetStarted', 'SingleValue', 'Permit', 'Trip'].includes(this.doctype)
     ) {
       return;
     }
@@ -74,19 +74,6 @@ module.exports = class BaseDocument extends Observable {
         });
     } else if (event === 'afterUpdate' || event === 'afterInsert') {
       console.log('Before Syncing to firestore', this.doctype);
-
-      if (
-        this.doctype === 'Trip'  || this.doctype == 'Permit'
-        /*&&
-        this.type == 'I3MS' &&
-        !(
-          this.meta.editableFields &&
-          this.meta.editableFields.some(f => this[f])
-        )
-        */
-      ) {
-        return;
-      }
 
       if (this.doctype === 'Account' && event !== 'afterUpdate') {
         return;

@@ -29,11 +29,11 @@ module.exports = class Permit extends BaseDocument {
         .sum('loadQty as sum')
     )[0];
 
-    this.numTrips = count;
-    this.delivered = sum;
+    this.numTrips = count || 0;
+    this.delivered = sum || 0;
 
     console.log('trips', count);
-    return count;
+    return count || 0;
   }
 
   getNumberOfTagged() {
@@ -64,10 +64,8 @@ module.exports = class Permit extends BaseDocument {
         .sum('loadQty as sum')
     )[0];
 
-    console.log('quantity', sum);
-
-    this.numTrips = count;
-    this.delivered = sum;
-    return sum;
+    this.numTrips = count || 0;
+    this.delivered = sum || 0;
+    return sum || 0;
   }
 };

@@ -724,7 +724,9 @@ module.exports = function(tabNo) {
     }
   }
 
-  async function lastTwoMonthPermits(href, selector, previousMonth) {
+  async function lastTwoMonthPermits(href, selector, previousMonth, onlyNewPermits) {
+
+    console.log('last two month permits called');
     await gotoPage(href);
 
     selector || (selector = '#grdTransporterActions');
@@ -739,15 +741,22 @@ module.exports = function(tabNo) {
     const el = await page.$(selector);
     let rows = [];
     if (el) {
-      const r = await promiseAny(
-        page.waitForXPath(
-          '//*[@id="grdTransporterActions"]/tbody/tr/td[contains(text(), "No Record(s) Found")]'
-        ),
-        openAll('#btnAll')
-      );
+      if (!onlyNewPermits) {
+        const r = await promiseAny(
+          page.waitForXPath(
+            '//*[@id="grdTransporterActions"]/tbody/tr/td[contains(text(), "No Record(s) Found")]'
+          ),
+          openAll('#btnAll')
+        );
 
-      if (r === 2) {
-        await delay(5000);
+        console.log('last two month permits after waiting', r);
+
+        if (r === 2) {
+          await delay(5000);
+          rows = await tableData(selector);
+          console.log('last two month permits', rows);
+        }
+      } else {
         rows = await tableData(selector);
       }
     }
