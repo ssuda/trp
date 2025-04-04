@@ -26,7 +26,7 @@ module.exports = class BaseDocument extends Observable {
     }
 
     if (
-      ['Tax', 'Currency', 'GetStarted', 'SingleValue', 'Permit', 'Trip'].includes(this.doctype)
+      ['Tax', 'Currency', 'GetStarted', 'SingleValue', 'Trip'].includes(this.doctype)
     ) {
       return;
     }
