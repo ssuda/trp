@@ -16,6 +16,7 @@ import ChartOfAccounts from '@/pages/ChartOfAccounts';
 import InvoiceForm from '@/pages/InvoiceForm';
 import JournalEntryForm from '@/pages/JournalEntryForm';
 import PermitActionForm from '@/pages/PermitActionForm';
+import TruckListUpdateForm from '@/pages/TruckListUpdateForm';
 import DataImport from '@/pages/Import';
 import CustomerCare from '@/pages/CustomerCare';
 import Payment from './components/Payment';
@@ -119,6 +120,12 @@ const routes = [
     path: '/i3msAccount',
     name: 'I3msAccount',
     component: I3msAccount,
+    props: true
+  },
+  {
+    path: '/truckListUpdate',
+    name: 'TruckListUpdate',
+    component: TruckListUpdateForm,
     props: true
   },
   {

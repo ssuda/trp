@@ -67,6 +67,7 @@ export default {
         async files => {
           if (files && files[0]) {
             let dataURL = await this.getDataURL(files[0]);
+            console.log('dataurl', dataURL);
             this.triggerChange(dataURL);
           }
         }

@@ -18,6 +18,29 @@ const config = {
       icon: getIcon('dashboard')
     },
     {
+      title: _('Tagging'),
+      icon: getIcon('truck', '24', '5'),
+      action: async function() {
+          try {
+            const doc = await frappe.getNewDoc('PermitAction');
+            doc.set({
+              label: _('Tagging'),
+              action: 'tagging',
+              buttonText: _('Tagging')
+            });
+  
+            router.push({
+              name: 'PermitAction',
+              params: {
+                name: doc.name
+              }
+            });
+          } catch (ex) {
+            console.error(ex);
+          }
+        }
+    },
+    {
       title: _('Transport'),
       action() {
         router.push('/list/Permit');
@@ -44,6 +67,10 @@ const config = {
           doctype: 'TruckList'
         },
         {
+          label: _('Truck List Update'),
+          route: '/truckListUpdate',
+        },
+        {
           label: _('Auto Tagging'),
           route: '/list/AutoTagging',
           doctype: 'AutoTagging'
@@ -59,130 +86,130 @@ const config = {
       ],
       icon: getIcon('truck', '24', '5')
     },
-    {
-      title: _('Sales'),
-      icon: getIcon('sales'),
-      action() {
-        router.push('/list/SalesInvoice');
-      },
-      items: [
-        {
-          label: _('Invoices'),
-          route: '/list/SalesInvoice',
-          doctype: 'SalesInvoice'
-        },
-        {
-          label: _('Customers'),
-          route: '/list/Customer',
-          doctype: 'Customer'
-        },
-        {
-          label: _('Items'),
-          route: '/list/Item',
-          doctype: 'Item'
-        },
-        {
-          label: _('Journal Entry'),
-          route: '/list/JournalEntry',
-          doctype: 'JournalEntry'
-        }
-      ]
-    },
-    {
-      title: _('Purchases'),
-      icon: getIcon('purchase'),
-      action() {
-        router.push('/list/PurchaseInvoice');
-      },
-      items: [
-        {
-          label: _('Bills'),
-          route: '/list/PurchaseInvoice',
-          doctype: 'PurchaseInvoice'
-        },
-        {
-          label: _('Suppliers'),
-          route: '/list/Supplier',
-          doctype: 'Supplier'
-        },
-        {
-          label: _('Items'),
-          route: '/list/Item',
-          doctype: 'Item'
-        },
-        {
-          label: _('Journal Entry'),
-          route: '/list/JournalEntry',
-          doctype: 'JournalEntry'
-        }
-      ]
-    },
-    {
-      title: _('Reports'),
-      icon: getIcon('reports'),
-      action() {
-        router.push('/report/trip-report');
-      },
-      items: [
-        {
-          label: _('Trip Report'),
-          route: '/report/trip-report'
-        },
-        {
-          label: _('General Ledger'),
-          route: '/report/general-ledger'
-        },
-        {
-          label: _('Profit And Loss'),
-          route: '/report/profit-and-loss'
-        },
-        {
-          label: _('Balance Sheet'),
-          route: '/report/balance-sheet'
-        },
-        {
-          label: _('Trial Balance'),
-          route: '/report/trial-balance'
-        }
-      ]
-    },
+    // {
+    //   title: _('Sales'),
+    //   icon: getIcon('sales'),
+    //   action() {
+    //     router.push('/list/SalesInvoice');
+    //   },
+    //   items: [
+    //     {
+    //       label: _('Invoices'),
+    //       route: '/list/SalesInvoice',
+    //       doctype: 'SalesInvoice'
+    //     },
+    //     {
+    //       label: _('Customers'),
+    //       route: '/list/Customer',
+    //       doctype: 'Customer'
+    //     },
+    //     {
+    //       label: _('Items'),
+    //       route: '/list/Item',
+    //       doctype: 'Item'
+    //     },
+    //     {
+    //       label: _('Journal Entry'),
+    //       route: '/list/JournalEntry',
+    //       doctype: 'JournalEntry'
+    //     }
+    //   ]
+    // },
+    // {
+    //   title: _('Purchases'),
+    //   icon: getIcon('purchase'),
+    //   action() {
+    //     router.push('/list/PurchaseInvoice');
+    //   },
+    //   items: [
+    //     {
+    //       label: _('Bills'),
+    //       route: '/list/PurchaseInvoice',
+    //       doctype: 'PurchaseInvoice'
+    //     },
+    //     {
+    //       label: _('Suppliers'),
+    //       route: '/list/Supplier',
+    //       doctype: 'Supplier'
+    //     },
+    //     {
+    //       label: _('Items'),
+    //       route: '/list/Item',
+    //       doctype: 'Item'
+    //     },
+    //     {
+    //       label: _('Journal Entry'),
+    //       route: '/list/JournalEntry',
+    //       doctype: 'JournalEntry'
+    //     }
+    //   ]
+    // },
+    // {
+    //   title: _('Reports'),
+    //   icon: getIcon('reports'),
+    //   action() {
+    //     router.push('/report/trip-report');
+    //   },
+    //   items: [
+    //     {
+    //       label: _('Trip Report'),
+    //       route: '/report/trip-report'
+    //     },
+    //     {
+    //       label: _('General Ledger'),
+    //       route: '/report/general-ledger'
+    //     },
+    //     {
+    //       label: _('Profit And Loss'),
+    //       route: '/report/profit-and-loss'
+    //     },
+    //     {
+    //       label: _('Balance Sheet'),
+    //       route: '/report/balance-sheet'
+    //     },
+    //     {
+    //       label: _('Trial Balance'),
+    //       route: '/report/trial-balance'
+    //     }
+    //   ]
+    // },
     {
       title: _('Setup'),
       icon: getIcon('settings'),
       items: [
-        {
-          label: _('Users'),
-          route: '/list/SpinBiUser',
-          doctype: 'SpinBiUser',
-          condition: () => frappe.currentUser.role === 'Administrator'
-        },
-        {
-          label: _('Chart of Accounts'),
-          route: '/chart-of-accounts'
-        },
-        {
-          label: _('Taxes'),
-          route: '/list/Tax',
-          doctype: 'Tax'
-        },
-        {
-          label: _('Settings'),
-          action() {
-            openSettings();
-          }
-        },
-        /*{
-          label: _('Support & Referal'),
-          route: '/customer-care'
-        },
-        {
-          label: _('Billing'),
-          route: '/billing'
-        },*/
-        {
-          label: _('Terms and Conditions'),
-          route: '/terms-conditions'
-        },
+        // {
+        //   label: _('Users'),
+        //   route: '/list/SpinBiUser',
+        //   doctype: 'SpinBiUser',
+        //   condition: () => frappe.currentUser.role === 'Administrator'
+        // },
+        // {
+        //   label: _('Chart of Accounts'),
+        //   route: '/chart-of-accounts'
+        // },
+        // {
+        //   label: _('Taxes'),
+        //   route: '/list/Tax',
+        //   doctype: 'Tax'
+        // },
+        // {
+        //   label: _('Settings'),
+        //   action() {
+        //     openSettings();
+        //   }
+        // },
+        // /*{
+        //   label: _('Support & Referal'),
+        //   route: '/customer-care'
+        // },
+        // {
+        //   label: _('Billing'),
+        //   route: '/billing'
+        // },*/
+        // {
+        //   label: _('Terms and Conditions'),
+        //   route: '/terms-conditions'
+        // },
         {
           label: _('Sign Out'),
           async action() {

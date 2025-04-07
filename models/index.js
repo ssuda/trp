@@ -37,6 +37,8 @@ module.exports = {
   I3MSAccount: require('./doctype/I3MSAccount/I3MSAccount.js'),
   Truck: require('./doctype/Truck/Truck.js'),
   TruckList: require('./doctype/Truck/TruckList.js'),
+  TruckListUpdate: require('./doctype/Truck/TruckListUpdate.js'),
+
   Permit: require('./doctype/Permit/Permit.js'),
   FuelSlip: require('./doctype/Trip/FuelSlip.js'),
   PermitAction: require('./doctype/Permit/PermitAction.js'),

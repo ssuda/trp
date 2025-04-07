@@ -18,6 +18,8 @@
   "main": "background.js",
   "dependencies": {
     "@google-cloud/vision": "^2.3.1",
+    "@google/genai": "^0.7.0",
+    "@google/generative-ai": "^0.24.0",
     "@popperjs/core": "^2.0.3",
     "apollo-cache-inmemory": "^1.6.6",
     "apollo-client": "^2.6.10",
@@ -48,6 +50,7 @@
     "luxon": "^1.21.3",
     "moment": "^2.25.3",
     "moment-timezone": "^0.5.31",
+    "node-fetch": "^2.7.0",
     "node-machine-id": "^1.1.12",
     "portal-vue": "^2.1.6",
     "puppeteer": "^18.1.0",

@@ -58,7 +58,7 @@ import tessaract from '../api/tessaract';
       const currentDoc = await frappe.getDoc('Permit', permit.name);
       oldTagged = currentDoc.tagged ? JSON.parse(currentDoc.tagged) : {};
       isNew = false;
-    } catch (ex) { 
+    } catch (ex) {
       console.log('Permit not found', ex);
     }
 
@@ -134,6 +134,19 @@ import tessaract from '../api/tessaract';
     ipcRenderer.send('relaunch-app');
   });
 
+  frappe.events.on('trucks-ocr', (data) => {
+    console.log('Sending trucks ocr to main process', data);
+    ipcRenderer.send('trucks-ocr', {
+      ...data,
+      ...frappe.globalConfig
+    });
+  });
+
+  ipcRenderer.on('trucks-ocr-results', (e, results) => {
+    frappe.events.trigger('trucks-ocr-results', results);
+  });
+
+
   ipcRenderer.on('i3ms-company-name', (e, name) => {
     const i3msCompanyName = normalizeCompanyName(name);
 
@@ -151,7 +164,7 @@ import tessaract from '../api/tessaract';
 
   frappe.events.on('open-tabs', args => {
     console.log('open tabs called', args.numBrowsers);
-    ipcRenderer.send('open-tabs', args);
+    //ipcRenderer.send('open-tabs', args);
   });
 
   frappe.events.on('show-browser', args => {
@@ -392,7 +405,7 @@ import tessaract from '../api/tessaract';
               p.source.toUpperCase() == doc.source.toUpperCase() &&
               (!doc.transportedFrom ||
                 doc.transportedFrom.toUpperCase() ==
-                  p.transportedFrom.toUpperCase())
+                p.transportedFrom.toUpperCase())
           );
 
           if (permit) {
@@ -428,32 +441,32 @@ import tessaract from '../api/tessaract';
           console.log('AutoTagging', autoTags);
 
           //if (process.env.NODE_ENV !== 'development') {
-            const permit = autoTags[0].permit;
+          const permit = autoTags[0].permit;
 
-            try {
-              const doc = frappe.getNewDoc('PermitAction');
-              await doc.set({
-                label: _('Tagging'),
-                action: 'tagging',
-                buttonText: _('Tagging'),
-                permit: permit.name,
-                truckList: autoTags[0].truckList,
-                isCloudTagging: true
-              });
+          try {
+            const doc = frappe.getNewDoc('PermitAction');
+            await doc.set({
+              label: _('Tagging'),
+              action: 'tagging',
+              buttonText: _('Tagging'),
+              permit: permit.name,
+              truckList: autoTags[0].truckList,
+              isCloudTagging: true
+            });
 
-              router.push({
-                name: 'PermitAction',
-                params: {
-                  name: doc.name
-                }
-              });
-            } catch (ex) {
-              console.error(ex);
-            }
+            router.push({
+              name: 'PermitAction',
+              params: {
+                name: doc.name
+              }
+            });
+          } catch (ex) {
+            console.error(ex);
+          }
 
-            // for (let i = 0; i < autoTags.length; ++i) {
-            //   await tagPermit(autoTags[i]);
-            // }
+          // for (let i = 0; i < autoTags.length; ++i) {
+          //   await tagPermit(autoTags[i]);
+          // }
           //}
         }
       });

@@ -21,8 +21,10 @@ import {
   busyFlag,
   companyName,
   disconnect,
-  openTabs
+  openTabs,
 } from '../api';
+
+import gemini from '../api/gemini';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isMac = process.platform === 'darwin';
@@ -60,6 +62,7 @@ async function processMessage(message, cb) {
   }
 
   switch (type) {
+   
     case 'i3ms-company':
       {
         console.log('i3ms-company is called');
@@ -346,7 +349,7 @@ ipcMain.on('relaunch-app', (event, args) => {
 
 //openBrowser(true);
 
-function messageQueueCallback() {}
+function messageQueueCallback() { }
 
 ipcMain.on('i3ms-company', async (event, args) => {
   messageQueue.push(
@@ -419,6 +422,16 @@ ipcMain.on('permits-details', async (event, args) => {
     messageQueueCallback
   );
 });
+
+ipcMain.on('trucks-ocr', async (event, args) => {
+    console.log('trucks-ocr background', args);
+    const r = await gemini(args);
+    if (r) {
+      console.log('sending ocr results to browser', r);
+      event.sender.send('trucks-ocr-results', r);
+    }
+  }
+);
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {

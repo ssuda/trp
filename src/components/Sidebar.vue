@@ -90,7 +90,9 @@ export default {
     },
 
     companyName() {
-      return companyNameFromLastSelectedFilePath();
+      const p = companyNameFromLastSelectedFilePath();
+      console.log('companyName', p);
+      return p;
     },
 
     companyField() {

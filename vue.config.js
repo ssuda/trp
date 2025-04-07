@@ -6,9 +6,11 @@ module.exports = {
     electronBuilder: {
       nodeIntegration: true, // this may or may not be necessary - you can try without it
       externals: [
+        '@google/generative-ai',
         '@google-cloud/vision',
         'puppeteer',
         'puppeteer-core',
+        'node-fetch',
         'yaku',
         'tesseract.js'
       ], // this excludes the node-pty from the front end

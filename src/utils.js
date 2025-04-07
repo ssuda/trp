@@ -197,8 +197,9 @@ export function dbPath(companyName) {
 }
 
 export function companyNameFromLastSelectedFilePath() {
-  let path = config.get('lastSelectedFilePath', null)
-  return path.replace(remote.getGlobal('userData') + '/', '').replace('.db', '');
+  let filePath = config.get('lastSelectedFilePath', null);
+  const ext = path.extname(filePath);
+  return path.basename(filePath, ext);
 }
 
 
