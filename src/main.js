@@ -71,7 +71,7 @@ import tessaract from '../api/tessaract';
       ..._.omit(permit, ['tagged', 'trips']),
       delivered: trips.reduce((p, t) => p + +t.load_carrying, 0),
       numTrips: trips.length,
-      tagged: JSON.stringify(tagged),
+      tagged: JSON.stringify(tagged)
     });
 
     if (permit.trips) {
@@ -134,7 +134,7 @@ import tessaract from '../api/tessaract';
     ipcRenderer.send('relaunch-app');
   });
 
-  frappe.events.on('trucks-ocr', (data) => {
+  frappe.events.on('trucks-ocr', data => {
     console.log('Sending trucks ocr to main process', data);
     ipcRenderer.send('trucks-ocr', {
       ...data,
@@ -145,7 +145,6 @@ import tessaract from '../api/tessaract';
   ipcRenderer.on('trucks-ocr-results', (e, results) => {
     frappe.events.trigger('trucks-ocr-results', results);
   });
-
 
   ipcRenderer.on('i3ms-company-name', (e, name) => {
     const i3msCompanyName = normalizeCompanyName(name);
@@ -164,7 +163,7 @@ import tessaract from '../api/tessaract';
 
   frappe.events.on('open-tabs', args => {
     console.log('open tabs called', args.numBrowsers);
-    //ipcRenderer.send('open-tabs', args);
+    ipcRenderer.send('open-tabs', args);
   });
 
   frappe.events.on('show-browser', args => {
@@ -223,7 +222,7 @@ import tessaract from '../api/tessaract';
     console.log('received tagvehicles', permit);
     ipcRenderer.send('tag-vehicles', permit);
 
-    ipcRenderer.once('tag-results', function (e, response) {
+    ipcRenderer.once('tag-results', function(e, response) {
       ipcRenderer.removeAllListeners('tag-result');
 
       let tagged = permit.tagged ? JSON.parse(permit.tagged) : {};
@@ -245,14 +244,14 @@ import tessaract from '../api/tessaract';
 
     let batchSize = 0;
 
-    ipcRenderer.on('tag-result', async function (e, response) {
+    ipcRenderer.on('tag-result', async function(e, response) {
       permit = permit || {};
 
       if (!permit.name) {
         permit = await frappe.getNewDoc('Permit');
         permit.set({
           name: response.name,
-          taggingUrl: response.taggingUrl,
+          taggingUrl: response.taggingUrl
         });
       }
 
@@ -270,7 +269,7 @@ import tessaract from '../api/tessaract';
               .collection('customers')
               .doc(frappe.AccountingSettings.gstin)
               .get();
-          } catch (ex) { }
+          } catch (ex) {}
         }
 
         if (!frappe.currentUser.remote) {
@@ -293,7 +292,7 @@ import tessaract from '../api/tessaract';
   frappe.events.on('release-vehicles', permit => {
     ipcRenderer.send('release-vehicles', permit);
 
-    ipcRenderer.once('release-vehicles-results', function (e, response) {
+    ipcRenderer.once('release-vehicles-results', function(e, response) {
       console.log(
         'Updating permit after release',
         Object.keys(response).length
@@ -378,7 +377,12 @@ import tessaract from '../api/tessaract';
 
         permits = permits.filter(p => {
           const startDate = moment(p.startDate, 'YYYY-MM-DD');
-          console.log('startDAte', today, startDate, startDate.isSame(today, 'day'));
+          console.log(
+            'startDAte',
+            today,
+            startDate,
+            startDate.isSame(today, 'day')
+          );
           return startDate.isSame(today, 'day');
         });
 
@@ -405,7 +409,7 @@ import tessaract from '../api/tessaract';
               p.source.toUpperCase() == doc.source.toUpperCase() &&
               (!doc.transportedFrom ||
                 doc.transportedFrom.toUpperCase() ==
-                p.transportedFrom.toUpperCase())
+                  p.transportedFrom.toUpperCase())
           );
 
           if (permit) {

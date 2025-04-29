@@ -46,7 +46,7 @@ export async function newPermits(credentials, sse) {
       console.error(ex);
     }
 
-    await delay(30000);
+    await delay(10000);
   }
 }
 
@@ -105,7 +105,7 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
         'https://i3ms.odishaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
         !args.onlyNewPermits,
-        args.onlyNewPermits,
+        args.onlyNewPermits
       );
       break;
     } catch (ex) {}
@@ -150,7 +150,7 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
         taggingUrl: permit['Tag New Vehicle'],
         vehicleDetails: permit['Vehicle Details'],
         noTrips: args.onlyNewPermits,
-        noTagged: args.onlyNewPermits,
+        noTagged: args.onlyNewPermits
       };
 
       // if (args.onlyNewPermits && pr.taggingUrl) {
@@ -584,7 +584,7 @@ export async function initializeBrowser(
   cb,
   returnCompanyName
 ) {
-  return i3ms.initializeBrowser(cred, true, tologin, cb, returnCompanyName);
+  return i3ms.initializeBrowser(cred, headless, tologin, cb, returnCompanyName);
 }
 
 export async function disconnect() {

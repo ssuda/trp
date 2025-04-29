@@ -21,7 +21,7 @@ import {
   busyFlag,
   companyName,
   disconnect,
-  openTabs,
+  openTabs
 } from '../api';
 
 import gemini from '../api/gemini';
@@ -62,13 +62,12 @@ async function processMessage(message, cb) {
   }
 
   switch (type) {
-   
     case 'i3ms-company':
       {
         console.log('i3ms-company is called');
         const r = await initializeBrowser(
           null,
-          null,
+          true,
           false,
           disconnectHandler,
           true
@@ -126,7 +125,7 @@ async function processMessage(message, cb) {
         console.log('release-vehicles', args);
         await initializeBrowser(
           args.credentials,
-          !args.showBrowser,
+          false,
           false,
           disconnectHandler
         );
@@ -181,7 +180,7 @@ async function processMessage(message, cb) {
 
         await initializeBrowser(
           args.credentials,
-          false,
+          !args.showBrowser,
           false,
           disconnectHandler
         );
@@ -300,7 +299,7 @@ ipcMain.on('open-browser', async (event, args) => {
 
 let tabsOpened = false;
 ipcMain.on('open-tabs', async (event, args) => {
-  console.log('open tabs called', args.numBrowsers);
+  console.log('open tabs called', args);
   if (!tabsOpened) {
     openTabs(args.numBrowsers, args.credentials, !args.showBrowser);
     tabsOpened = true;
@@ -349,7 +348,7 @@ ipcMain.on('relaunch-app', (event, args) => {
 
 //openBrowser(true);
 
-function messageQueueCallback() { }
+function messageQueueCallback() {}
 
 ipcMain.on('i3ms-company', async (event, args) => {
   messageQueue.push(
@@ -424,14 +423,13 @@ ipcMain.on('permits-details', async (event, args) => {
 });
 
 ipcMain.on('trucks-ocr', async (event, args) => {
-    console.log('trucks-ocr background', args);
-    const r = await gemini(args);
-    if (r) {
-      console.log('sending ocr results to browser', r);
-      event.sender.send('trucks-ocr-results', r);
-    }
+  console.log('trucks-ocr background', args);
+  const r = await gemini(args);
+  if (r) {
+    console.log('sending ocr results to browser', r);
+    event.sender.send('trucks-ocr-results', r);
   }
-);
+});
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {

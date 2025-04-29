@@ -5,7 +5,7 @@
     </div>
     <textarea
       ref="input"
-      rows="3"
+      rows="15"
       :class="[inputClasses]"
       :value="value"
       :placeholder="inputPlaceholder"

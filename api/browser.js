@@ -141,7 +141,7 @@ module.exports = function(tabNo) {
         ignoreHTTPSErrors: true,
         waitForInitialPage: false,
         //ignoreDefaultArgs: true,
-        args: browserArgs(false),
+        args: browserArgs(headless),
         //  args: [
         //   '--auto-detect=false',
         //  "--no-proxy-server",
@@ -331,7 +331,6 @@ module.exports = function(tabNo) {
     if (!browser || !page || !href) {
       return;
     }
-
 
     href = decodeURI(href);
     let referer = await page.url();
@@ -724,8 +723,12 @@ module.exports = function(tabNo) {
     }
   }
 
-  async function lastTwoMonthPermits(href, selector, previousMonth, onlyNewPermits) {
-
+  async function lastTwoMonthPermits(
+    href,
+    selector,
+    previousMonth,
+    onlyNewPermits
+  ) {
     console.log('last two month permits called');
     await gotoPage(href);
 
