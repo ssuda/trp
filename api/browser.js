@@ -382,10 +382,10 @@ module.exports = function(tabNo) {
       retry = 0;
     }
 
-    if (retry > 10) {
-      console.log('password wrong');
-      return;
-    }
+    // if (retry > 10) {
+    //  console.log('password wrong');
+    //  return;
+    // }
 
     try {
       if (!page) {
@@ -444,6 +444,11 @@ module.exports = function(tabNo) {
       log('return from race', r);
       if (r == 2) {
         log('Calling login() again because of timeout');
+        let message = await page.$eval('#lblMsg', el => el.innerText);
+        if (/password is incorrect/i.test(message)) {
+          console.log('password wrong');
+          return;
+        }
         return login(retry + 1);
       }
 

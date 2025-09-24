@@ -1,4 +1,4 @@
-# SpinBi ERP
+# SpinBi
 
 [![Build Status](https://travis-ci.com/frappe/books.svg?branch=master)](https://travis-ci.com/frappe/books)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/frappe/books)](https://github.com/frappe/books/releases)
@@ -6,7 +6,7 @@
 
 Free Desktop book-keeping software for small-businesses and freelancers.
 
-<kbd><img src=".github/spinbi-trp-preview.png" alt="SpinBi ERP Preview" /></kbd>
+<kbd><img src=".github/spinbi-trp-preview.png" alt="SpinBi Preview" /></kbd>
 
 ## Features
 
@@ -31,7 +31,7 @@ page](https://github.com/frappe/books/releases).
 
 ## Development
 
-SpinBi ERP is built on [FrappeJS](https://github.com/frappe/frappejs), Vue.js
+SpinBi is built on [FrappeJS](https://github.com/frappe/frappejs), Vue.js
 and Electron. It is offline by default, and uses a local SQLite file as the
 database.
 
