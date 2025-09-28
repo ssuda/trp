@@ -27,7 +27,7 @@ export async function newPermits(credentials, showBrowser, sse) {
 
   await newPermitBrowser.initializeBrowser(
     credentials,
-    showBrowser,
+    !showBrowser,
     true,
     () => {
       toExit = true;
