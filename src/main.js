@@ -369,7 +369,10 @@ import tessaract from '../api/tessaract';
         password: frappe.AccountingSettings.i3msPassword
       };
 
-      ipcRenderer.send('auto-tagging', credentials);
+      ipcRenderer.send('auto-tagging', {
+        credentials,
+        showBrowser: frappe.AccountingSettings.showBrowser
+      });
 
       ipcRenderer.on('new-permits', async (e, permits) => {
         //filter out permits today(startDate), replace DateTime with moment

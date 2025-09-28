@@ -16,7 +16,7 @@ export let busyFlag = {
 //export methods
 let newPermitBrowser;
 
-export async function newPermits(credentials, sse) {
+export async function newPermits(credentials, showBrowser, sse) {
   if (newPermitBrowser) {
     return;
   }
@@ -25,9 +25,14 @@ export async function newPermits(credentials, sse) {
 
   let toExit = false;
 
-  await newPermitBrowser.initializeBrowser(credentials, true, true, () => {
-    toExit = true;
-  });
+  await newPermitBrowser.initializeBrowser(
+    credentials,
+    showBrowser,
+    true,
+    () => {
+      toExit = true;
+    }
+  );
 
   while (!toExit) {
     let out = [];
@@ -36,7 +41,7 @@ export async function newPermits(credentials, sse) {
         {
           onlyNewPermits: true
         },
-        null,
+        sse,
         newPermitBrowser
       );
 
@@ -105,7 +110,8 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
         'https://i3ms.odishaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
         !args.onlyNewPermits,
-        args.onlyNewPermits
+        args.onlyNewPermits,
+        sse
       );
       break;
     } catch (ex) {}

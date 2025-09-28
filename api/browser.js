@@ -732,60 +732,69 @@ module.exports = function(tabNo) {
     href,
     selector,
     previousMonth,
-    onlyNewPermits
+    onlyNewPermits,
+    sse
   ) {
     console.log('last two month permits called');
     await gotoPage(href);
 
-    selector || (selector = '#grdTransporterActions');
+    do {
+      selector || (selector = '#grdTransporterActions');
 
-    let submitButton = await promiseAny(
-      page.waitForSelector('#btnsubmit'),
-      page.waitForSelector('#btnSubmit')
-    );
+      let submitButton = await promiseAny(
+        page.waitForSelector('#btnsubmit'),
+        page.waitForSelector('#btnSubmit')
+      );
 
-    await page.waitForSelector(selector);
+      await page.waitForSelector(selector);
 
-    const el = await page.$(selector);
-    let rows = [];
-    if (el) {
-      if (!onlyNewPermits) {
-        const r = await promiseAny(
-          page.waitForXPath(
-            '//*[@id="grdTransporterActions"]/tbody/tr/td[contains(text(), "No Record(s) Found")]'
-          ),
-          openAll('#btnAll')
-        );
+      const el = await page.$(selector);
+      let rows = [];
+      if (el) {
+        if (!onlyNewPermits) {
+          const r = await promiseAny(
+            page.waitForXPath(
+              '//*[@id="grdTransporterActions"]/tbody/tr/td[contains(text(), "No Record(s) Found")]'
+            ),
+            openAll('#btnAll')
+          );
 
-        console.log('last two month permits after waiting', r);
+          console.log('last two month permits after waiting', r);
 
-        if (r === 2) {
-          await delay(5000);
+          if (r === 2) {
+            await delay(5000);
+            rows = await tableData(selector);
+            console.log('last two month permits', rows);
+          }
+        } else {
           rows = await tableData(selector);
-          console.log('last two month permits', rows);
         }
-      } else {
-        rows = await tableData(selector);
       }
-    }
 
-    if (previousMonth) {
-      await page.waitForSelector('#ddlMonth');
-      const dt = moment().subtract(1, 'month');
-      const month = dt.month() + 1;
-      const year = dt.year();
+      if (previousMonth) {
+        await page.waitForSelector('#ddlMonth');
+        const dt = moment().subtract(1, 'month');
+        const month = dt.month() + 1;
+        const year = dt.year();
 
-      await page.select('#ddlMonth', '' + month);
-      await page.select('#ddlYear', '' + year);
-      await page.click(submitButton == 1 ? '#btnsubmit' : '#btnSubmit');
+        await page.select('#ddlMonth', '' + month);
+        await page.select('#ddlYear', '' + year);
+        await page.click(submitButton == 1 ? '#btnsubmit' : '#btnSubmit');
 
-      await openAll('#btnAll');
-      await delay(5000);
+        await openAll('#btnAll');
+        await delay(5000);
 
-      let data = await tableData(selector);
-      rows = rows.concat(data || []);
-    }
-    return rows;
+        let data = await tableData(selector);
+        rows = rows.concat(data || []);
+      }
+
+      if (sse) {
+        sse.send('new-permits', rows);
+        await page.reload();
+      } else {
+        return rows;
+      }
+    } while (sse);
   }
 
   async function gotoPermitTripsPage(href) {
