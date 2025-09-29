@@ -752,7 +752,7 @@ module.exports = function(tabNo) {
         endDate: endDate,
         circle: permit['Circle'],
         taggingUrl: permit['Tag New Vehicle'],
-        source: permit['Lessee/Licensee Name'],
+        source: permit['Lessee/Licensee Name'].replace(/-\d+/, ''),
         vehicleDetails: permit['Vehicle Details']
       };
 
