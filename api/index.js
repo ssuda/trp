@@ -155,6 +155,7 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
         circle: permit['Circle'],
         taggingUrl: permit['Tag New Vehicle'],
         vehicleDetails: permit['Vehicle Details'],
+        requestedBy: permit['Lessee/Licensee Name'],
         noTrips: args.onlyNewPermits,
         noTagged: args.onlyNewPermits
       };
