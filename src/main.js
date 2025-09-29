@@ -408,11 +408,7 @@ import tessaract from '../api/tessaract';
         //find docs;
         let autoTags = docs.filter(doc => {
           let permit = newPermits.find(
-            p =>
-              p.source.toUpperCase() == doc.source.toUpperCase() &&
-              (!doc.transportedFrom ||
-                doc.transportedFrom.toUpperCase() ==
-                  p.transportedFrom.toUpperCase())
+            p => p.source.toUpperCase() == doc.source.toUpperCase()
           );
 
           if (permit) {
