@@ -836,6 +836,8 @@ module.exports = function(tabNo) {
       } else {
         return rows;
       }
+
+      await delay(5000);
     } while (sse);
   }
 
