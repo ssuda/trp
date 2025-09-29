@@ -728,6 +728,47 @@ module.exports = function(tabNo) {
     }
   }
 
+  async function permitsInfo(permits, sse) {
+    const out = [];
+
+    for (let permit of permits) {
+
+      if (/javascript/i.test(permit['Permit No.']) || !permit['Permit No.']) {
+        continue;
+      }
+
+      const createdAt = moment(
+        permit['Request On'] || permit['Requested On'],
+        'DD MMM YYYY'
+      );
+
+      const startDate = createdAt.local().format('YYYY-MM-DD');
+      createdAt.add(1, 'month');
+      const endDate = createdAt.local().format('YYYY-MM-DD');
+
+      let pr = {
+        name: permit['Permit No.'],
+        startDate: startDate,
+        endDate: endDate,
+        circle: permit['Circle'],
+        taggingUrl: permit['Tag New Vehicle'],
+        vehicleDetails: permit['Vehicle Details'],
+      };
+
+
+      if (!pr.taggingUrl) {
+        const uri = new URL(pr.vehicleDetails);
+        pr.taggingUrl =
+          'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
+          uri.search;
+      }
+
+      out.push(pr);
+    }
+
+    sse.send('new-permits', out);
+  }
+
   async function lastTwoMonthPermits(
     href,
     selector,
@@ -789,7 +830,8 @@ module.exports = function(tabNo) {
       }
 
       if (sse) {
-        sse.send('new-permits', rows);
+        //sse.send('new-permits', rows);
+        await permitsInfo(rows, sse);
         await page.reload();
       } else {
         return rows;
