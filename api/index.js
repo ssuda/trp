@@ -41,7 +41,7 @@ export async function newPermits(credentials, showBrowser, sse) {
         {
           onlyNewPermits: true
         },
-        sse,
+        null,
         newPermitBrowser
       );
 
@@ -51,7 +51,7 @@ export async function newPermits(credentials, showBrowser, sse) {
       console.error(ex);
     }
 
-    await delay(10000);
+    await delay(5000);
   }
 }
 
@@ -155,14 +155,10 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
         circle: permit['Circle'],
         taggingUrl: permit['Tag New Vehicle'],
         vehicleDetails: permit['Vehicle Details'],
-        requestedBy: permit['Lessee/Licensee Name'],
+        source: permit['Lessee/Licensee Name'],
         noTrips: args.onlyNewPermits,
         noTagged: args.onlyNewPermits
       };
-
-      // if (args.onlyNewPermits && pr.taggingUrl) {
-      //   continue;
-      // }
 
       if (!pr.taggingUrl) {
         const uri = new URL(pr.vehicleDetails);
@@ -170,6 +166,11 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
           'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
           uri.search;
       }
+
+      if (args.onlyNewPermits && pr.taggingUrl) {
+        continue;
+      }
+
       if (pr.taggingUrl) {
         try {
           const l = await getPermit(pr, sse, browser);
