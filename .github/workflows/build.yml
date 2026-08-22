@@ -29,10 +29,13 @@ jobs:
           npm config set msvs_version 2022
           npm install -g node-gyp@latest
 
-      - name: Install Dependencies & Download Electron Binary
+      - name: Install Dependencies & Download Binaries
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "false"
         run: |
           npm install --ignore-scripts
           node node_modules/electron/install.js
+          node node_modules/puppeteer/install.js
 
       - name: Rebuild Native App Dependencies
         run: npx electron-builder install-app-deps
