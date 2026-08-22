@@ -1,4 +1,4 @@
-name: Build Desktop App
+name: Build Windows Desktop App
 
 on:
   workflow_dispatch:
@@ -10,19 +10,16 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-13, windows-latest]
+  build-windows:
+    name: Build Windows App
+    runs-on: windows-latest
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js 14
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '14'
           cache: 'npm'
@@ -35,12 +32,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: spinbi-app-${{ matrix.os }}
+          name: spinbi-windows-app
           path: |
-            dist_electron/*.dmg
             dist_electron/*.exe
-            dist_electron/*.zip
+            dist_electron/*.blockmap
           if-no-files-found: ignore
