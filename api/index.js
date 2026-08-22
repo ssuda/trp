@@ -465,7 +465,24 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
       count++;
     } catch (ex) {
       console.log('Tab', tabNo, 'tagged vehicle', count, ex.message);
-      await tab.gotoTagPage(taggingUrl);
+      try {
+        await promiseWithTimeout(tab.gotoTagPage(taggingUrl), 30000);
+      } catch (e) {
+        console.error('Tab', tabNo, 'Failed resetting page:', e.message);
+      }
+
+      if (renderer) {
+        renderer.send('total', 1);
+        renderer.send('failed', 1);
+        renderer.send('tag-result', {
+          name: (options && options.name) || '',
+          taggingUrl,
+          truck: {
+            [truck]: ex.message || 'Tagging Timeout / Error'
+          }
+        });
+      }
+      count++;
     }
   }
 
