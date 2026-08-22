@@ -19,6 +19,10 @@ module.exports = {
           {
             from: 'data',
             to: 'data'
+          },
+          {
+            from: 'node_modules/puppeteer/.local-chromium',
+            to: 'node_modules/puppeteer/.local-chromium'
           }
         ]
       }

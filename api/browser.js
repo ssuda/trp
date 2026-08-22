@@ -2,7 +2,9 @@ const puppeteer = require('puppeteer');
 const _ = require('lodash');
 const moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Kolkata');
-//const findChrome = require('chrome-finder');
+const findChrome = require('chrome-finder');
+const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 
 const vision = require('./captch-browser'); //require('./vision'); //require('../src/rekognition');
@@ -118,39 +120,60 @@ module.exports = function(tabNo) {
   let globalHeadless;
   let captchaImage;
 
+  function getExecutablePath() {
+    try {
+      const defaultPath = puppeteer.executablePath();
+      if (fs.existsSync(defaultPath)) {
+        return defaultPath;
+      }
+    } catch (e) {}
+
+    if (process.resourcesPath) {
+      const resourceChromium = path.join(
+        process.resourcesPath,
+        'node_modules',
+        'puppeteer',
+        '.local-chromium'
+      );
+      if (fs.existsSync(resourceChromium)) {
+        const glob = require('glob');
+        const matches = glob.sync('**/chrome.exe', {
+          cwd: resourceChromium,
+          absolute: true
+        });
+        if (matches && matches.length > 0) {
+          return matches[0];
+        }
+      }
+    }
+
+    try {
+      const systemChrome = findChrome();
+      if (systemChrome && fs.existsSync(systemChrome)) {
+        return systemChrome;
+      }
+    } catch (e) {}
+
+    return undefined;
+  }
+
   async function browserInstance(headless) {
-    // const browserFetcher = puppeteer.createBrowserFetcher();
-    // const localChromiums = await browserFetcher.localRevisions();
-
-    // if (!localChromiums.length) {
-    //   return console.error('Can\'t find installed Chromium');
-    // }
-
-    // const { executablePath } = await browserFetcher.revisionInfo(localChromiums[0]);
-
     headless =
       process.env.SHOW_BROWSER !== undefined
         ? !JSON.parse(process.env.SHOW_BROWSER.toLowerCase())
         : headless;
 
     if (!browser) {
+      const execPath = getExecutablePath();
+      log('Launching browser with executablePath:', execPath);
+
       browser = await puppeteer.launch({
         dumpio: false,
-        //product: 'firefox',
         headless,
         ignoreHTTPSErrors: true,
         waitForInitialPage: false,
-        //ignoreDefaultArgs: true,
+        executablePath: execPath,
         args: browserArgs(headless),
-        //  args: [
-        //   '--auto-detect=false',
-        //  "--no-proxy-server",
-        // '--disable-extensions',
-        //   '--no-sandbox',
-        //   '--disable-setuid-sandbox',
-        //  ],
-        //executablePath: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe', //findChrome(),
-        //executablePath,//findChrome(),
         defaultViewport: defaultViewport(headless),
         timeout: 0
       });
