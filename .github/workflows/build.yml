@@ -29,8 +29,10 @@ jobs:
           npm config set msvs_version 2022
           npm install -g node-gyp@latest
 
-      - name: Install Dependencies
-        run: npm install --ignore-scripts
+      - name: Install Dependencies & Download Electron Binary
+        run: |
+          npm install --ignore-scripts
+          node node_modules/electron/install.js
 
       - name: Rebuild Native App Dependencies
         run: npx electron-builder install-app-deps
