@@ -2,11 +2,13 @@ const puppeteer = require('puppeteer');
 const _ = require('lodash');
 const moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Kolkata');
-//const findChrome = require('chrome-finder');
+const findChrome = require('chrome-finder');
+const fs = require('fs');
 const crypto = require('crypto');
 
 const vision = require('./captch-browser'); //require('./vision'); //require('../src/rekognition');
-const { delay, promiseAny } = require('./utils');
+const { getEmbeddedChromiumPath } = require('./chromium');
+const { delay, promiseAny, promiseWithTimeout } = require('./utils');
 
 function browserArgs(headless) {
   const result = [
@@ -92,14 +94,26 @@ function browserArgs(headless) {
   return result;
 }
 
+function browserLaunchTimeout() {
+  const configured = Number(process.env.PUPPETEER_LAUNCH_TIMEOUT_MS);
+  if (Number.isFinite(configured) && configured >= 10000) {
+    return Math.min(configured, 120000);
+  }
+  return 60000;
+}
+
 function defaultViewport(headless) {
+  if (headless !== true) {
+    return null;
+  }
+
   return {
     deviceScaleFactor: 1,
     hasTouch: false,
-    height: headless === true ? 1080 : 0,
+    height: 1080,
     isLandscape: true,
     isMobile: false,
-    width: headless === true ? 1920 : 0
+    width: 1920
   };
 }
 
@@ -118,48 +132,67 @@ module.exports = function(tabNo) {
   let globalHeadless;
   let captchaImage;
 
+  function getExecutablePath() {
+    const embeddedChromium = getEmbeddedChromiumPath();
+    if (embeddedChromium) {
+      log('Found embedded Chromium at:', embeddedChromium);
+      return embeddedChromium;
+    }
+
+    try {
+      const defaultPath = puppeteer.executablePath();
+      if (fs.existsSync(defaultPath)) {
+        log('Found default Puppeteer Chromium at:', defaultPath);
+        return defaultPath;
+      }
+    } catch (e) {}
+
+    if (process.platform === 'win32') {
+      throw new Error(
+        'Compatible embedded Chromium is missing. Reinstall the application.'
+      );
+    }
+
+    try {
+      const systemChrome = findChrome();
+      if (systemChrome && fs.existsSync(systemChrome)) {
+        log('Found system Chrome at:', systemChrome);
+        return systemChrome;
+      }
+    } catch (e) {}
+
+    return undefined;
+  }
+
   async function browserInstance(headless) {
-    // const browserFetcher = puppeteer.createBrowserFetcher();
-    // const localChromiums = await browserFetcher.localRevisions();
-
-    // if (!localChromiums.length) {
-    //   return console.error('Can\'t find installed Chromium');
-    // }
-
-    // const { executablePath } = await browserFetcher.revisionInfo(localChromiums[0]);
-
-    headless =
-      process.env.SHOW_BROWSER !== undefined
-        ? !JSON.parse(process.env.SHOW_BROWSER.toLowerCase())
-        : headless;
-
     if (!browser) {
-      browser = await puppeteer.launch({
+      const execPath = getExecutablePath();
+      log('Launching browser with executablePath:', execPath);
+
+      const launchedBrowser = await puppeteer.launch({
         dumpio: false,
-        //product: 'firefox',
         headless,
         ignoreHTTPSErrors: true,
         waitForInitialPage: false,
-        //ignoreDefaultArgs: true,
+        executablePath: execPath,
         args: browserArgs(headless),
-        //  args: [
-        //   '--auto-detect=false',
-        //  "--no-proxy-server",
-        // '--disable-extensions',
-        //   '--no-sandbox',
-        //   '--disable-setuid-sandbox',
-        //  ],
-        //executablePath: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe', //findChrome(),
-        //executablePath,//findChrome(),
         defaultViewport: defaultViewport(headless),
-        timeout: 0
+        timeout: browserLaunchTimeout()
       });
-      browser.on('error', () => page.reload());
-      browser.on('disconnected', disconnectHandler);
+      browser = launchedBrowser;
+      launchedBrowser.on('error', ex => {
+        error('Browser process error:', ex && ex.message ? ex.message : ex);
+      });
+      launchedBrowser.on('disconnected', () =>
+        disconnectHandler(launchedBrowser)
+      );
     }
   }
 
-  function disconnectHandler(e) {
+  function disconnectHandler(disconnectedBrowser) {
+    if (browser && disconnectedBrowser && browser !== disconnectedBrowser) {
+      return;
+    }
     browser = null;
     page = null;
     if (globalDisconnectHandler) {
@@ -167,26 +200,21 @@ module.exports = function(tabNo) {
     }
   }
 
-  async function pageInstance() {
+  async function pageInstance(forceNewPage = false, browserContext) {
     credentials || (credentials = {});
 
-    const pages = await browser.pages();
-
-    if (pages.length) {
-      page = pages[0];
+    if (forceNewPage) {
+      page = browserContext
+        ? await browserContext.newPage()
+        : await browser.newPage();
     } else {
-      page = await browser.newPage();
-    }
-
-    await page.setRequestInterception(true);
-
-    page.on('request', async request => {
-      if (request.url().includes('verisign.com')) {
-        await request.abort();
+      const pages = await browser.pages();
+      if (pages.length) {
+        page = pages[0];
       } else {
-        await request.continue();
+        page = await browser.newPage();
       }
-    });
+    }
 
     page.on('dialog', async dialog => {
       try {
@@ -219,11 +247,44 @@ module.exports = function(tabNo) {
       }
     });
 
-    page.setDefaultTimeout(120000);
-    //page.setDefaultNavigationTimeout(120000);
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'
+    page.setDefaultTimeout(60000);
+    page.setDefaultNavigationTimeout(30000);
+    const userAgent = (await browser.userAgent()).replace(
+      /HeadlessChrome/i,
+      'Chrome'
     );
+    await page.setUserAgent(userAgent);
+    await page.evaluateOnNewDocument(() => {
+      try {
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: () => false
+        });
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          get: () => 'visible'
+        });
+        document.hasFocus = () => true;
+      } catch (ex) {
+        // Older Chromium builds may expose these properties as non-configurable.
+      }
+    });
+    try {
+      const client = await page.target().createCDPSession();
+      await client.send('Network.enable');
+      await client
+        .send('Network.setBlockedURLs', { urls: ['*verisign.com*'] })
+        .catch(() => {});
+      await client.send('Page.enable');
+      await client
+        .send('Page.setWebLifecycleState', { state: 'active' })
+        .catch(() => {});
+      await client
+        .send('Emulation.setFocusEmulationEnabled', { enabled: true })
+        .catch(() => {});
+    } catch (ex) {
+      log('Unable to force page active state:', ex.message);
+    }
     // await page.addScriptTag({
     //   content:
     // })
@@ -242,12 +303,20 @@ module.exports = function(tabNo) {
   }
 
   async function clickHelper(selector, timeout = 60000, waitFor = null) {
+    await page.waitForSelector(selector, {
+      timeout: Math.min(timeout, 30000)
+    });
     await page.evaluate(selector => {
-      document.querySelector(selector).click();
+      const el = document.querySelector(selector);
+      if (!el) {
+        throw new Error(`Unable to find ${selector}`);
+      }
+      el.click();
     }, selector);
 
-    await page.waitForSelector(waitFor || selector, { timeout });
-    //await page.waitForNavigation({ timeout, waitUntil })
+    if (waitFor) {
+      await page.waitForSelector(waitFor, { timeout });
+    }
   }
 
   function setRadioButton(selector) {
@@ -256,26 +325,24 @@ module.exports = function(tabNo) {
     }, selector);
   }
 
-  async function gridData(selector) {
-    await page.waitForSelector(selector);
-    let rows = await page.$$eval(`${selector} tr`, trs => {
-      return trs.map(tr => tr.innerText);
-    });
-
-    rows = rows.filter(row => !row.includes('\n'));
-    rows = rows
-      .map(row => row.split('\t').filter(t => t.trim()))
-      .filter(r => r.length >= 3);
-    rows = _.flatMap(rows);
-    rows = _.chunk(rows, 3);
-    return _.reduce(
-      rows,
-      (p, row) => {
-        p[row[0]] = row[2].toUpperCase();
-        return p;
-      },
-      {}
+  async function gridData(selector, timeout) {
+    await page.waitForSelector(selector, timeout ? { timeout } : undefined);
+    const rows = await page.$$eval(`${selector} tr`, trs =>
+      trs.map(tr => tr.innerText)
     );
+
+    // Map each row on its own; flattening all cells before chunking by 3
+    // misaligned every key/value pair whenever a row has more than 3 cells.
+    return rows.reduce((data, row) => {
+      if (row.includes('\n')) {
+        return data;
+      }
+      const cells = row.split('\t').filter(cell => cell.trim());
+      if (cells.length >= 3) {
+        data[cells[0]] = cells[2].toUpperCase();
+      }
+      return data;
+    }, {});
   }
 
   async function tableData(selector, txtField) {
@@ -327,45 +394,56 @@ module.exports = function(tabNo) {
     );
   }
 
-  async function gotoPage(href) {
+  async function gotoPage(href, allowLogin = true, maxAttempts = 2) {
     if (!browser || !page || !href) {
-      return;
+      throw new Error('Browser, page, or destination URL is unavailable');
     }
 
     href = decodeURI(href);
     let referer = await page.url();
-
-    let numAttempts = 1;
-    let success = true;
+    let lastError;
 
     mainUrl = href;
 
-    while (numAttempts < 80) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         if (!browser || !page) {
-          success = false;
-          break;
+          throw new Error('Browser disconnected during navigation');
         }
         await page.goto(href, {
           referer,
-          waitUntil: 'domcontentloaded'
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
         });
-        success = true;
-        break;
+
+        if (
+          allowLogin &&
+          /\/(i3msnew1|Default)\.aspx/i.test(page.url())
+        ) {
+          log('Session expired while loading page; waiting for login');
+          await login();
+        }
+        return true;
       } catch (ex) {
-        error(ex);
-        if (!browser || !page || /net::ERR_/i.test(ex.message)) {
-          success = false;
+        lastError = ex;
+        error(
+          `Navigation attempt ${attempt}/${maxAttempts} failed:`,
+          ex.message
+        );
+        if (!browser || !page) {
           break;
         }
-        await delay(5000);
-        numAttempts++;
-        await page.reload();
-        success = false;
+        if (attempt < maxAttempts) {
+          await delay(2000);
+        }
       }
     }
 
-    return success;
+    throw new Error(
+      `Unable to load i3ms page after ${maxAttempts} attempts: ${
+        (lastError && lastError.message) || href
+      }`
+    );
   }
 
   function generateUID(length) {
@@ -376,146 +454,325 @@ module.exports = function(tabNo) {
       .substring(0, length);
   }
 
-  let newLoginInProgress = false;
-  async function login(retry) {
-    if (!retry) {
-      retry = 0;
+  let loginPromise;
+
+  async function performLogin() {
+    if (!page || !credentials || !credentials.username || !credentials.password) {
+      throw new Error('i3ms login credentials are unavailable');
     }
 
-    // if (retry > 10) {
-    //  console.log('password wrong');
-    //  return;
-    // }
+    let lastError;
 
-    try {
-      if (!page) {
-        return;
-      }
-
-      var today = new Date();
-      var date =
-        today.getFullYear() +
-        '-' +
-        (today.getMonth() + 1) +
-        '-' +
-        today.getDate();
-      var time =
-        today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
-      var dateTime = date + ' ' + time;
-
-      let no = generateUID(256);
-      let string = '09' + no + '/' + dateTime;
-      let encodedString = Buffer.from(string).toString('base64');
-
-      console.log(
-        'Tab',
-        tabNo,
-        'Logging into ',
-        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString,
-        retry
-      );
-
-      newLoginInProgress = true;
-      await page.goto(
-        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString,
-        {
-          referer: 'https://i3ms.odishaminerals.gov.in/i3msnew1.aspx'
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        if (!page) {
+          throw new Error('Browser page is unavailable during login');
         }
-      );
 
-      await page.waitForSelector('#btnSubmit');
-      await fill('#txtusr', credentials.username);
-      await fill('#txtpwd', credentials.password);
+        const today = new Date();
+        const date =
+          today.getFullYear() +
+          '-' +
+          (today.getMonth() + 1) +
+          '-' +
+          today.getDate();
+        const time =
+          today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
+        const dateTime = date + ' ' + time;
 
-      const httpResponseWeWaitForPromise = page.waitForResponse(
-        'https://i3ms.odishaminerals.gov.in/Dashboard_TR.aspx'
-      );
+        const no = generateUID(256);
+        const string = '09' + no + '/' + dateTime;
+        const encodedString = Buffer.from(string).toString('base64');
+        const loginUrl =
+          'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString;
 
-      await page.click('#btnSubmit');
+        log('Logging into', loginUrl, `attempt ${attempt}/3`);
 
-      newLoginInProgress = false;
+        await page.goto(loginUrl, {
+          referer: 'https://i3ms.odishaminerals.gov.in/i3msnew1.aspx',
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
+        });
 
-      let r = await promiseAny([httpResponseWeWaitForPromise, delay(30000)]);
+        await page.waitForSelector('#btnSubmit', { timeout: 20000 });
+        await fill('#txtusr', credentials.username);
+        await fill('#txtpwd', credentials.password);
 
-      if (newLoginInProgress) {
-        return;
-      }
+        await Promise.all([
+          page
+            .waitForNavigation({
+              waitUntil: 'domcontentloaded',
+              timeout: 30000
+            })
+            .catch(() => null),
+          page.click('#btnSubmit')
+        ]);
 
-      log('return from race', r);
-      if (r == 2) {
-        log('Calling login() again because of timeout');
-        let message = await page.$eval('#lblMsg', el => el.innerText);
+        const message = await page
+          .$eval('#lblMsg', el => el.innerText)
+          .catch(() => '');
+
         if (/password is incorrect/i.test(message)) {
-          console.log('password wrong');
-          return;
+          throw new Error('i3ms password is incorrect');
         }
-        return login(retry + 1);
-      }
 
-      await delay(5000);
-      // try {
-      //   await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 });
-      // } catch(ex) {
-      // }
-
-      if (newLoginInProgress) {
-        return;
-      }
-
-      log('Before loggedin');
-      let url = await page.url();
-
-      if (newLoginInProgress) {
-        return;
-      }
-
-      if (url.includes('/Default.aspx')) {
-        log('Calling login() again because url is same');
-        return login(retry + 1);
-      } else {
-        log('loggedin');
-        if (mainUrl && page) {
-          log('Going to url', mainUrl);
-          try {
-            await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
-          } catch (ex) {
-            await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
-          }
+        const currentUrl = page.url();
+        if (/\/Default\.aspx/i.test(currentUrl)) {
+          throw new Error(message || 'i3ms login timed out');
         }
+
+        log('Logged in');
+        if (mainUrl && page && mainUrl !== loginUrl) {
+          log('Returning to', mainUrl);
+          await gotoPage(mainUrl, false);
+        }
+        return true;
+      } catch (ex) {
+        lastError = ex;
+        error(`Login attempt ${attempt}/3 failed:`, ex.message);
+        if (/password is incorrect/i.test(ex.message)) {
+          throw ex;
+        }
+        // Retry immediately: the next attempt starts with a fresh goto, which
+        // is all the reset a transient failure needs.
       }
-    } catch (ex) {
-      error(ex.message);
-      if (!/(execution context)|(network|timeout|net::ERR)/i.test(ex.message)) {
-        await delay(60000);
-      }
-      return login(retry + 1);
     }
+
+    throw new Error(
+      `Unable to log in to i3ms after 3 attempts: ${
+        (lastError && lastError.message) || 'unknown error'
+      }`
+    );
+  }
+
+  function login() {
+    if (!loginPromise) {
+      loginPromise = performLogin().finally(() => {
+        loginPromise = null;
+      });
+    }
+    return loginPromise;
   }
 
   async function gotoTagPage(href) {
-    href = decodeURIComponent(href);
-    let retries = 0;
+    if (!href) {
+      throw new Error('Tagging URL is unavailable');
+    }
+    try {
+      href = decodeURIComponent(href);
+    } catch (ex) {
+      // Keep the raw href when it is not properly encoded.
+    }
+    let lastError;
 
-    while (retries < 3) {
-      await gotoPage(href);
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const r = await gridData('#grTrAction');
-        const v = await page.$eval('#lbtn_count', el => el.innerText);
-        if (v) {
-          r.tagged = +v;
+        await gotoPage(href, true, 1);
+        const r = await gridData('#grTrAction', 30000);
+        const v = await page
+          .$eval('#lbtn_count', el => el.innerText)
+          .catch(() => '');
+        const taggedCount = parseInt(String(v).replace(/[^0-9]/g, ''), 10);
+        if (Number.isFinite(taggedCount)) {
+          r.tagged = taggedCount;
         }
         return r;
       } catch (ex) {
-        if (!/timeout/i.test(ex.message)) {
-          break;
+        lastError = ex;
+        error(`Tag page attempt ${attempt}/2 failed:`, ex.message);
+        if (attempt < 2) {
+          await delay(2000);
         }
-        retries++;
       }
+    }
+
+    throw new Error(
+      `Unable to open tagging page: ${
+        (lastError && lastError.message) || 'unknown error'
+      }`
+    );
+  }
+
+  async function waitForCaptchaImage(timeoutMs = 10000) {
+    const startTime = Date.now();
+    const hasBufferedImage = () => captchaImage && captchaImage !== 'Error';
+
+    // Fast path: the response interceptor usually captures the captcha bytes
+    // right after the image is requested.
+    while (Date.now() - startTime < 1500) {
+      if (hasBufferedImage()) {
+        return captchaImage;
+      }
+      await delay(25);
+    }
+
+    // Fallback: wait in-page until the captcha element finishes loading, then
+    // capture it with a single element screenshot. Polling inside the page
+    // avoids a Node <-> browser round-trip on every check.
+    const remaining = timeoutMs - (Date.now() - startTime);
+    if (remaining <= 0 || !pageReady()) {
+      return captchaImage;
+    }
+
+    const selector =
+      'img[src*="captcha.aspx" i], input[type="image"][src*="captcha.aspx" i]';
+    try {
+      await page.waitForFunction(
+        sel => {
+          const el = document.querySelector(sel);
+          return (
+            !!el &&
+            (!('complete' in el) || (el.complete && el.naturalWidth > 0))
+          );
+        },
+        { polling: 200, timeout: remaining },
+        selector
+      );
+
+      if (hasBufferedImage()) {
+        return captchaImage;
+      }
+
+      const element = await page.$(selector);
+      if (element) {
+        return await element.screenshot({ type: 'png' });
+      }
+    } catch (ex) {
+      log('Unable to capture captcha element:', ex.message);
+    }
+
+    return captchaImage;
+  }
+
+  function recoverableTaggingMessage(message) {
+    return /(something(?: went)? wrong)|(in\s*correct captcha)|(captcha.{0,60}(invalid|wrong|recognition|ocr|parse|empty|image|number|operator|readable|required))|(execution context)|(target closed)|(session closed)|(page.{0,20}closed)|(network)|(navigation)|(timeout)|(timed out)|(detached)|(\berror\b)/i.test(
+      message || ''
+    );
+  }
+
+  function pageReady() {
+    return Boolean(
+      browser &&
+        (typeof browser.isConnected !== 'function' || browser.isConnected()) &&
+        page &&
+        (typeof page.isClosed !== 'function' || !page.isClosed())
+    );
+  }
+
+  async function waitForTagSearchResult(timeout = 30000) {
+    const result = await page.waitForFunction(
+      () => {
+        const vts = document.querySelector('#Rdo_VTS_0');
+        if (vts && !vts.hasAttribute('data-spinbi-stale')) return 'vts';
+
+        const message = document.querySelector('#lblMsg');
+        if (
+          message &&
+          message.textContent.trim() &&
+          (!message.hasAttribute('data-spinbi-stale') ||
+            message.textContent.trim() !== message.dataset.spinbiPreviousText)
+        ) {
+          return 'message';
+        }
+
+        const validation = document.querySelector('#lblVehicleVldInfo');
+        if (
+          validation &&
+          validation.textContent.trim() &&
+          (!validation.hasAttribute('data-spinbi-stale') ||
+            validation.textContent.trim() !==
+              validation.dataset.spinbiPreviousText)
+        ) {
+          return 'validation';
+        }
+
+        return false;
+      },
+      { polling: 100, timeout }
+    );
+
+    return result.jsonValue();
+  }
+
+  async function waitForTagSubmitResult(
+    truckNo,
+    previousTaggedCount,
+    timeout = 30000
+  ) {
+    const result = await page.waitForFunction(
+      (expectedTruck, taggedCountBeforeSubmit) => {
+        const message = document.querySelector('#lblMsg');
+        if (
+          message &&
+          message.textContent.trim() &&
+          (!message.hasAttribute('data-spinbi-stale') ||
+            message.textContent.trim() !== message.dataset.spinbiPreviousText)
+        ) {
+          return 'message';
+        }
+
+        const taggedCount = document.querySelector('#lbtn_count');
+        if (taggedCountBeforeSubmit !== null && taggedCount) {
+          const countText = taggedCount.textContent.replace(/[^0-9]/g, '');
+          const currentTaggedCount = countText ? Number(countText) : null;
+          if (
+            Number.isFinite(currentTaggedCount) &&
+            currentTaggedCount > taggedCountBeforeSubmit
+          ) {
+            return 'count';
+          }
+        }
+
+        const vehicle = document.querySelector('#txtVehicleNo');
+        if (
+          vehicle &&
+          vehicle.value.trim().toUpperCase() !==
+            String(expectedTruck)
+              .trim()
+              .toUpperCase()
+        ) {
+          return 'reset';
+        }
+
+        return false;
+      },
+      { polling: 100, timeout },
+      truckNo,
+      previousTaggedCount
+    );
+
+    return result.jsonValue();
+  }
+
+  async function markTagResultsStale(selectors) {
+    await page.evaluate(selectors => {
+      selectors.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) {
+          element.dataset.spinbiPreviousText = element.textContent.trim();
+          element.dataset.spinbiPreviousValue = element.value || '';
+          element.setAttribute('data-spinbi-stale', 'true');
+        }
+      });
+    }, selectors);
+  }
+
+  async function readPermitName(options) {
+    try {
+      return await page.$eval('#grTrAction .valueBlack', el =>
+        el ? el.innerText : ''
+      );
+    } catch (e) {
+      return (options && options.name) || '';
     }
   }
 
-  async function tagVehicle(href, truckNo, renderer, options) {
+  async function tagVehicle(truckNo, renderer, options) {
     let reason = '';
+    let permitName = '';
+    let submitAttempted = false;
+    let submitOutcomeKnown = false;
+
     try {
       log('before waiting for txtVehicleNo');
 
@@ -523,132 +780,164 @@ module.exports = function(tabNo) {
 
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
 
-      let permitName = await page.$eval(
-        '#grTrAction .valueBlack',
-        el => el.innerText
-      );
+      permitName = await readPermitName(options);
 
-      options.name = permitName;
-      console.log('permitname', permitName);
+      log('permitName', permitName);
 
       await page.$eval(
         '#txtVehicleNo',
         (el, truckNo) => {
           el.disabled = false;
           el.value = truckNo;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
         },
         truckNo
       );
 
       log('before btnsearch');
+      // Search can immediately request captcha.aspx, so clearing the cached
+      // image must happen before the postback starts.
+      captchaImage = 'Error';
+      await markTagResultsStale([
+        '#Rdo_VTS_0',
+        '#lblMsg',
+        '#lblVehicleVldInfo'
+      ]);
       await clickHelper('#btnsearch', 120000);
 
-      const r = await promiseAny(
-        page.waitForSelector('#Rdo_VTS_0', { timeout: 30000 }),
-        page.waitForSelector('#lblMsg'),
-        page.waitForSelector('#lblVehicleVldInfo')
-      );
+      const searchResult = await waitForTagSearchResult();
 
-      log('after btnsearch', r);
+      log('after btnsearch', searchResult);
 
-      if (r == 1) {
-        // let gpsStatus = await page.$eval('#Rdo_VTS_0', el => el.parentElement.textContent);
-        // log('gpsStatus', gpsStatus);
+      if (searchResult === 'vts') {
+        {
+          await clickHelper('#rdo_GPS_0');
+          await clickHelper('#Rdo_VTS_0');
 
-        // if (gpsStatus.toLowerCase() == 'no') {
-        //   log('vts not active returning false');
-        //   return {
-        //     reason: 'Inactive VTS',
-        //     name: permitName
-        //   };
-        // }
-        //await setRadioButton('#RDO_GPSSTS_0');
-        //await clickHelper('#rdo_GPS_0');
-        await clickHelper('#rdo_GPS_0');
-        await clickHelper('#Rdo_VTS_0');
-        // if (!(await page.$('#Rdo_SIM_0'))) {
-        //   return {
-        //     reason: 'Vehicle VTU Status Not Received From ORSAC.',
-        //     name: permitName
-        //   };
-        // }
-        log('before waiting for SIM');
-        await clickHelper('#Rdo_SIM_0');
-        //await setRadioButton('#Rdo_SIM_0');
+          log('before waiting for SIM');
+          await clickHelper('#Rdo_SIM_0');
 
-        await page.click('#chkClick');
-        if (captchaImage == 'Error') {
-          log('Loading captcha image error, reloading page');
-          await gotoTagPage(href);
-          return tagVehicle(href, truckNo, renderer, options);
+          try {
+            await page.waitForSelector('#chkClick', { timeout: 10000 });
+            await page.click('#chkClick');
+          } catch (e) {
+            log('chkClick wait/click skipped:', e.message);
+          }
+
+          const validCaptchaImage = await waitForCaptchaImage(10000);
+
+          if (!validCaptchaImage || validCaptchaImage === 'Error') {
+            throw new Error('Captcha image could not be loaded');
+          }
+
+          let captchaVal = await promiseWithTimeout(
+            vision(validCaptchaImage, renderer),
+            30000
+          );
+          if (
+            captchaVal === null ||
+            captchaVal === undefined ||
+            !String(captchaVal).trim()
+          ) {
+            throw new Error('Captcha recognition returned an empty value');
+          }
+          log('captchaVal', captchaVal);
+          await page.$eval(
+            '#txtcaptcha',
+            (e, val) => (e.value = val),
+            captchaVal
+          );
+          log('before btnsubmit');
+          const previousTaggedCount = await page
+            .$eval('#lbtn_count', el => {
+              const countText = el.textContent.replace(/[^0-9]/g, '');
+              const value = countText ? Number(countText) : null;
+              return Number.isFinite(value) ? value : null;
+            })
+            .catch(() => null);
+          await markTagResultsStale(['#lblMsg', '#txtVehicleNo']);
+          submitAttempted = true;
+          await clickHelper('#btnSubmit', 120000);
+          const submitResult = await waitForTagSubmitResult(
+            truckNo,
+            previousTaggedCount
+          );
+          submitOutcomeKnown = true;
+          log('after btnsubmit', submitResult);
+
+          reason = await page
+            .$eval('#lblMsg', el => (el ? el.innerText : ''))
+            .catch(() => '');
+          if (recoverableTaggingMessage(reason)) {
+            throw new Error(reason);
+          }
+          if (!reason && !['reset', 'count'].includes(submitResult)) {
+            throw new Error('Tagging result could not be confirmed');
+          }
         }
-        let captchaVal = await vision(captchaImage, renderer);
-        log('captchaVal', captchaVal);
-        await page.$eval(
-          '#txtcaptcha',
-          (e, val) => (e.value = val),
-          captchaVal
-        );
-        log('before btnsubmit');
-        await clickHelper('#btnSubmit', 120000, '#btnsearch');
-        log('after btnsubmit');
-
-        reason = await page.$eval('#lblMsg', el => el.innerText);
-        if (
-          /(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(
-            reason
-          )
-        ) {
-          return tagVehicle(href, truckNo, renderer, options);
-        }
-      } else if (r == 3) {
-        reason = await page.$eval('#lblVehicleVldInfo', el => el.innerText);
+      } else if (searchResult === 'validation') {
+        reason = await page
+          .$eval('#lblVehicleVldInfo', el => (el ? el.innerText : ''))
+          .catch(() => '');
         log('vehicle', truckNo, reason);
       } else {
-        reason = await page.$eval('#lblMsg', el => el.innerText);
+        reason = await page
+          .$eval('#lblMsg', el => (el ? el.innerText : ''))
+          .catch(() => '');
         if (!reason) {
-          reason = await page.$eval('#lblVehicleVldInfo', el => el.innerText);
+          reason = await page
+            .$eval('#lblVehicleVldInfo', el => (el ? el.innerText : ''))
+            .catch(() => '');
         }
 
-        if (
-          /(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(
-            reason
-          )
-        ) {
-          return tagVehicle(href, truckNo, renderer, options);
+        if (recoverableTaggingMessage(reason)) {
+          throw new Error(reason);
         }
       }
 
-      return { reason, name: permitName.trim() };
+      return { reason, name: (permitName || '').trim() };
     } catch (ex) {
-      let url = page.url();
+      let url = '';
+      try {
+        url = page ? page.url() : '';
+      } catch (urlError) {
+        url = '';
+      }
       error(ex.message, url);
-      if (
-        !url.includes('TransporterAssignVehicleNew.aspx') ||
-        /(execution context)|(network|timeout)/i.test(ex.message)
-      ) {
-        await gotoTagPage(href);
-        return tagVehicle(href, truckNo, renderer, options);
+
+      if (submitAttempted && !submitOutcomeKnown) {
+        ex.tagSubmissionOutcomeUnknown = true;
       }
 
-      let permitName = await page.$eval(
-        '#grTrAction .valueBlack',
-        el => el.innerText
-      );
-      console.log('permitname', permitName);
-      return { reason: false, name: permitName };
+      if (
+        !pageReady() ||
+        !url.includes('TransporterAssignVehicleNew.aspx') ||
+        recoverableTaggingMessage(ex.message)
+      ) {
+        throw ex;
+      }
+
+      permitName = await readPermitName(options);
+
+      return {
+        reason: ex.message || 'Tagging failed',
+        name: (permitName || '').trim()
+      };
     }
   }
 
   async function releasePage(href, permitNo, trucks) {
     let numberOfOptions = 3;
     let option = 2;
+    let failures = 0;
+    let lastError;
 
-    while (option <= numberOfOptions) {
+    while (option <= numberOfOptions && failures < 2) {
       try {
-        await gotoPage(href);
+        await gotoPage(href, true, 1);
 
-        await page.waitForSelector('#ddlTransporter');
+        await page.waitForSelector('#ddlTransporter', { timeout: 30000 });
 
         numberOfOptions = await page.$$eval(
           '#ddlTransporter option',
@@ -666,7 +955,7 @@ module.exports = function(tabNo) {
         await clickHelper('#btnGetVehicle');
 
         console.log('waiting for  1stFrom');
-        await page.waitForSelector('#lstFrom');
+        await page.waitForSelector('#lstFrom', { timeout: 30000 });
         let r = await page.$eval('#lstFrom', el => {
           const arr = [];
 
@@ -694,13 +983,23 @@ module.exports = function(tabNo) {
           return r;
         }
       } catch (ex) {
+        lastError = ex;
+        failures++;
         error(ex);
         if (!browser || !page) {
           break;
         }
-        await gotoPage(href);
+        if (failures < 2) {
+          await delay(2000);
+        }
       }
     }
+
+    throw new Error(
+      `Unable to read the tagged vehicle list: ${
+        (lastError && lastError.message) || 'no transporter data found'
+      }`
+    );
   }
 
   function permitDataFromTable(selector) {
@@ -724,7 +1023,9 @@ module.exports = function(tabNo) {
     const text = await page.$eval(selector, el => el.innerText);
     if (!/paging/i.test(text)) {
       await page.click(selector);
-      await page.waitForFunction('!document.querySelector(".paging")');
+      await page.waitForFunction('!document.querySelector(".paging")', {
+        polling: 100
+      });
     }
   }
 
@@ -918,11 +1219,37 @@ module.exports = function(tabNo) {
 
   async function disconnect() {
     if (browser) {
-      await browser.close();
+      const closingBrowser = browser;
       browser = null;
       page = null;
+      try {
+        await promiseWithTimeout(closingBrowser.close(), 15000);
+      } catch (ex) {
+        error('Browser close timed out; terminating process:', ex.message);
+        const browserProcess = closingBrowser.process();
+        if (browserProcess && !browserProcess.killed) {
+          browserProcess.kill();
+        }
+      }
     } else {
       return Promise.resolve();
+    }
+  }
+
+  // Reload the current page so an idle logged-in session stays warm. If the
+  // session already expired, the response interceptor logs back in during the
+  // reload. A dead page/connection drops the browser so the pool rebuilds it.
+  async function keepAlivePage() {
+    if (!pageReady()) {
+      throw new Error('Tagging page is unavailable');
+    }
+    try {
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+      return true;
+    } catch (ex) {
+      error('Keep-alive reload failed:', ex.message);
+      await disconnect();
+      throw ex;
     }
   }
 
@@ -989,6 +1316,7 @@ module.exports = function(tabNo) {
     getPage,
     companyName,
     initializeBrowser,
+    login,
     permitVehicles,
     gotoPermitTripsPage,
     lastTwoMonthPermits,
@@ -997,6 +1325,7 @@ module.exports = function(tabNo) {
     tagVehicle,
     gotoTagPage,
     disconnect,
-    openBrowser
+    openBrowser,
+    keepAlivePage
   };
 };

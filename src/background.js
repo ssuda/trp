@@ -21,7 +21,9 @@ import {
   busyFlag,
   companyName,
   disconnect,
-  openTabs
+  setTaggingBrowserVisibility,
+  startTaggingPool,
+  shutdown
 } from '../api';
 
 import gemini from '../api/gemini';
@@ -46,10 +48,8 @@ protocol.registerSchemesAsPrivileged([
 import fastq from 'fastq';
 const messageQueue = fastq(processMessage, 2);
 
-async function processMessage(message, cb) {
+async function handleMessage(message) {
   const { event, args, type } = message;
-
-  busyFlag.isBusy = true;
 
   let cancelPromiseResolve;
 
@@ -103,16 +103,10 @@ async function processMessage(message, cb) {
     case 'tag-vehicles':
       {
         console.log('tag-vehicles', args);
-        // await initializeBrowser(
-        //   args.credentials,
-        //   !args.showBrowser,
-        //   false,
-        //   disconnectHandler
-        // );
-        const r = await Promise.race([
-          cancelPromise,
-          tagVehicles(args, event.sender)
-        ]);
+        // Awaited directly: a disconnect mid-run must not orphan this job.
+        // tagVehicles recovers its own tabs and every step is timeout-bounded,
+        // so the queue slot is released only when tagging has really finished.
+        const r = await tagVehicles(args, event.sender);
         if (r) {
           console.log('sending tag-vehicles results to browser', r);
           event.sender.send('tag-results', r);
@@ -195,9 +189,29 @@ async function processMessage(message, cb) {
       }
       break;
   }
+}
 
-  cb(null);
-  busyFlag.isBusy = false;
+async function processMessage(message, cb) {
+  const { event, type } = message;
+
+  // A rejected task that skipped cb() would leak a fastq slot (two leaks
+  // wedge every queued i3ms operation) and leave busyFlag set, silently
+  // stopping the permit refresher. Every outcome lands in the finally.
+  busyFlag.isBusy = true;
+  try {
+    await handleMessage(message);
+  } catch (ex) {
+    console.error('i3ms operation failed:', type, ex.message);
+    if (event && event.sender && !event.sender.isDestroyed()) {
+      event.sender.send('i3ms-operation-failed', {
+        type,
+        message: ex.message
+      });
+    }
+  } finally {
+    cb(null);
+    busyFlag.isBusy = false;
+  }
 }
 
 function createWindow() {
@@ -297,12 +311,15 @@ ipcMain.on('open-browser', async (event, args) => {
   }
 });
 
-let tabsOpened = false;
 ipcMain.on('open-tabs', async (event, args) => {
-  console.log('open tabs called', args);
-  if (!tabsOpened) {
-    openTabs(args.numBrowsers, args.credentials, !args.showBrowser);
-    tabsOpened = true;
+  console.log('open-tabs (warming tagging pool)', args && args.numBrowsers);
+  // startTaggingPool is idempotent: ready tabs with matching credentials and
+  // headless mode are reused, missing ones are opened, so this is safe to
+  // call on every login as well as after the pool died.
+  try {
+    await startTaggingPool(args || {});
+  } catch (ex) {
+    console.error('Unable to start tagging pool:', ex.message);
   }
 });
 
@@ -325,16 +342,14 @@ ipcMain.on('auto-tagging', (event, args) => {
   newPermits(args.credentials, args.showBrowser, event.sender);
 });
 
-ipcMain.on('show-browser', async (event, args) => {
+ipcMain.on('show-browser', async () => {
   console.log('showing browsers');
-  await disconnect();
-  process.env.SHOW_BROWSER = true;
+  await setTaggingBrowserVisibility(true);
 });
 
-ipcMain.on('hide-browser', async (event, args) => {
+ipcMain.on('hide-browser', async () => {
   console.log('hiding browsers');
-  await disconnect();
-  delete process.env.SHOW_BROWSER;
+  await setTaggingBrowserVisibility(false);
 });
 
 ipcMain.on('refresh-permits', (event, args) => {
@@ -438,6 +453,29 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Close every puppeteer-controlled Chromium before quitting so no chrome
+// child processes are orphaned. First quit request runs shutdown, defers the
+// actual quit; the second passes straight through.
+let shuttingDown = false;
+app.on('before-quit', event => {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+  console.log('Closing i3ms browsers before quit...');
+  event.preventDefault();
+  const hardExitTimer = setTimeout(() => app.exit(0), 20000);
+  if (hardExitTimer.unref) {
+    hardExitTimer.unref();
+  }
+  shutdown()
+    .catch(ex => console.error('Shutdown failed:', ex.message))
+    .finally(() => {
+      clearTimeout(hardExitTimer);
+      app.quit();
+    });
 });
 
 app.on('activate', () => {

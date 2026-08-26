@@ -267,7 +267,6 @@ export default {
     }
   },
   async created() {
-    frappe.isTagging = false;
     try {
       this.doc = await frappe.getDoc('PermitAction', this.name);
       if (typeof(this.doc.permit) == 'string') {
@@ -372,13 +371,20 @@ export default {
           this.$router.back();
         });
       } else if (this.doc.action === 'tagging') {
-        frappe.isTagging = true;
+        if (frappe.isTagging) {
+          this.loading = false;
+          await showMessageDialog({
+            description: this._('Already Tagging'),
+            buttons: [{ label: _('Ok') }]
+          });
+          return;
+        }
+
         const startTimer = DateTime.local();
 
         if (!this.doc.truckList && !this.doc.trucks) {
           showMessageDialog({ message: this._('Please provide trucks') });
           this.loading = false;
-          frappe.isTagging = false;
           return;
         }
 
@@ -412,10 +418,6 @@ export default {
         //   return;
         // }
 
-        if (this.doc.showBrowser) {
-          frappe.events.trigger('show-browser');
-        }
-
         let taggedObj = permit.tagged ? JSON.parse(permit.tagged) : {};
         let tagged = Object.keys(taggedObj);
         trucks = _.difference(trucks, tagged);
@@ -434,7 +436,10 @@ export default {
         let obj = {
           credentials,
           trucks,
-          numBrowsers: this.doc.numBrowsers
+          numBrowsers: this.doc.numBrowsers,
+          // Pool mode is decided by AccountingSettings alone; a doc-level
+          // flag that differs would close the whole warm pool on start.
+          showBrowser: !!frappe.AccountingSettings.showBrowser
         };
 
         if (this.doc.permit) {
@@ -491,6 +496,10 @@ export default {
             }
           }
         }
+
+        // Action settings must remain authoritative after permit data is merged.
+        obj.numBrowsers = this.doc.numBrowsers || frappe.AccountingSettings.numBrowsers;
+        obj.showBrowser = !!frappe.AccountingSettings.showBrowser;
 
         if (trucks.length) {
           let timerInterval = setInterval(() => {
@@ -658,7 +667,16 @@ export default {
           //     buttons: [{ label: 'Ok' }]
           //   });
           // } else {
-            frappe.events.trigger('tag-vehicles', obj);
+            if (frappe.isTagging) {
+              clearInterval(timerInterval);
+              this.loading = false;
+              await showMessageDialog({
+                description: this._('Already Tagging'),
+                buttons: [{ label: _('Ok') }]
+              });
+              return;
+            }
+
             frappe.events.off('total', totalCb);
             frappe.events.off('failed', failedCb);
 
@@ -666,6 +684,7 @@ export default {
             frappe.events.on('failed', failedCb);
 
             frappe.events.once('tag-results', async () => {
+              frappe.isTagging = false;
               clearInterval(timerInterval);
               this.loading = false;
               frappe.events.off('total', totalCb);
@@ -675,12 +694,19 @@ export default {
                 buttons: [{ label: 'Ok' }]
               });
 
-              if (this.doc.showBrowser) {
-                frappe.events.trigger('hide-browser');
-              }
-              frappe.isTagging = false;
               this.$router.back();
             });
+
+            frappe.isTagging = true;
+            try {
+              frappe.events.trigger('tag-vehicles', obj);
+            } catch (error) {
+              frappe.isTagging = false;
+              clearInterval(timerInterval);
+              frappe.events.off('total', totalCb);
+              frappe.events.off('failed', failedCb);
+              throw error;
+            }
           //}
         } else {
           showMessageDialog({
@@ -692,7 +718,6 @@ export default {
             ]
           });
           this.loading = false;
-          frappe.isTagging = false;
           return;
         }
       } else if (this.doc.action === 'release') {
