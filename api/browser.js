@@ -178,19 +178,15 @@ module.exports = function(tabNo) {
       page = await browser.newPage();
     }
 
-    await page.setRequestInterception(true);
-
-    page.on('request', async request => {
-      try {
-        if (request.url().includes('verisign.com')) {
-          await request.abort().catch(() => {});
-        } else {
-          await request.continue().catch(() => {});
-        }
-      } catch (ex) {
-        // Ignore already handled or closed request errors
-      }
-    });
+    try {
+      const client = await page.target().createCDPSession();
+      await client.send('Network.enable');
+      await client.send('Network.setBlockedURLs', {
+        urls: ['*verisign.com*']
+      });
+    } catch (ex) {
+      error('Failed to configure CDP blocked URLs:', ex.message);
+    }
 
     page.on('dialog', async dialog => {
       try {
