@@ -366,7 +366,7 @@ module.exports = function(tabNo) {
           success = false;
           break;
         }
-        await delay(2000);
+        await delay(30000);
         numAttempts++;
         await page
           .reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
