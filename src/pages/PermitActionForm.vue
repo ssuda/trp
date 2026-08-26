@@ -287,14 +287,18 @@ export default {
     }
   },
 
-  deactivated () {
-    frappe.isTagging = false;
+  deactivated() {
+    if (!this.loading) {
+      frappe.isTagging = false;
+    }
     frappe.events.off('total');
     frappe.events.off('failed');
   },
 
   destroyed() {
-    frappe.isTagging = false;
+    if (!this.loading) {
+      frappe.isTagging = false;
+    }
     frappe.events.off('total');
     frappe.events.off('failed');
   },

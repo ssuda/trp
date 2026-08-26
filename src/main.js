@@ -443,7 +443,13 @@ import tessaract from '../api/tessaract';
 
           console.log('AutoTagging', autoTags);
 
-          //if (process.env.NODE_ENV !== 'development') {
+          if (frappe.isTagging) {
+            console.log(
+              'Actual tagging has started, skipping auto-tagging navigation'
+            );
+            return;
+          }
+
           const permit = autoTags[0].permit;
 
           try {
@@ -456,6 +462,13 @@ import tessaract from '../api/tessaract';
               truckList: autoTags[0].truckList,
               isCloudTagging: true
             });
+
+            if (frappe.isTagging) {
+              console.log(
+                'Actual tagging has started, skipping auto-tagging navigation'
+              );
+              return;
+            }
 
             router.push({
               name: 'PermitAction',

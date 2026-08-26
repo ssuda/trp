@@ -6,7 +6,7 @@ moment.tz.setDefault('Asia/Kolkata');
 const crypto = require('crypto');
 
 const vision = require('./captch-browser'); //require('./vision'); //require('../src/rekognition');
-const { delay, promiseAny } = require('./utils');
+const { delay, promiseAny, promiseWithTimeout } = require('./utils');
 
 function browserArgs(headless) {
   const result = [
@@ -181,16 +181,20 @@ module.exports = function(tabNo) {
     await page.setRequestInterception(true);
 
     page.on('request', async request => {
-      if (request.url().includes('verisign.com')) {
-        await request.abort();
-      } else {
-        await request.continue();
+      try {
+        if (request.url().includes('verisign.com')) {
+          await request.abort().catch(() => {});
+        } else {
+          await request.continue().catch(() => {});
+        }
+      } catch (ex) {
+        // Ignore already handled or closed request errors
       }
     });
 
     page.on('dialog', async dialog => {
       try {
-        await dialog.accept();
+        await dialog.accept().catch(() => {});
       } catch (ex) {}
     });
 
@@ -242,12 +246,15 @@ module.exports = function(tabNo) {
   }
 
   async function clickHelper(selector, timeout = 60000, waitFor = null) {
+    await page.waitForSelector(selector, { timeout: Math.min(timeout, 30000) });
     await page.evaluate(selector => {
-      document.querySelector(selector).click();
+      const el = document.querySelector(selector);
+      if (el) el.click();
     }, selector);
 
-    await page.waitForSelector(waitFor || selector, { timeout });
-    //await page.waitForNavigation({ timeout, waitUntil })
+    if (waitFor) {
+      await page.waitForSelector(waitFor, { timeout });
+    }
   }
 
   function setRadioButton(selector) {
@@ -340,7 +347,7 @@ module.exports = function(tabNo) {
 
     mainUrl = href;
 
-    while (numAttempts < 80) {
+    while (numAttempts <= 3) {
       try {
         if (!browser || !page) {
           success = false;
@@ -348,7 +355,8 @@ module.exports = function(tabNo) {
         }
         await page.goto(href, {
           referer,
-          waitUntil: 'domcontentloaded'
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
         });
         success = true;
         break;
@@ -358,9 +366,11 @@ module.exports = function(tabNo) {
           success = false;
           break;
         }
-        await delay(5000);
+        await delay(2000);
         numAttempts++;
-        await page.reload();
+        await page
+          .reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
+          .catch(() => {});
         success = false;
       }
     }
@@ -514,7 +524,18 @@ module.exports = function(tabNo) {
     }
   }
 
-  async function tagVehicle(href, truckNo, renderer, options) {
+  async function waitForCaptchaImage(timeoutMs = 6000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (captchaImage && captchaImage !== 'Error') {
+        return true;
+      }
+      await delay(100);
+    }
+    return false;
+  }
+
+  async function tagVehicle(href, truckNo, renderer, options, attempt = 0) {
     let reason = '';
     try {
       log('before waiting for txtVehicleNo');
@@ -523,10 +544,9 @@ module.exports = function(tabNo) {
 
       await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
 
-      let permitName = await page.$eval(
-        '#grTrAction .valueBlack',
-        el => el.innerText
-      );
+      let permitName = await page
+        .$eval('#grTrAction .valueBlack', el => el.innerText)
+        .catch(() => options.name || '');
 
       options.name = permitName;
       console.log('permitname', permitName);
@@ -545,44 +565,45 @@ module.exports = function(tabNo) {
 
       const r = await promiseAny(
         page.waitForSelector('#Rdo_VTS_0', { timeout: 30000 }),
-        page.waitForSelector('#lblMsg'),
-        page.waitForSelector('#lblVehicleVldInfo')
+        page.waitForFunction(
+          () => {
+            const m = document.querySelector('#lblMsg');
+            const v = document.querySelector('#lblVehicleVldInfo');
+            return (
+              (m && m.innerText && m.innerText.trim()) ||
+              (v && v.innerText && v.innerText.trim())
+            );
+          },
+          { timeout: 30000 }
+        )
       );
 
       log('after btnsearch', r);
 
       if (r == 1) {
-        // let gpsStatus = await page.$eval('#Rdo_VTS_0', el => el.parentElement.textContent);
-        // log('gpsStatus', gpsStatus);
-
-        // if (gpsStatus.toLowerCase() == 'no') {
-        //   log('vts not active returning false');
-        //   return {
-        //     reason: 'Inactive VTS',
-        //     name: permitName
-        //   };
-        // }
-        //await setRadioButton('#RDO_GPSSTS_0');
-        //await clickHelper('#rdo_GPS_0');
         await clickHelper('#rdo_GPS_0');
         await clickHelper('#Rdo_VTS_0');
-        // if (!(await page.$('#Rdo_SIM_0'))) {
-        //   return {
-        //     reason: 'Vehicle VTU Status Not Received From ORSAC.',
-        //     name: permitName
-        //   };
-        // }
         log('before waiting for SIM');
         await clickHelper('#Rdo_SIM_0');
-        //await setRadioButton('#Rdo_SIM_0');
 
         await page.click('#chkClick');
-        if (captchaImage == 'Error') {
+        const gotCaptcha = await waitForCaptchaImage(6000);
+        if (!gotCaptcha) {
           log('Loading captcha image error, reloading page');
-          await gotoTagPage(href);
-          return tagVehicle(href, truckNo, renderer, options);
+          if (attempt < 2) {
+            await gotoTagPage(href);
+            return tagVehicle(href, truckNo, renderer, options, attempt + 1);
+          }
+          return {
+            reason: 'Loading captcha image timed out',
+            name: (permitName || '').trim()
+          };
         }
-        let captchaVal = await vision(captchaImage, renderer);
+
+        let captchaVal = await promiseWithTimeout(
+          vision(captchaImage, renderer),
+          20000
+        );
         log('captchaVal', captchaVal);
         await page.$eval(
           '#txtcaptcha',
@@ -590,24 +611,50 @@ module.exports = function(tabNo) {
           captchaVal
         );
         log('before btnsubmit');
-        await clickHelper('#btnSubmit', 120000, '#btnsearch');
+        await page.evaluate(() => {
+          const btn = document.querySelector('#btnSubmit');
+          if (btn) btn.click();
+        });
+
+        await page
+          .waitForFunction(
+            () => {
+              const m = document.querySelector('#lblMsg');
+              const v = document.querySelector('#lblVehicleVldInfo');
+              return (
+                (m && m.innerText && m.innerText.trim()) ||
+                (v && v.innerText && v.innerText.trim()) ||
+                !window.location.href.includes(
+                  'TransporterAssignVehicleNew.aspx'
+                )
+              );
+            },
+            { timeout: 45000 }
+          )
+          .catch(() => {});
         log('after btnsubmit');
 
-        reason = await page.$eval('#lblMsg', el => el.innerText);
+        reason = await page
+          .$eval('#lblMsg', el => el.innerText)
+          .catch(() => '');
         if (
           /(something wrong)|(in correct captcha)|(error)|(timeout)/i.test(
             reason
           )
         ) {
-          return tagVehicle(href, truckNo, renderer, options);
+          if (attempt < 2) {
+            await gotoTagPage(href);
+            return tagVehicle(href, truckNo, renderer, options, attempt + 1);
+          }
         }
-      } else if (r == 3) {
-        reason = await page.$eval('#lblVehicleVldInfo', el => el.innerText);
-        log('vehicle', truckNo, reason);
       } else {
-        reason = await page.$eval('#lblMsg', el => el.innerText);
+        reason = await page
+          .$eval('#lblVehicleVldInfo', el => el.innerText)
+          .catch(() => '');
         if (!reason) {
-          reason = await page.$eval('#lblVehicleVldInfo', el => el.innerText);
+          reason = await page
+            .$eval('#lblMsg', el => el.innerText)
+            .catch(() => '');
         }
 
         if (
@@ -615,28 +662,24 @@ module.exports = function(tabNo) {
             reason
           )
         ) {
-          return tagVehicle(href, truckNo, renderer, options);
+          if (attempt < 2) {
+            await gotoTagPage(href);
+            return tagVehicle(href, truckNo, renderer, options, attempt + 1);
+          }
         }
       }
 
-      return { reason, name: permitName.trim() };
+      return { reason, name: (permitName || '').trim() };
     } catch (ex) {
-      let url = page.url();
+      let url = page ? page.url() : '';
       error(ex.message, url);
-      if (
-        !url.includes('TransporterAssignVehicleNew.aspx') ||
-        /(execution context)|(network|timeout)/i.test(ex.message)
-      ) {
+      if (attempt < 2) {
         await gotoTagPage(href);
-        return tagVehicle(href, truckNo, renderer, options);
+        return tagVehicle(href, truckNo, renderer, options, attempt + 1);
       }
 
-      let permitName = await page.$eval(
-        '#grTrAction .valueBlack',
-        el => el.innerText
-      );
-      console.log('permitname', permitName);
-      return { reason: false, name: permitName };
+      let permitName = options.name || '';
+      return { reason: ex.message || false, name: permitName };
     }
   }
 
