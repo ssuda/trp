@@ -5,7 +5,7 @@ import coreModels from 'frappejs/models';
 import FeatherIcon from 'frappejs/ui/components/FeatherIcon';
 import outsideClickDirective from 'frappejs/ui/plugins/outsideClickDirective';
 import models from '../models';
-import { ipcMain, ipcRenderer } from 'electron';
+import { ipcRenderer } from 'electron';
 import { firestore } from '@/firebase';
 import moment from 'moment';
 
@@ -25,7 +25,6 @@ import Document from 'frappejs/model/document';
 import { FieldValue } from '@/firebase';
 import { normalizeCompanyName } from './utils';
 import { DateTime } from 'luxon';
-import tessaract from '../api/tessaract';
 
 (async () => {
   frappe.isServer = true;
@@ -200,12 +199,6 @@ import tessaract from '../api/tessaract';
     frappe.events.trigger('permits-details-results', e);
   });
 
-  ipcRenderer.on('captcha', async (evt, payload) => {
-    console.log('Received captcha image from background', payload);
-    const resp = await tessaract(payload.image);
-    evt.sender.send('captcha-response', { data: resp, id: payload.id });
-  });
-
   ipcRenderer.on('sample', async (evt, data) => {
     console.log('Received sample data', data);
   });
@@ -220,7 +213,6 @@ import tessaract from '../api/tessaract';
 
   frappe.events.on('tag-vehicles', permit => {
     console.log('received tagvehicles', permit);
-    ipcRenderer.send('tag-vehicles', permit);
 
     ipcRenderer.once('tag-results', function(e, response) {
       ipcRenderer.removeAllListeners('tag-result');
@@ -287,6 +279,10 @@ import tessaract from '../api/tessaract';
         });
       }
     });
+
+    // Register completion and progress listeners before dispatch. Fast jobs
+    // must not be able to return before the renderer starts listening.
+    ipcRenderer.send('tag-vehicles', permit);
   });
 
   frappe.events.on('release-vehicles', permit => {

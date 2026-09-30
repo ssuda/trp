@@ -503,6 +503,39 @@ module.exports = function(tabNo) {
     return loginPromise;
   }
 
+  function isCurrentTagPage(href) {
+    if (!page) {
+      return false;
+    }
+    try {
+      const currentUrl = new URL(page.url());
+      const targetUrl = new URL(href);
+      return (
+        currentUrl.origin.toLowerCase() === targetUrl.origin.toLowerCase() &&
+        currentUrl.pathname.toLowerCase() ===
+          targetUrl.pathname.toLowerCase() &&
+        currentUrl.search === targetUrl.search
+      );
+    } catch (ex) {
+      return page.url() === href;
+    }
+  }
+
+  async function currentTagPageData(timeout = 30000) {
+    const r = await gridData('#grTrAction', { timeout });
+    await page.waitForSelector('#txtVehicleNo', { timeout });
+    const v = await page
+      .$eval('#lbtn_count', el => el.innerText)
+      .catch(() => '');
+    if (v) {
+      const tagged = parseInt(String(v).replace(/[^0-9]/g, ''), 10);
+      if (Number.isFinite(tagged)) {
+        r.tagged = tagged;
+      }
+    }
+    return r;
+  }
+
   async function gotoTagPage(href) {
     if (!href) {
       throw new Error('Tagging URL is unavailable');
@@ -512,23 +545,23 @@ module.exports = function(tabNo) {
     } catch (ex) {
       // Keep the original URL when it is not correctly encoded.
     }
+
+    if (isCurrentTagPage(href)) {
+      try {
+        const data = await currentTagPageData(1000);
+        log('Reusing loaded tagging page');
+        return data;
+      } catch (ex) {
+        log('Loaded tagging page is not ready; reloading it');
+      }
+    }
+
     let lastError;
 
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         await gotoPage(href, 1);
-        const r = await gridData('#grTrAction', { timeout: 30000 });
-        await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
-        const v = await page
-          .$eval('#lbtn_count', el => el.innerText)
-          .catch(() => '');
-        if (v) {
-          const tagged = parseInt(String(v).replace(/[^0-9]/g, ''), 10);
-          if (Number.isFinite(tagged)) {
-            r.tagged = tagged;
-          }
-        }
-        return r;
+        return await currentTagPageData();
       } catch (ex) {
         lastError = ex;
         error(`Tag page attempt ${attempt}/2 failed:`, ex.message);

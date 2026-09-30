@@ -3,11 +3,12 @@ moment.tz.setDefault('Asia/Kolkata');
 require('console-stamp')(console, '[HH:MM:ss.l]');
 
 const browser = require('./browser');
+const captchaOcr = require('./tessaract');
 
 const i3ms = browser();
 const _ = require('lodash');
 
-const { delay, promiseWithTimeout } = require('./utils');
+const { delay } = require('./utils');
 
 export let busyFlag = {
   isBusy: false
@@ -424,9 +425,10 @@ export async function getPermit(permit, sse, browser = i3ms) {
 
 export async function tagging(tab, vehicles, options, renderer, tabNo) {
   const { taggingUrl } = options;
+  const results = {};
 
   if (!Array.isArray(vehicles) || !vehicles.length) {
-    return;
+    return results;
   }
 
   for (let count = 0; count < vehicles.length; count++) {
@@ -437,12 +439,10 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
       } catch (recoveryError) {
         console.error('Tab', tabNo, 'recovery failed:', recoveryError.message);
         for (; count < vehicles.length; count++) {
-          sendTagFailure(
-            renderer,
-            options,
-            vehicles[count],
-            recoveryError.message || 'Tagging browser disconnected'
-          );
+          const reason =
+            recoveryError.message || 'Tagging browser disconnected';
+          results[vehicles[count]] = reason;
+          sendTagFailure(renderer, options, vehicles[count], reason);
         }
         break;
       }
@@ -464,6 +464,7 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
       if (reason && /is already tagged/i.test(reason)) {
         reason = 'Already Tagged by SomeOne';
       }
+      results[truck] = reason;
 
       if (renderer) {
         renderer.send('total', 1);
@@ -494,11 +495,14 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
           resetError.message
         );
       });
-      sendTagFailure(renderer, options, truck, ex.message || 'Tagging failed');
+      const reason = ex.message || 'Tagging failed';
+      results[truck] = reason;
+      sendTagFailure(renderer, options, truck, reason);
     }
   }
 
   console.log('Tab', tabNo, 'Tagging ended');
+  return results;
 }
 
 function sendTagFailure(renderer, options, truck, reason) {
@@ -519,7 +523,7 @@ function sendTagFailure(renderer, options, truck, reason) {
 
 async function tabTagging(taggingUrl, tab, chunk, options, sse, tabNo) {
   await tab.gotoTagPage(taggingUrl);
-  await tagging(tab, chunk, options, sse, tabNo);
+  return tagging(tab, chunk, options, sse, tabNo);
 }
 
 let tabs = [];
@@ -587,6 +591,7 @@ async function recoverTaggingTab(tabNo, options) {
 export function openTabs(numTabs, credentials, headless = true) {
   console.log('open tabs called in api/index.js');
   const parsedNumTabs = Math.max(1, Math.floor(Number(numTabs) || 1));
+  captchaOcr.setProcessLimit(parsedNumTabs);
 
   tabsReady = tabsReady
     .catch(() => {})
@@ -679,7 +684,7 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
     const readyTabEntries = tabs
       .map((tab, tabNo) => ({ tab, tabNo }))
       .filter(entry => tabReady(entry.tab))
-      .slice(0, trucks.length);
+      .slice(0, Math.min(requestedBrowsers, trucks.length));
     if (!readyTabEntries.length) {
       trucks.forEach(truck =>
         sendTagFailure(sse, options, truck, 'No tagging browser is available')
@@ -687,12 +692,16 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
       return {};
     }
 
+    console.log(
+      `Tagging ${trucks.length} trucks with ${readyTabEntries.length} browsers`
+    );
+
     const chunks = _.chunk(
       trucks,
       Math.ceil(trucks.length / readyTabEntries.length)
     );
 
-    await Promise.all(
+    const tabResults = await Promise.all(
       readyTabEntries.map((entry, i) => {
         return tabTagging(
           taggingUrl,
@@ -703,9 +712,13 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
           entry.tabNo
         ).catch(ex => {
           console.error('Tab', entry.tabNo, 'tagging stopped:', ex.message);
-          (chunks[i] || []).forEach(truck =>
-            sendTagFailure(sse, options, truck, ex.message || 'Tagging failed')
-          );
+          const failed = {};
+          (chunks[i] || []).forEach(truck => {
+            const reason = ex.message || 'Tagging failed';
+            failed[truck] = reason;
+            sendTagFailure(sse, options, truck, reason);
+          });
+          return failed;
         });
       })
     );
@@ -724,32 +737,7 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
     //   );
     // }
 
-    console.log('Fetching Successfully Tagged', options.name);
-
-    let tagged = {};
-    const verificationTab = readyTabEntries[0].tab;
-    try {
-      tagged = await promiseWithTimeout(
-        successfullyTagged(options.name, null, verificationTab),
-        90000
-      );
-    } catch (verificationError) {
-      console.error(
-        'Final tag verification failed without blocking completion:',
-        verificationError.message
-      );
-      if (/timed out/i.test(verificationError.message)) {
-        await verificationTab.disconnect().catch(() => {});
-        const tabIndex = tabs.indexOf(verificationTab);
-        if (tabIndex >= 0) {
-          tabs[tabIndex] = null;
-        }
-      }
-    }
-
-    // for (let i = 0; i < numTabs; ++i) {
-    //   await tabs[i].disconnect();
-    // }
+    const tagged = Object.assign({}, ...tabResults);
 
     console.log('Complete End of Tagging');
 
