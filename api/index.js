@@ -425,16 +425,38 @@ export async function getPermit(permit, sse, browser = i3ms) {
 export async function tagging(tab, vehicles, options, renderer, tabNo) {
   const { taggingUrl } = options;
 
-  for (let count = 0; count < vehicles.length; ) {
-    if (!tab.getBrowser()) return Promise.resolve();
+  if (!Array.isArray(vehicles) || !vehicles.length) {
+    return;
+  }
+
+  for (let count = 0; count < vehicles.length; count++) {
+    if (!tabReady(tab)) {
+      try {
+        tab = await recoverTaggingTab(tabNo, options);
+        await tab.gotoTagPage(taggingUrl);
+      } catch (recoveryError) {
+        console.error('Tab', tabNo, 'recovery failed:', recoveryError.message);
+        for (; count < vehicles.length; count++) {
+          sendTagFailure(
+            renderer,
+            options,
+            vehicles[count],
+            recoveryError.message || 'Tagging browser disconnected'
+          );
+        }
+        break;
+      }
+    }
 
     let truck = vehicles[count];
 
     console.log('Tab', tabNo, 'tagging vehicle', count);
     try {
-      let { reason, name } = await promiseWithTimeout(
-        tab.tagVehicle(taggingUrl, truck, renderer, options),
-        120000
+      let { reason, name } = await tab.tagVehicle(
+        taggingUrl,
+        truck,
+        renderer,
+        options
       );
 
       console.log('Tab', tabNo, 'tagged vehicle', count, reason);
@@ -453,7 +475,7 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
         }
       }
 
-      if (reason || reason === '') {
+      if (renderer && (reason || reason === '')) {
         renderer.send('tag-result', {
           name,
           taggingUrl,
@@ -462,14 +484,37 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
           }
         });
       }
-      count++;
     } catch (ex) {
       console.log('Tab', tabNo, 'tagged vehicle', count, ex.message);
-      await tab.gotoTagPage(taggingUrl);
+      await tab.gotoTagPage(taggingUrl).catch(resetError => {
+        console.error(
+          'Tab',
+          tabNo,
+          'failed resetting tag page:',
+          resetError.message
+        );
+      });
+      sendTagFailure(renderer, options, truck, ex.message || 'Tagging failed');
     }
   }
 
   console.log('Tab', tabNo, 'Tagging ended');
+}
+
+function sendTagFailure(renderer, options, truck, reason) {
+  if (!renderer || typeof renderer.send !== 'function') {
+    return;
+  }
+
+  renderer.send('total', 1);
+  renderer.send('failed', 1);
+  renderer.send('tag-result', {
+    name: (options && options.name) || '',
+    taggingUrl: options && options.taggingUrl,
+    truck: {
+      [truck]: reason
+    }
+  });
 }
 
 async function tabTagging(taggingUrl, tab, chunk, options, sse, tabNo) {
@@ -478,40 +523,190 @@ async function tabTagging(taggingUrl, tab, chunk, options, sse, tabNo) {
 }
 
 let tabs = [];
+let tabsReady = Promise.resolve();
+let taggingCredentials;
+let taggingHeadless;
 
-async function tagFromTab(taggingUrl, chunk, options, sse, tabNo) {
-  const tab = tabs[tabNo];
-  await tabTagging(taggingUrl, tab, chunk, options, sse, tabNo);
+function tabReady(tab) {
+  const tabBrowser = tab && tab.getBrowser();
+  const tabPage = tab && tab.getPage();
+  return Boolean(
+    tabBrowser &&
+      (typeof tabBrowser.isConnected !== 'function' ||
+        tabBrowser.isConnected()) &&
+      tabPage &&
+      (typeof tabPage.isClosed !== 'function' || !tabPage.isClosed())
+  );
+}
+
+function sameCredentials(first, second) {
+  return Boolean(
+    first &&
+      second &&
+      first.username === second.username &&
+      first.password === second.password
+  );
+}
+
+async function resetTabs() {
+  const oldTabs = tabs;
+  tabs = [];
+  await Promise.all(
+    oldTabs.map(tab => (tab ? tab.disconnect().catch(() => {}) : null))
+  );
 }
 
 async function openTab(tabNo, credentials, headless) {
   const tab = browser(tabNo);
-  tabs.push(tab);
-  await tab.initializeBrowser(credentials, headless, !!credentials);
+  tabs[tabNo] = tab;
+
+  try {
+    await tab.initializeBrowser(credentials, headless, !!credentials);
+    return true;
+  } catch (ex) {
+    console.error('Tab', tabNo, 'failed to initialize:', ex.message);
+    await tab.disconnect().catch(() => {});
+    tabs[tabNo] = null;
+    return false;
+  }
+}
+
+async function recoverTaggingTab(tabNo, options) {
+  const opened = await openTab(
+    tabNo,
+    options.credentials,
+    !options.showBrowser
+  );
+  if (!opened || !tabReady(tabs[tabNo])) {
+    throw new Error(`Unable to recover tagging browser ${tabNo + 1}`);
+  }
+  console.log('Recovered tagging browser', tabNo + 1);
+  return tabs[tabNo];
 }
 
 export function openTabs(numTabs, credentials, headless = true) {
   console.log('open tabs called in api/index.js');
-  return Promise.all(
-    [...Array(numTabs).keys()].map(i => {
-      return openTab(i, credentials, headless);
-    })
+  const parsedNumTabs = Math.max(1, Math.floor(Number(numTabs) || 1));
+
+  tabsReady = tabsReady
+    .catch(() => {})
+    .then(async () => {
+      if (
+        !sameCredentials(taggingCredentials, credentials) ||
+        taggingHeadless !== headless
+      ) {
+        await resetTabs();
+      }
+
+      taggingCredentials = credentials;
+      taggingHeadless = headless;
+
+      await Promise.all(
+        [...Array(parsedNumTabs).keys()].map(i => {
+          if (tabReady(tabs[i])) {
+            return true;
+          }
+          return openTab(i, credentials, headless);
+        })
+      );
+
+      return tabs;
+    });
+
+  return tabsReady;
+}
+
+export async function startTaggingPool(options = {}) {
+  if (
+    !options.credentials ||
+    !options.credentials.username ||
+    !options.credentials.password
+  ) {
+    throw new Error('Cannot start tagging pool: i3ms credentials are missing');
+  }
+
+  return openTabs(
+    options.numBrowsers || 10,
+    options.credentials,
+    !options.showBrowser
   );
 }
 
-async function tagFromTabs(taggingUrl, chunks, options, sse) {
+export async function setTaggingBrowserVisibility(showBrowser) {
+  const desiredHeadless = !showBrowser;
+  await tabsReady.catch(() => {});
+
+  if (tabs.some(tabReady) && taggingHeadless !== desiredHeadless) {
+    const credentials = taggingCredentials;
+    const poolSize = Math.max(1, tabs.length);
+    await resetTabs();
+    taggingHeadless = undefined;
+    if (credentials && credentials.username) {
+      await openTabs(poolSize, credentials, desiredHeadless);
+    }
+  }
+}
+
+export async function shutdown() {
+  await tabsReady.catch(() => {});
+  await resetTabs();
+  taggingCredentials = null;
+  taggingHeadless = undefined;
+
+  if (newPermitBrowser) {
+    await newPermitBrowser.disconnect().catch(() => {});
+    newPermitBrowser = null;
+  }
+  if (refreshBrowser) {
+    await refreshBrowser.disconnect().catch(() => {});
+    refreshBrowser = null;
+  }
+  await i3ms.disconnect().catch(() => {});
+}
+
+async function tagFromTabs(taggingUrl, trucks, options, sse) {
   try {
-    if (!tabs.length) {
-      await openTabs(
-        options.numBrowsers || 10,
-        options.credentials,
-        options.showBrowser
+    const requestedBrowsers = Math.max(
+      1,
+      Math.floor(Number(options.numBrowsers) || tabs.length || 10)
+    );
+    await openTabs(
+      requestedBrowsers,
+      options.credentials,
+      !options.showBrowser
+    );
+
+    const readyTabEntries = tabs
+      .map((tab, tabNo) => ({ tab, tabNo }))
+      .filter(entry => tabReady(entry.tab))
+      .slice(0, trucks.length);
+    if (!readyTabEntries.length) {
+      trucks.forEach(truck =>
+        sendTagFailure(sse, options, truck, 'No tagging browser is available')
       );
+      return {};
     }
 
+    const chunks = _.chunk(
+      trucks,
+      Math.ceil(trucks.length / readyTabEntries.length)
+    );
+
     await Promise.all(
-      tabs.map((_, i) => {
-        return tagFromTab(taggingUrl, chunks[i], options, sse, i);
+      readyTabEntries.map((entry, i) => {
+        return tabTagging(
+          taggingUrl,
+          entry.tab,
+          chunks[i],
+          options,
+          sse,
+          entry.tabNo
+        ).catch(ex => {
+          console.error('Tab', entry.tabNo, 'tagging stopped:', ex.message);
+          (chunks[i] || []).forEach(truck =>
+            sendTagFailure(sse, options, truck, ex.message || 'Tagging failed')
+          );
+        });
       })
     );
 
@@ -531,7 +726,26 @@ async function tagFromTabs(taggingUrl, chunks, options, sse) {
 
     console.log('Fetching Successfully Tagged', options.name);
 
-    const tagged = await successfullyTagged(options.name, null, tabs[0]);
+    let tagged = {};
+    const verificationTab = readyTabEntries[0].tab;
+    try {
+      tagged = await promiseWithTimeout(
+        successfullyTagged(options.name, null, verificationTab),
+        90000
+      );
+    } catch (verificationError) {
+      console.error(
+        'Final tag verification failed without blocking completion:',
+        verificationError.message
+      );
+      if (/timed out/i.test(verificationError.message)) {
+        await verificationTab.disconnect().catch(() => {});
+        const tabIndex = tabs.indexOf(verificationTab);
+        if (tabIndex >= 0) {
+          tabs[tabIndex] = null;
+        }
+      }
+    }
 
     // for (let i = 0; i < numTabs; ++i) {
     //   await tabs[i].disconnect();
@@ -542,21 +756,20 @@ async function tagFromTabs(taggingUrl, chunks, options, sse) {
     return tagged;
   } catch (ex) {
     console.error(ex);
+    return {};
   }
 }
 
 export async function tagVehicles(options, sse) {
-  const { taggingUrl, name: permitNumber, trucks } = options;
-  let chunks = _.chunk(
-    trucks,
-    Math.ceil(trucks.length / (+options.numBrowsers || tabs.length))
-  );
+  const { taggingUrl, trucks } = options;
   try {
-    if (trucks.length) {
-      return tagFromTabs(taggingUrl, chunks, options, sse);
+    if (Array.isArray(trucks) && trucks.length) {
+      return await tagFromTabs(taggingUrl, trucks, options, sse);
     }
+    return {};
   } catch (ex) {
     console.error(ex);
+    return {};
   }
 }
 

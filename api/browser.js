@@ -152,9 +152,18 @@ module.exports = function(tabNo) {
         //executablePath: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe', //findChrome(),
         //executablePath,//findChrome(),
         defaultViewport: defaultViewport(headless),
-        timeout: 0
+        timeout: 60000
       });
-      browser.on('error', () => page.reload());
+      browser.on('error', ex => {
+        error('Browser error:', ex.message);
+        if (page && !page.isClosed()) {
+          page
+            .reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
+            .catch(reloadError =>
+              error('Browser reload failed:', reloadError.message)
+            );
+        }
+      });
       browser.on('disconnected', disconnectHandler);
     }
   }
@@ -259,8 +268,8 @@ module.exports = function(tabNo) {
     }, selector);
   }
 
-  async function gridData(selector) {
-    await page.waitForSelector(selector);
+  async function gridData(selector, options) {
+    await page.waitForSelector(selector, options);
     let rows = await page.$$eval(`${selector} tr`, trs => {
       return trs.map(tr => tr.innerText);
     });
@@ -330,48 +339,57 @@ module.exports = function(tabNo) {
     );
   }
 
-  async function gotoPage(href) {
+  async function gotoPage(href, maxAttempts = 2) {
     if (!browser || !page || !href) {
-      return;
+      throw new Error('Browser, page, or destination URL is unavailable');
     }
 
-    href = decodeURI(href);
-    let referer = await page.url();
-
-    let numAttempts = 1;
-    let success = true;
+    try {
+      href = decodeURI(href);
+    } catch (ex) {
+      // Keep the original URL when it is not correctly encoded.
+    }
+    const referer = await page.url();
+    let lastError;
 
     mainUrl = href;
 
-    while (numAttempts <= 3) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         if (!browser || !page) {
-          success = false;
-          break;
+          throw new Error('Browser disconnected during navigation');
         }
         await page.goto(href, {
           referer,
           waitUntil: 'domcontentloaded',
           timeout: 30000
         });
-        success = true;
-        break;
+
+        if (/\/(i3msnew1|Default)\.aspx/i.test(page.url())) {
+          log('Session expired while loading page; waiting for login');
+          await login();
+        }
+        return true;
       } catch (ex) {
-        error(ex);
-        if (!browser || !page || /net::ERR_/i.test(ex.message)) {
-          success = false;
+        lastError = ex;
+        error(
+          `Navigation attempt ${attempt}/${maxAttempts} failed:`,
+          ex.message
+        );
+        if (!browser || !page) {
           break;
         }
-        await delay(30000);
-        numAttempts++;
-        await page
-          .reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
-          .catch(() => {});
-        success = false;
+        if (attempt < maxAttempts) {
+          await delay(2000);
+        }
       }
     }
 
-    return success;
+    throw new Error(
+      `Unable to load i3ms page after ${maxAttempts} attempts: ${(lastError &&
+        lastError.message) ||
+        href}`
+    );
   }
 
   function generateUID(length) {
@@ -382,142 +400,148 @@ module.exports = function(tabNo) {
       .substring(0, length);
   }
 
-  let newLoginInProgress = false;
-  async function login(retry) {
-    if (!retry) {
-      retry = 0;
+  let loginPromise;
+
+  async function performLogin() {
+    if (
+      !page ||
+      !credentials ||
+      !credentials.username ||
+      !credentials.password
+    ) {
+      throw new Error('i3ms login credentials are unavailable');
     }
 
-    // if (retry > 10) {
-    //  console.log('password wrong');
-    //  return;
-    // }
+    let lastError;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const today = new Date();
+        const date =
+          today.getFullYear() +
+          '-' +
+          (today.getMonth() + 1) +
+          '-' +
+          today.getDate();
+        const time =
+          today.getHours() +
+          ':' +
+          today.getMinutes() +
+          ':' +
+          today.getSeconds();
+        const no = generateUID(256);
+        const encodedString = Buffer.from(
+          '09' + no + '/' + date + ' ' + time
+        ).toString('base64');
+        const loginUrl =
+          'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString;
 
-    try {
-      if (!page) {
-        return;
-      }
+        log('Logging into', loginUrl, `attempt ${attempt}/3`);
+        await page.goto(loginUrl, {
+          referer: 'https://i3ms.odishaminerals.gov.in/i3msnew1.aspx',
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
+        });
+        await page.waitForSelector('#btnSubmit', { timeout: 20000 });
+        await fill('#txtusr', credentials.username);
+        await fill('#txtpwd', credentials.password);
 
-      var today = new Date();
-      var date =
-        today.getFullYear() +
-        '-' +
-        (today.getMonth() + 1) +
-        '-' +
-        today.getDate();
-      var time =
-        today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
-      var dateTime = date + ' ' + time;
+        const dashboardResponse = page
+          .waitForResponse(
+            response => response.url().includes('/Dashboard_TR.aspx'),
+            { timeout: 30000 }
+          )
+          .then(() => true)
+          .catch(() => false);
 
-      let no = generateUID(256);
-      let string = '09' + no + '/' + dateTime;
-      let encodedString = Buffer.from(string).toString('base64');
+        await page.click('#btnSubmit');
+        const reachedDashboard = await dashboardResponse;
+        const message = await page
+          .$eval('#lblMsg', el => el.innerText)
+          .catch(() => '');
 
-      console.log(
-        'Tab',
-        tabNo,
-        'Logging into ',
-        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString,
-        retry
-      );
-
-      newLoginInProgress = true;
-      await page.goto(
-        'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString,
-        {
-          referer: 'https://i3ms.odishaminerals.gov.in/i3msnew1.aspx'
-        }
-      );
-
-      await page.waitForSelector('#btnSubmit');
-      await fill('#txtusr', credentials.username);
-      await fill('#txtpwd', credentials.password);
-
-      const httpResponseWeWaitForPromise = page.waitForResponse(
-        'https://i3ms.odishaminerals.gov.in/Dashboard_TR.aspx'
-      );
-
-      await page.click('#btnSubmit');
-
-      newLoginInProgress = false;
-
-      let r = await promiseAny([httpResponseWeWaitForPromise, delay(30000)]);
-
-      if (newLoginInProgress) {
-        return;
-      }
-
-      log('return from race', r);
-      if (r == 2) {
-        log('Calling login() again because of timeout');
-        let message = await page.$eval('#lblMsg', el => el.innerText);
         if (/password is incorrect/i.test(message)) {
-          console.log('password wrong');
-          return;
+          throw new Error('i3ms password is incorrect');
         }
-        return login(retry + 1);
-      }
+        if (
+          !reachedDashboard &&
+          /\/(i3msnew1|Default)\.aspx/i.test(page.url())
+        ) {
+          throw new Error(message || 'i3ms login timed out');
+        }
 
-      await delay(5000);
-      // try {
-      //   await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 });
-      // } catch(ex) {
-      // }
-
-      if (newLoginInProgress) {
-        return;
-      }
-
-      log('Before loggedin');
-      let url = await page.url();
-
-      if (newLoginInProgress) {
-        return;
-      }
-
-      if (url.includes('/Default.aspx')) {
-        log('Calling login() again because url is same');
-        return login(retry + 1);
-      } else {
         log('loggedin');
-        if (mainUrl && page) {
+        if (mainUrl && mainUrl !== loginUrl) {
           log('Going to url', mainUrl);
-          try {
-            await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
-          } catch (ex) {
-            await page.goto(mainUrl, { waitUntil: 'domcontentloaded' });
-          }
+          await page.goto(mainUrl, {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
+          });
+        }
+        return true;
+      } catch (ex) {
+        lastError = ex;
+        error(`Login attempt ${attempt}/3 failed:`, ex.message);
+        if (/password is incorrect/i.test(ex.message)) {
+          throw ex;
         }
       }
-    } catch (ex) {
-      error(ex.message);
-      if (!/(execution context)|(network|timeout|net::ERR)/i.test(ex.message)) {
-        await delay(60000);
-      }
-      return login(retry + 1);
     }
+
+    throw new Error(
+      `Unable to log in to i3ms after 3 attempts: ${(lastError &&
+        lastError.message) ||
+        'unknown error'}`
+    );
+  }
+
+  function login() {
+    if (!loginPromise) {
+      loginPromise = performLogin().finally(() => {
+        loginPromise = null;
+      });
+    }
+    return loginPromise;
   }
 
   async function gotoTagPage(href) {
-    href = decodeURIComponent(href);
-    let retries = 0;
+    if (!href) {
+      throw new Error('Tagging URL is unavailable');
+    }
+    try {
+      href = decodeURIComponent(href);
+    } catch (ex) {
+      // Keep the original URL when it is not correctly encoded.
+    }
+    let lastError;
 
-    while (retries < 3) {
-      await gotoPage(href);
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const r = await gridData('#grTrAction');
-        const v = await page.$eval('#lbtn_count', el => el.innerText);
+        await gotoPage(href, 1);
+        const r = await gridData('#grTrAction', { timeout: 30000 });
+        await page.waitForSelector('#txtVehicleNo', { timeout: 30000 });
+        const v = await page
+          .$eval('#lbtn_count', el => el.innerText)
+          .catch(() => '');
         if (v) {
-          r.tagged = +v;
+          const tagged = parseInt(String(v).replace(/[^0-9]/g, ''), 10);
+          if (Number.isFinite(tagged)) {
+            r.tagged = tagged;
+          }
         }
         return r;
       } catch (ex) {
-        if (!/timeout/i.test(ex.message)) {
-          break;
+        lastError = ex;
+        error(`Tag page attempt ${attempt}/2 failed:`, ex.message);
+        if (attempt < 2) {
+          await delay(2000);
         }
-        retries++;
       }
     }
+
+    throw new Error(
+      `Unable to open tagging page: ${(lastError && lastError.message) ||
+        'unknown error'}`
+    );
   }
 
   async function waitForCaptchaImage(timeoutMs = 6000) {
@@ -529,6 +553,97 @@ module.exports = function(tabNo) {
       await delay(100);
     }
     return false;
+  }
+
+  async function markTagResultsStale(selectors) {
+    await page.evaluate(selectors => {
+      selectors.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) {
+          element.dataset.spinbiPreviousText = element.textContent.trim();
+          element.setAttribute('data-spinbi-stale', 'true');
+        }
+      });
+    }, selectors);
+  }
+
+  async function waitForTagSearchResult() {
+    const result = await page.waitForFunction(
+      () => {
+        const vts = document.querySelector('#Rdo_VTS_0');
+        if (vts && !vts.hasAttribute('data-spinbi-stale')) return 'vts';
+
+        const message = document.querySelector('#lblMsg');
+        if (
+          message &&
+          message.textContent.trim() &&
+          (!message.hasAttribute('data-spinbi-stale') ||
+            message.textContent.trim() !== message.dataset.spinbiPreviousText)
+        ) {
+          return 'message';
+        }
+
+        const validation = document.querySelector('#lblVehicleVldInfo');
+        if (
+          validation &&
+          validation.textContent.trim() &&
+          (!validation.hasAttribute('data-spinbi-stale') ||
+            validation.textContent.trim() !==
+              validation.dataset.spinbiPreviousText)
+        ) {
+          return 'validation';
+        }
+        return false;
+      },
+      { polling: 100, timeout: 30000 }
+    );
+
+    return result.jsonValue();
+  }
+
+  async function waitForTagSubmitResult(truckNo, previousTaggedCount) {
+    const result = await page.waitForFunction(
+      (expectedTruck, taggedCountBeforeSubmit) => {
+        const message = document.querySelector('#lblMsg');
+        if (
+          message &&
+          message.textContent.trim() &&
+          (!message.hasAttribute('data-spinbi-stale') ||
+            message.textContent.trim() !== message.dataset.spinbiPreviousText)
+        ) {
+          return 'message';
+        }
+
+        const taggedCount = document.querySelector('#lbtn_count');
+        if (taggedCountBeforeSubmit !== null && taggedCount) {
+          const countText = taggedCount.textContent.replace(/[^0-9]/g, '');
+          const currentTaggedCount = countText ? Number(countText) : null;
+          if (
+            Number.isFinite(currentTaggedCount) &&
+            currentTaggedCount > taggedCountBeforeSubmit
+          ) {
+            return 'count';
+          }
+        }
+
+        const vehicle = document.querySelector('#txtVehicleNo');
+        if (
+          vehicle &&
+          vehicle.value.trim().toUpperCase() !==
+            String(expectedTruck)
+              .trim()
+              .toUpperCase()
+        ) {
+          return 'reset';
+        }
+        return false;
+      },
+      { polling: 100, timeout: 45000 },
+      truckNo,
+      previousTaggedCount
+    );
+
+    return result.jsonValue();
   }
 
   async function tagVehicle(href, truckNo, renderer, options, attempt = 0) {
@@ -557,26 +672,18 @@ module.exports = function(tabNo) {
       );
 
       log('before btnsearch');
+      await markTagResultsStale([
+        '#Rdo_VTS_0',
+        '#lblMsg',
+        '#lblVehicleVldInfo'
+      ]);
       await clickHelper('#btnsearch', 120000);
 
-      const r = await promiseAny(
-        page.waitForSelector('#Rdo_VTS_0', { timeout: 30000 }),
-        page.waitForFunction(
-          () => {
-            const m = document.querySelector('#lblMsg');
-            const v = document.querySelector('#lblVehicleVldInfo');
-            return (
-              (m && m.innerText && m.innerText.trim()) ||
-              (v && v.innerText && v.innerText.trim())
-            );
-          },
-          { timeout: 30000 }
-        )
-      );
+      const searchResult = await waitForTagSearchResult();
 
-      log('after btnsearch', r);
+      log('after btnsearch', searchResult);
 
-      if (r == 1) {
+      if (searchResult === 'vts') {
         await clickHelper('#rdo_GPS_0');
         await clickHelper('#Rdo_VTS_0');
         log('before waiting for SIM');
@@ -600,6 +707,9 @@ module.exports = function(tabNo) {
           vision(captchaImage, renderer),
           20000
         );
+        if (!captchaVal) {
+          throw new Error('Captcha recognition returned an empty value');
+        }
         log('captchaVal', captchaVal);
         await page.$eval(
           '#txtcaptcha',
@@ -607,28 +717,24 @@ module.exports = function(tabNo) {
           captchaVal
         );
         log('before btnsubmit');
+        const previousTaggedCount = await page
+          .$eval('#lbtn_count', el => {
+            const countText = el.textContent.replace(/[^0-9]/g, '');
+            const value = countText ? Number(countText) : null;
+            return Number.isFinite(value) ? value : null;
+          })
+          .catch(() => null);
+        await markTagResultsStale(['#lblMsg']);
         await page.evaluate(() => {
           const btn = document.querySelector('#btnSubmit');
           if (btn) btn.click();
         });
 
-        await page
-          .waitForFunction(
-            () => {
-              const m = document.querySelector('#lblMsg');
-              const v = document.querySelector('#lblVehicleVldInfo');
-              return (
-                (m && m.innerText && m.innerText.trim()) ||
-                (v && v.innerText && v.innerText.trim()) ||
-                !window.location.href.includes(
-                  'TransporterAssignVehicleNew.aspx'
-                )
-              );
-            },
-            { timeout: 45000 }
-          )
-          .catch(() => {});
-        log('after btnsubmit');
+        const submitResult = await waitForTagSubmitResult(
+          truckNo,
+          previousTaggedCount
+        );
+        log('after btnsubmit', submitResult);
 
         reason = await page
           .$eval('#lblMsg', el => el.innerText)
@@ -771,7 +877,6 @@ module.exports = function(tabNo) {
     const out = [];
 
     for (let permit of permits) {
-
       if (/javascript/i.test(permit['Permit No.']) || !permit['Permit No.']) {
         continue;
       }
@@ -794,7 +899,6 @@ module.exports = function(tabNo) {
         source: permit['Lessee/Licensee Name'].replace(/-\d+/, ''),
         vehicleDetails: permit['Vehicle Details']
       };
-
 
       if (!pr.taggingUrl) {
         const uri = new URL(pr.vehicleDetails);

@@ -107,10 +107,8 @@ async function handleMessage(message) {
         // tagVehicles recovers its own tabs and every step is timeout-bounded,
         // so the queue slot is released only when tagging has really finished.
         const r = await tagVehicles(args, event.sender);
-        if (r) {
-          console.log('sending tag-vehicles results to browser', r);
-          event.sender.send('tag-results', r);
-        }
+        console.log('sending tag-vehicles results to browser', r || {});
+        event.sender.send('tag-results', r || {});
       }
       break;
 
@@ -203,6 +201,11 @@ async function processMessage(message, cb) {
   } catch (ex) {
     console.error('i3ms operation failed:', type, ex.message);
     if (event && event.sender && !event.sender.isDestroyed()) {
+      if (type === 'tag-vehicles') {
+        // Always release the renderer's tagging lock, even for an unexpected
+        // main-process failure outside the normal per-truck recovery paths.
+        event.sender.send('tag-results', {});
+      }
       event.sender.send('i3ms-operation-failed', {
         type,
         message: ex.message
