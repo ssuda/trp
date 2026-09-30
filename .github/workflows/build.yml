@@ -1,0 +1,55 @@
+name: Build Windows Desktop App
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-windows:
+    name: Build Windows App
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 14
+        uses: actions/setup-node@v4
+        with:
+          node-version: '14'
+          cache: npm
+
+      - name: Configure node-gyp
+        shell: powershell
+        run: |
+          npm config set msvs_version 2022
+          npm install --global node-gyp@9
+
+      - name: Install Dependencies and Embedded Browsers
+        shell: powershell
+        run: |
+          npm install --ignore-scripts
+          node node_modules/electron/install.js
+          node node_modules/puppeteer/install.js
+
+      - name: Rebuild Native Dependencies
+        run: npx electron-builder install-app-deps
+
+      - name: Build Electron App
+        run: npm run electron:build
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: spinbi-windows-app
+          path: |
+            dist_electron/*.exe
+            dist_electron/*.blockmap
+          if-no-files-found: error
