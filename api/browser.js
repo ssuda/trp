@@ -1093,12 +1093,38 @@ module.exports = function(tabNo) {
   }
 
   async function disconnect() {
-    if (browser) {
-      await browser.close();
-      browser = null;
-      page = null;
-    } else {
+    const browserToClose = browser;
+    browser = null;
+    page = null;
+
+    if (!browserToClose) {
       return Promise.resolve();
+    }
+
+    try {
+      await promiseWithTimeout(
+        browserToClose.close(),
+        5000,
+        'Browser close timed out'
+      );
+    } catch (ex) {
+      error('Graceful browser close failed:', ex.message);
+      try {
+        const browserProcess = browserToClose.process();
+        if (browserProcess && !browserProcess.killed) {
+          browserProcess.kill();
+        }
+      } catch (killError) {
+        error('Unable to terminate browser process:', killError.message);
+      }
+      try {
+        browserToClose.disconnect();
+      } catch (disconnectError) {
+        error(
+          'Unable to disconnect browser after close failure:',
+          disconnectError.message
+        );
+      }
     }
   }
 

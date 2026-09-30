@@ -264,7 +264,7 @@ import { DateTime } from 'luxon';
           } catch (ex) {}
         }
 
-        if (!frappe.currentUser.remote) {
+        if (frappe.currentUser.remote && frappe.currentUser.remote.ref) {
           await frappe.currentUser.remote.ref.update({
             tagged: FieldValue.increment(batchSize)
           });

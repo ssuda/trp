@@ -8,10 +8,15 @@ const captchaOcr = require('./tessaract');
 const i3ms = browser();
 const _ = require('lodash');
 
-const { delay } = require('./utils');
+const { delay, promiseWithTimeout } = require('./utils');
+
+const TAGGING_PAGE_TIMEOUT = 90000;
+const TAGGING_TRUCK_TIMEOUT = 120000;
+const TAGGING_TAB_READY_TIMEOUT = 60000;
 
 export let busyFlag = {
-  isBusy: false
+  isBusy: false,
+  isTagging: false
 };
 
 //export methods
@@ -36,6 +41,13 @@ export async function newPermits(credentials, showBrowser, sse) {
   );
 
   while (!toExit) {
+    while (busyFlag.isTagging && !toExit) {
+      await delay(1000);
+    }
+    if (toExit) {
+      break;
+    }
+
     let out = [];
     try {
       out = await twoMonthPermits(
@@ -435,9 +447,20 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
     if (!tabReady(tab)) {
       try {
         tab = await recoverTaggingTab(tabNo, options);
-        await tab.gotoTagPage(taggingUrl);
+        await promiseWithTimeout(
+          tab.gotoTagPage(taggingUrl),
+          TAGGING_PAGE_TIMEOUT,
+          `Recovered tagging page timed out after ${TAGGING_PAGE_TIMEOUT /
+            1000}s`
+        );
       } catch (recoveryError) {
         console.error('Tab', tabNo, 'recovery failed:', recoveryError.message);
+        if (recoveryError.code === 'ETIMEDOUT') {
+          if (tabs[tabNo] === tab) {
+            tabs[tabNo] = null;
+          }
+          await tab.disconnect().catch(() => {});
+        }
         for (; count < vehicles.length; count++) {
           const reason =
             recoveryError.message || 'Tagging browser disconnected';
@@ -449,35 +472,38 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
     }
 
     let truck = vehicles[count];
+    const truckStartedAt = Date.now();
 
     console.log('Tab', tabNo, 'tagging vehicle', count);
     try {
-      let { reason, name } = await tab.tagVehicle(
-        taggingUrl,
-        truck,
-        renderer,
-        options
+      let { reason, name } = await promiseWithTimeout(
+        tab.tagVehicle(taggingUrl, truck, renderer, options),
+        TAGGING_TRUCK_TIMEOUT,
+        `Tagging ${truck} timed out after ${TAGGING_TRUCK_TIMEOUT / 1000}s`
       );
 
-      console.log('Tab', tabNo, 'tagged vehicle', count, reason);
+      console.log(
+        'Tab',
+        tabNo,
+        'tagged vehicle',
+        count,
+        reason,
+        `in ${Date.now() - truckStartedAt}ms`
+      );
 
       if (reason && /is already tagged/i.test(reason)) {
         reason = 'Already Tagged by SomeOne';
       }
       results[truck] = reason;
 
-      if (renderer) {
-        renderer.send('total', 1);
-      }
+      sendRenderer(renderer, 'total', 1);
 
       if (reason) {
-        if (renderer) {
-          renderer.send('failed', 1);
-        }
+        sendRenderer(renderer, 'failed', 1);
       }
 
       if (renderer && (reason || reason === '')) {
-        renderer.send('tag-result', {
+        sendRenderer(renderer, 'tag-result', {
           name,
           taggingUrl,
           truck: {
@@ -486,15 +512,48 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
         });
       }
     } catch (ex) {
-      console.log('Tab', tabNo, 'tagged vehicle', count, ex.message);
-      await tab.gotoTagPage(taggingUrl).catch(resetError => {
-        console.error(
-          'Tab',
-          tabNo,
-          'failed resetting tag page:',
-          resetError.message
-        );
-      });
+      console.log(
+        'Tab',
+        tabNo,
+        'tagged vehicle',
+        count,
+        ex.message,
+        `in ${Date.now() - truckStartedAt}ms`
+      );
+      if (ex.code === 'ETIMEDOUT') {
+        // A timed-out Puppeteer command may never settle. Close this browser
+        // so the next queue item is handled by a clean authenticated window.
+        if (tabs[tabNo] === tab) {
+          tabs[tabNo] = null;
+        }
+        await tab.disconnect().catch(disconnectError => {
+          console.error(
+            'Tab',
+            tabNo,
+            'failed closing timed-out browser:',
+            disconnectError.message
+          );
+        });
+      } else {
+        await promiseWithTimeout(
+          tab.gotoTagPage(taggingUrl),
+          TAGGING_PAGE_TIMEOUT,
+          `Tagging page reset timed out after ${TAGGING_PAGE_TIMEOUT / 1000}s`
+        ).catch(async resetError => {
+          console.error(
+            'Tab',
+            tabNo,
+            'failed resetting tag page:',
+            resetError.message
+          );
+          if (resetError.code === 'ETIMEDOUT') {
+            if (tabs[tabNo] === tab) {
+              tabs[tabNo] = null;
+            }
+            await tab.disconnect().catch(() => {});
+          }
+        });
+      }
       const reason = ex.message || 'Tagging failed';
       results[truck] = reason;
       sendTagFailure(renderer, options, truck, reason);
@@ -505,14 +564,27 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
   return results;
 }
 
-function sendTagFailure(renderer, options, truck, reason) {
+function sendRenderer(renderer, channel, payload) {
   if (!renderer || typeof renderer.send !== 'function') {
-    return;
+    return false;
+  }
+  if (typeof renderer.isDestroyed === 'function' && renderer.isDestroyed()) {
+    return false;
   }
 
-  renderer.send('total', 1);
-  renderer.send('failed', 1);
-  renderer.send('tag-result', {
+  try {
+    renderer.send(channel, payload);
+    return true;
+  } catch (ex) {
+    console.error('Unable to send tagging event', channel, ex.message);
+    return false;
+  }
+}
+
+function sendTagFailure(renderer, options, truck, reason) {
+  sendRenderer(renderer, 'total', 1);
+  sendRenderer(renderer, 'failed', 1);
+  sendRenderer(renderer, 'tag-result', {
     name: (options && options.name) || '',
     taggingUrl: options && options.taggingUrl,
     truck: {
@@ -521,21 +593,48 @@ function sendTagFailure(renderer, options, truck, reason) {
   });
 }
 
-async function tabTagging(taggingUrl, tab, chunk, options, sse, tabNo) {
-  await tab.gotoTagPage(taggingUrl);
-  return tagging(tab, chunk, options, sse, tabNo);
+async function tabTagging(taggingUrl, tab, takeNextTruck, options, sse, tabNo) {
+  try {
+    await promiseWithTimeout(
+      tab.gotoTagPage(taggingUrl),
+      TAGGING_PAGE_TIMEOUT,
+      `Tagging page timed out after ${TAGGING_PAGE_TIMEOUT / 1000}s`
+    );
+  } catch (ex) {
+    if (ex.code === 'ETIMEDOUT') {
+      if (tabs[tabNo] === tab) {
+        tabs[tabNo] = null;
+      }
+      await tab.disconnect().catch(() => {});
+    }
+    throw ex;
+  }
+  const results = {};
+  let truck;
+
+  while ((truck = takeNextTruck()) !== undefined) {
+    // Recovery replaces tabs[tabNo]. Always read the current instance before
+    // taking the next truck from the shared queue.
+    const activeTab = tabs[tabNo] || tab;
+    const tagged = await tagging(activeTab, [truck], options, sse, tabNo);
+    Object.assign(results, tagged);
+  }
+
+  return results;
 }
 
 let tabs = [];
 let tabsReady = Promise.resolve();
 let taggingCredentials;
 let taggingHeadless;
+const initializedTaggingTabs = new WeakSet();
 
 function tabReady(tab) {
   const tabBrowser = tab && tab.getBrowser();
   const tabPage = tab && tab.getPage();
   return Boolean(
-    tabBrowser &&
+    initializedTaggingTabs.has(tab) &&
+      tabBrowser &&
       (typeof tabBrowser.isConnected !== 'function' ||
         tabBrowser.isConnected()) &&
       tabPage &&
@@ -565,10 +664,17 @@ async function openTab(tabNo, credentials, headless) {
   tabs[tabNo] = tab;
 
   try {
-    await tab.initializeBrowser(credentials, headless, !!credentials);
+    await promiseWithTimeout(
+      tab.initializeBrowser(credentials, headless, !!credentials),
+      TAGGING_TAB_READY_TIMEOUT,
+      `Tagging browser ${tabNo +
+        1} login timed out after ${TAGGING_TAB_READY_TIMEOUT / 1000}s`
+    );
+    initializedTaggingTabs.add(tab);
     return true;
   } catch (ex) {
     console.error('Tab', tabNo, 'failed to initialize:', ex.message);
+    initializedTaggingTabs.delete(tab);
     await tab.disconnect().catch(() => {});
     tabs[tabNo] = null;
     return false;
@@ -669,56 +775,99 @@ export async function shutdown() {
   await i3ms.disconnect().catch(() => {});
 }
 
+async function waitForTaggingTab(
+  tabNo,
+  poolPromise,
+  credentials,
+  headless,
+  hasPendingTrucks
+) {
+  let poolSettled = false;
+  poolPromise.then(
+    () => (poolSettled = true),
+    () => (poolSettled = true)
+  );
+
+  const startedAt = Date.now();
+  while (
+    hasPendingTrucks() &&
+    Date.now() - startedAt < TAGGING_TAB_READY_TIMEOUT
+  ) {
+    const tab = tabs[tabNo];
+    if (
+      sameCredentials(taggingCredentials, credentials) &&
+      taggingHeadless === headless &&
+      tabReady(tab)
+    ) {
+      return tab;
+    }
+    if (poolSettled) {
+      return null;
+    }
+    await delay(100);
+  }
+  return null;
+}
+
 async function tagFromTabs(taggingUrl, trucks, options, sse) {
   try {
     const requestedBrowsers = Math.max(
       1,
       Math.floor(Number(options.numBrowsers) || tabs.length || 10)
     );
-    await openTabs(
+    const taggingPoolPromise = openTabs(
       requestedBrowsers,
       options.credentials,
       !options.showBrowser
     );
-
-    const readyTabEntries = tabs
-      .map((tab, tabNo) => ({ tab, tabNo }))
-      .filter(entry => tabReady(entry.tab))
-      .slice(0, Math.min(requestedBrowsers, trucks.length));
-    if (!readyTabEntries.length) {
-      trucks.forEach(truck =>
-        sendTagFailure(sse, options, truck, 'No tagging browser is available')
-      );
-      return {};
-    }
+    const workerCount = Math.min(requestedBrowsers, trucks.length);
 
     console.log(
-      `Tagging ${trucks.length} trucks with ${readyTabEntries.length} browsers`
+      `Tagging ${trucks.length} trucks with up to ${workerCount} browsers`
     );
 
-    const chunks = _.chunk(
-      trucks,
-      Math.ceil(trucks.length / readyTabEntries.length)
-    );
+    // All browser workers pull from one queue. Faster browsers keep working
+    // instead of waiting after completing a fixed chunk assigned up front.
+    let nextTruckIndex = 0;
+    const takeNextTruck = () => {
+      if (nextTruckIndex >= trucks.length) {
+        return undefined;
+      }
+      return trucks[nextTruckIndex++];
+    };
+
+    const hasPendingTrucks = () => nextTruckIndex < trucks.length;
 
     const tabResults = await Promise.all(
-      readyTabEntries.map((entry, i) => {
+      [...Array(workerCount).keys()].map(async tabNo => {
+        const tab = await waitForTaggingTab(
+          tabNo,
+          taggingPoolPromise,
+          options.credentials,
+          !options.showBrowser,
+          hasPendingTrucks
+        );
+        if (!tab) {
+          console.error(
+            'Tab',
+            tabNo,
+            'was not ready before the worker deadline'
+          );
+          return {};
+        }
+
         return tabTagging(
           taggingUrl,
-          entry.tab,
-          chunks[i],
+          tab,
+          takeNextTruck,
           options,
           sse,
-          entry.tabNo
+          tabNo
         ).catch(ex => {
-          console.error('Tab', entry.tabNo, 'tagging stopped:', ex.message);
-          const failed = {};
-          (chunks[i] || []).forEach(truck => {
-            const reason = ex.message || 'Tagging failed';
-            failed[truck] = reason;
-            sendTagFailure(sse, options, truck, reason);
-          });
-          return failed;
+          console.error('Tab', tabNo, 'tagging stopped:', ex.message);
+          // This worker stops taking new trucks. Other healthy workers keep
+          // draining the same queue.
+          return {};
         });
       })
     );
@@ -739,6 +888,17 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
 
     const tagged = Object.assign({}, ...tabResults);
 
+    // Normally every dequeued truck is reported by tagging(). Reconcile here
+    // so an unexpected worker-level failure cannot leave the UI waiting for a
+    // truck result that will never arrive.
+    trucks.forEach(truck => {
+      if (!Object.prototype.hasOwnProperty.call(tagged, truck)) {
+        const reason = 'No tagging browser completed this truck';
+        tagged[truck] = reason;
+        sendTagFailure(sse, options, truck, reason);
+      }
+    });
+
     console.log('Complete End of Tagging');
 
     return tagged;
@@ -750,6 +910,7 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
 
 export async function tagVehicles(options, sse) {
   const { taggingUrl, trucks } = options;
+  busyFlag.isTagging = true;
   try {
     if (Array.isArray(trucks) && trucks.length) {
       return await tagFromTabs(taggingUrl, trucks, options, sse);
@@ -758,6 +919,8 @@ export async function tagVehicles(options, sse) {
   } catch (ex) {
     console.error(ex);
     return {};
+  } finally {
+    busyFlag.isTagging = false;
   }
 }
 

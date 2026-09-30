@@ -18,12 +18,18 @@ export function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function promiseWithTimeout(promise, timeout) {
+export async function promiseWithTimeout(
+  promise,
+  timeout,
+  message = 'Request timed out'
+) {
   let timeoutId;
 
   const timeoutPromise = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
-      reject(new Error('Request timed out'));
+      const error = new Error(message);
+      error.code = 'ETIMEDOUT';
+      reject(error);
     }, timeout);
   });
 
