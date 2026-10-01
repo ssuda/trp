@@ -12,7 +12,7 @@ const { delay, promiseWithTimeout } = require('./utils');
 
 const TAGGING_PAGE_TIMEOUT = 90000;
 const TAGGING_TRUCK_TIMEOUT = 120000;
-const TAGGING_TAB_READY_TIMEOUT = 60000;
+const TAGGING_POOL_TIMEOUT = 180000;
 
 export let busyFlag = {
   isBusy: false,
@@ -627,6 +627,10 @@ let tabs = [];
 let tabsReady = Promise.resolve();
 let taggingCredentials;
 let taggingHeadless;
+let requestedTaggingCredentials;
+let requestedTaggingHeadless;
+let requestedTaggingPoolSize = 0;
+let taggingPoolOpening = false;
 const initializedTaggingTabs = new WeakSet();
 
 function tabReady(tab) {
@@ -664,12 +668,7 @@ async function openTab(tabNo, credentials, headless) {
   tabs[tabNo] = tab;
 
   try {
-    await promiseWithTimeout(
-      tab.initializeBrowser(credentials, headless, !!credentials),
-      TAGGING_TAB_READY_TIMEOUT,
-      `Tagging browser ${tabNo +
-        1} login timed out after ${TAGGING_TAB_READY_TIMEOUT / 1000}s`
-    );
+    await tab.initializeBrowser(credentials, headless, !!credentials);
     initializedTaggingTabs.add(tab);
     return true;
   } catch (ex) {
@@ -699,7 +698,22 @@ export function openTabs(numTabs, credentials, headless = true) {
   const parsedNumTabs = Math.max(1, Math.floor(Number(numTabs) || 1));
   captchaOcr.setProcessLimit(parsedNumTabs);
 
-  tabsReady = tabsReady
+  if (
+    taggingPoolOpening &&
+    sameCredentials(requestedTaggingCredentials, credentials) &&
+    requestedTaggingHeadless === headless &&
+    requestedTaggingPoolSize >= parsedNumTabs
+  ) {
+    console.log('Reusing tagging pool initialization already in progress');
+    return tabsReady;
+  }
+
+  requestedTaggingCredentials = credentials;
+  requestedTaggingHeadless = headless;
+  requestedTaggingPoolSize = parsedNumTabs;
+  taggingPoolOpening = true;
+
+  const opening = tabsReady
     .catch(() => {})
     .then(async () => {
       if (
@@ -723,6 +737,14 @@ export function openTabs(numTabs, credentials, headless = true) {
 
       return tabs;
     });
+
+  let trackedOpening;
+  trackedOpening = opening.finally(() => {
+    if (tabsReady === trackedOpening) {
+      taggingPoolOpening = false;
+    }
+  });
+  tabsReady = trackedOpening;
 
   return tabsReady;
 }
@@ -763,6 +785,10 @@ export async function shutdown() {
   await resetTabs();
   taggingCredentials = null;
   taggingHeadless = undefined;
+  requestedTaggingCredentials = null;
+  requestedTaggingHeadless = undefined;
+  requestedTaggingPoolSize = 0;
+  taggingPoolOpening = false;
 
   if (newPermitBrowser) {
     await newPermitBrowser.disconnect().catch(() => {});
@@ -775,55 +801,58 @@ export async function shutdown() {
   await i3ms.disconnect().catch(() => {});
 }
 
-async function waitForTaggingTab(
-  tabNo,
-  poolPromise,
-  credentials,
-  headless,
-  hasPendingTrucks
-) {
-  let poolSettled = false;
-  poolPromise.then(
-    () => (poolSettled = true),
-    () => (poolSettled = true)
-  );
-
-  const startedAt = Date.now();
-  while (
-    hasPendingTrucks() &&
-    Date.now() - startedAt < TAGGING_TAB_READY_TIMEOUT
-  ) {
-    const tab = tabs[tabNo];
-    if (
-      sameCredentials(taggingCredentials, credentials) &&
-      taggingHeadless === headless &&
-      tabReady(tab)
-    ) {
-      return tab;
-    }
-    if (poolSettled) {
-      return null;
-    }
-    await delay(100);
-  }
-  return null;
-}
-
 async function tagFromTabs(taggingUrl, trucks, options, sse) {
   try {
     const requestedBrowsers = Math.max(
       1,
       Math.floor(Number(options.numBrowsers) || tabs.length || 10)
     );
-    const taggingPoolPromise = openTabs(
-      requestedBrowsers,
-      options.credentials,
-      !options.showBrowser
-    );
-    const workerCount = Math.min(requestedBrowsers, trucks.length);
+    try {
+      await promiseWithTimeout(
+        openTabs(requestedBrowsers, options.credentials, !options.showBrowser),
+        TAGGING_POOL_TIMEOUT,
+        `Tagging browser pool timed out after ${TAGGING_POOL_TIMEOUT / 1000}s`
+      );
+    } catch (poolError) {
+      console.error(poolError.message);
+
+      // Stop incomplete logins before tagging starts. A late login with the
+      // same I3MS credentials can invalidate sessions already doing work.
+      await Promise.all(
+        [...Array(requestedBrowsers).keys()].map(async tabNo => {
+          const tab = tabs[tabNo];
+          if (!tab || tabReady(tab)) {
+            return;
+          }
+          tabs[tabNo] = null;
+          initializedTaggingTabs.delete(tab);
+          await tab.disconnect().catch(() => {});
+        })
+      );
+    }
+
+    const poolMatchesRequest =
+      sameCredentials(taggingCredentials, options.credentials) &&
+      taggingHeadless === !options.showBrowser;
+    const readyTabEntries = poolMatchesRequest
+      ? tabs
+          .map((tab, tabNo) => ({ tab, tabNo }))
+          .filter(entry => tabReady(entry.tab))
+          .slice(0, Math.min(requestedBrowsers, trucks.length))
+      : [];
+
+    if (!readyTabEntries.length) {
+      const reason = 'No tagging browser completed login';
+      const failed = {};
+      trucks.forEach(truck => {
+        failed[truck] = reason;
+        sendTagFailure(sse, options, truck, reason);
+      });
+      return failed;
+    }
 
     console.log(
-      `Tagging ${trucks.length} trucks with up to ${workerCount} browsers`
+      `Tagging ${trucks.length} trucks with ${readyTabEntries.length} browsers`
     );
 
     // All browser workers pull from one queue. Faster browsers keep working
@@ -836,26 +865,8 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
       return trucks[nextTruckIndex++];
     };
 
-    const hasPendingTrucks = () => nextTruckIndex < trucks.length;
-
     const tabResults = await Promise.all(
-      [...Array(workerCount).keys()].map(async tabNo => {
-        const tab = await waitForTaggingTab(
-          tabNo,
-          taggingPoolPromise,
-          options.credentials,
-          !options.showBrowser,
-          hasPendingTrucks
-        );
-        if (!tab) {
-          console.error(
-            'Tab',
-            tabNo,
-            'was not ready before the worker deadline'
-          );
-          return {};
-        }
-
+      readyTabEntries.map(({ tab, tabNo }) => {
         return tabTagging(
           taggingUrl,
           tab,
