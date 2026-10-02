@@ -12,7 +12,7 @@ const { delay, promiseWithTimeout } = require('./utils');
 
 const TAGGING_PAGE_TIMEOUT = 90000;
 const TAGGING_TRUCK_TIMEOUT = 120000;
-const TAGGING_POOL_TIMEOUT = 180000;
+const TAGGING_LOGIN_TIMEOUT = 180000;
 
 export let busyFlag = {
   isBusy: false,
@@ -631,14 +631,12 @@ let requestedTaggingCredentials;
 let requestedTaggingHeadless;
 let requestedTaggingPoolSize = 0;
 let taggingPoolOpening = false;
-const initializedTaggingTabs = new WeakSet();
 
 function tabReady(tab) {
   const tabBrowser = tab && tab.getBrowser();
   const tabPage = tab && tab.getPage();
   return Boolean(
-    initializedTaggingTabs.has(tab) &&
-      tabBrowser &&
+    tabBrowser &&
       (typeof tabBrowser.isConnected !== 'function' ||
         tabBrowser.isConnected()) &&
       tabPage &&
@@ -668,12 +666,15 @@ async function openTab(tabNo, credentials, headless) {
   tabs[tabNo] = tab;
 
   try {
-    await tab.initializeBrowser(credentials, headless, !!credentials);
-    initializedTaggingTabs.add(tab);
+    await promiseWithTimeout(
+      tab.initializeBrowser(credentials, headless, !!credentials),
+      TAGGING_LOGIN_TIMEOUT,
+      `Tagging browser ${tabNo +
+        1} login timed out after ${TAGGING_LOGIN_TIMEOUT / 1000}s`
+    );
     return true;
   } catch (ex) {
     console.error('Tab', tabNo, 'failed to initialize:', ex.message);
-    initializedTaggingTabs.delete(tab);
     await tab.disconnect().catch(() => {});
     tabs[tabNo] = null;
     return false;
@@ -807,29 +808,11 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
       1,
       Math.floor(Number(options.numBrowsers) || tabs.length || 10)
     );
-    try {
-      await promiseWithTimeout(
-        openTabs(requestedBrowsers, options.credentials, !options.showBrowser),
-        TAGGING_POOL_TIMEOUT,
-        `Tagging browser pool timed out after ${TAGGING_POOL_TIMEOUT / 1000}s`
-      );
-    } catch (poolError) {
-      console.error(poolError.message);
-
-      // Stop incomplete logins before tagging starts. A late login with the
-      // same I3MS credentials can invalidate sessions already doing work.
-      await Promise.all(
-        [...Array(requestedBrowsers).keys()].map(async tabNo => {
-          const tab = tabs[tabNo];
-          if (!tab || tabReady(tab)) {
-            return;
-          }
-          tabs[tabNo] = null;
-          initializedTaggingTabs.delete(tab);
-          await tab.disconnect().catch(() => {});
-        })
-      );
-    }
+    await openTabs(
+      requestedBrowsers,
+      options.credentials,
+      !options.showBrowser
+    );
 
     const poolMatchesRequest =
       sameCredentials(taggingCredentials, options.credentials) &&
