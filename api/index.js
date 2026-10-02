@@ -594,28 +594,74 @@ function sendTagFailure(renderer, options, truck, reason) {
 }
 
 async function tabTagging(taggingUrl, tab, takeNextTruck, options, sse, tabNo) {
-  try {
-    await promiseWithTimeout(
-      tab.gotoTagPage(taggingUrl),
-      TAGGING_PAGE_TIMEOUT,
-      `Tagging page timed out after ${TAGGING_PAGE_TIMEOUT / 1000}s`
-    );
-  } catch (ex) {
-    if (ex.code === 'ETIMEDOUT') {
-      if (tabs[tabNo] === tab) {
+  async function openTaggingPage(activeTab) {
+    try {
+      await promiseWithTimeout(
+        activeTab.gotoTagPage(taggingUrl),
+        TAGGING_PAGE_TIMEOUT,
+        `Tagging page timed out after ${TAGGING_PAGE_TIMEOUT / 1000}s`
+      );
+      return activeTab;
+    } catch (ex) {
+      if (tabs[tabNo] === activeTab) {
         tabs[tabNo] = null;
       }
-      await tab.disconnect().catch(() => {});
+      await activeTab.disconnect().catch(() => {});
+      throw ex;
     }
+  }
+
+  async function prepareWorker(activeTab) {
+    const currentTab = tabs[tabNo] || activeTab;
+    if (tabReady(currentTab)) {
+      try {
+        return await openTaggingPage(currentTab);
+      } catch (ex) {
+        console.error(
+          'Tab',
+          tabNo,
+          'failed preparing tagging page:',
+          ex.message
+        );
+      }
+    }
+
+    const recoveredTab = await recoverTaggingTab(tabNo, options);
+    return openTaggingPage(recoveredTab);
+  }
+
+  let activeTab;
+  try {
+    activeTab = await prepareWorker(tab);
+  } catch (ex) {
+    console.error('Tab', tabNo, 'worker recovery failed:', ex.message);
     throw ex;
   }
-  const results = {};
-  let truck;
 
-  while ((truck = takeNextTruck()) !== undefined) {
-    // Recovery replaces tabs[tabNo]. Always read the current instance before
-    // taking the next truck from the shared queue.
-    const activeTab = tabs[tabNo] || tab;
+  const results = {};
+  let hasPendingTrucks = true;
+  while (hasPendingTrucks) {
+    // A browser that died after its previous truck must recover before it can
+    // reserve another truck. Healthy workers can keep draining the queue while
+    // this slot logs in again.
+    const currentTab = tabs[tabNo] || activeTab;
+    if (!tabReady(currentTab)) {
+      try {
+        activeTab = await prepareWorker(currentTab);
+      } catch (ex) {
+        console.error('Tab', tabNo, 'worker stopped:', ex.message);
+        break;
+      }
+    } else {
+      activeTab = currentTab;
+    }
+
+    const truck = takeNextTruck();
+    if (truck === undefined) {
+      hasPendingTrucks = false;
+      break;
+    }
+
     const tagged = await tagging(activeTab, [truck], options, sse, tabNo);
     Object.assign(results, tagged);
   }
@@ -662,6 +708,19 @@ async function resetTabs() {
 }
 
 async function openTab(tabNo, credentials, headless) {
+  const previousTab = tabs[tabNo];
+  if (previousTab) {
+    tabs[tabNo] = null;
+    await previousTab.disconnect().catch(ex => {
+      console.error(
+        'Tab',
+        tabNo,
+        'failed closing previous browser:',
+        ex.message
+      );
+    });
+  }
+
   const tab = browser(tabNo);
   tabs[tabNo] = tab;
 
@@ -676,7 +735,9 @@ async function openTab(tabNo, credentials, headless) {
   } catch (ex) {
     console.error('Tab', tabNo, 'failed to initialize:', ex.message);
     await tab.disconnect().catch(() => {});
-    tabs[tabNo] = null;
+    if (tabs[tabNo] === tab) {
+      tabs[tabNo] = null;
+    }
     return false;
   }
 }
