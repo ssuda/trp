@@ -5,16 +5,18 @@ const tesseractCli = require('./tesseract');
 const captchaExpression = require('./captcha-expression');
 
 const OCR_TIMEOUT = 20000;
-const MAX_OCR_PROCESSES = 16;
 const configuredOcrProcesses = Number(process.env.OCR_PROCESSES);
 let ocrProcessLimit = Number.isFinite(configuredOcrProcesses)
-  ? Math.max(1, Math.min(Math.floor(configuredOcrProcesses), MAX_OCR_PROCESSES))
-  : Math.max(1, Math.min(os.cpus().length, MAX_OCR_PROCESSES));
+  ? Math.max(1, Math.min(Math.floor(configuredOcrProcesses), 8))
+  : Math.max(1, Math.min(os.cpus().length, 8));
 let activeOcrProcesses = 0;
 const waitingOcrProcesses = [];
 
 function startWaitingOcrProcesses() {
-  while (activeOcrProcesses < ocrProcessLimit && waitingOcrProcesses.length) {
+  while (
+    activeOcrProcesses < ocrProcessLimit &&
+    waitingOcrProcesses.length
+  ) {
     activeOcrProcesses++;
     waitingOcrProcesses.shift()();
   }
@@ -25,10 +27,13 @@ function setOcrProcessLimit(browserCount) {
     return ocrProcessLimit;
   }
 
-  const parsedBrowserCount = Math.max(1, Math.floor(Number(browserCount) || 1));
+  const parsedBrowserCount = Math.max(
+    1,
+    Math.floor(Number(browserCount) || 1)
+  );
   ocrProcessLimit = Math.max(
     1,
-    Math.min(parsedBrowserCount, MAX_OCR_PROCESSES)
+    Math.min(os.cpus().length, parsedBrowserCount, 8)
   );
   startWaitingOcrProcesses();
   console.log('External OCR process limit:', ocrProcessLimit);
