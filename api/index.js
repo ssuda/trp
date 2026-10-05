@@ -517,9 +517,31 @@ function sendTagFailure(renderer, options, truck, reason) {
   });
 }
 
-async function tabTagging(taggingUrl, tab, chunk, options, sse, tabNo) {
+async function tabTagging(taggingUrl, tab, takeNextTruck, options, sse, tabNo) {
   await tab.gotoTagPage(taggingUrl);
-  await tagging(tab, chunk, options, sse, tabNo);
+
+  let truck;
+  while ((truck = takeNextTruck()) !== undefined) {
+    // tagging() can replace a disconnected browser in this slot. Always use
+    // that current browser for the next truck instead of the stale instance.
+    const activeTab = tabs[tabNo] || tab;
+    await tagging(activeTab, [truck], options, sse, tabNo);
+
+    if (!tabReady(tabs[tabNo] || activeTab)) {
+      try {
+        tab = await recoverTaggingTab(tabNo, options);
+        await tab.gotoTagPage(taggingUrl);
+      } catch (recoveryError) {
+        console.error(
+          'Tab',
+          tabNo,
+          'stopped after browser recovery failed:',
+          recoveryError.message
+        );
+        break;
+      }
+    }
+  }
 }
 
 let tabs = [];
@@ -687,28 +709,37 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
       return {};
     }
 
-    const chunks = _.chunk(
-      trucks,
-      Math.ceil(trucks.length / readyTabEntries.length)
-    );
+    // Workers take one truck only after completing the previous one. A faster
+    // browser therefore keeps working instead of waiting behind a slow chunk.
+    let nextTruckIndex = 0;
+    const takeNextTruck = () => {
+      if (nextTruckIndex >= trucks.length) {
+        return undefined;
+      }
+      return trucks[nextTruckIndex++];
+    };
 
     await Promise.all(
-      readyTabEntries.map((entry, i) => {
+      readyTabEntries.map(entry => {
         return tabTagging(
           taggingUrl,
           entry.tab,
-          chunks[i],
+          takeNextTruck,
           options,
           sse,
           entry.tabNo
         ).catch(ex => {
           console.error('Tab', entry.tabNo, 'tagging stopped:', ex.message);
-          (chunks[i] || []).forEach(truck =>
-            sendTagFailure(sse, options, truck, ex.message || 'Tagging failed')
-          );
         });
       })
     );
+
+    // A worker can stop before claiming another truck when its browser cannot
+    // recover. Report only trucks that no worker ever claimed.
+    while (nextTruckIndex < trucks.length) {
+      const truck = trucks[nextTruckIndex++];
+      sendTagFailure(sse, options, truck, 'No tagging browser is available');
+    }
 
     // console.log('End of tagging');
 
@@ -727,7 +758,12 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
     console.log('Fetching Successfully Tagged', options.name);
 
     let tagged = {};
-    const verificationTab = readyTabEntries[0].tab;
+    const verificationEntry = readyTabEntries.find(entry =>
+      tabReady(tabs[entry.tabNo] || entry.tab)
+    );
+    const verificationTab = verificationEntry
+      ? tabs[verificationEntry.tabNo] || verificationEntry.tab
+      : readyTabEntries[0].tab;
     try {
       tagged = await promiseWithTimeout(
         successfullyTagged(options.name, null, verificationTab),
