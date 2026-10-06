@@ -272,10 +272,19 @@ module.exports = function(tabNo) {
 
   async function clickHelper(selector, timeout = 60000, waitFor = null) {
     await page.waitForSelector(selector, { timeout: Math.min(timeout, 30000) });
-    await page.evaluate(selector => {
-      const el = document.querySelector(selector);
-      if (el) el.click();
-    }, selector);
+    try {
+      await page.evaluate(selector => {
+        const el = document.querySelector(selector);
+        if (el) el.click();
+      }, selector);
+    } catch (ex) {
+      // ASP.NET postbacks can replace the document before old Puppeteer has
+      // acknowledged evaluate(). The click was dispatched, so let the caller
+      // wait for the result in the new document instead of resubmitting it.
+      if (!isNavigationContextError(ex)) {
+        throw ex;
+      }
+    }
 
     if (waitFor) {
       await page.waitForSelector(waitFor, { timeout });
@@ -631,8 +640,9 @@ module.exports = function(tabNo) {
     let lastError;
 
     while (Date.now() < deadline) {
+      let result;
       try {
-        return await page.waitForFunction(
+        result = await page.waitForFunction(
           pageFunction,
           {
             polling: 100,
@@ -640,6 +650,7 @@ module.exports = function(tabNo) {
           },
           ...args
         );
+        return await result.jsonValue();
       } catch (ex) {
         lastError = ex;
         if (
@@ -655,10 +666,30 @@ module.exports = function(tabNo) {
         // Old Puppeteer rejects the waiter bound to that document; retrying it
         // attaches the same bounded wait to the replacement document.
         await delay(100);
+      } finally {
+        if (result && typeof result.dispose === 'function') {
+          await result.dispose().catch(() => {});
+        }
       }
     }
 
     throw lastError || new Error('Timed out waiting for i3ms page result');
+  }
+
+  async function clickAndWaitForTagResult(selector, waitForResult, timeout) {
+    // Every i3ms vehicle search and submit is a full Web Forms postback. Arm
+    // the navigation listener before clicking so old Puppeteer cannot miss a
+    // fast navigation, then inspect only the replacement document.
+    await Promise.all([
+      page.waitForNavigation({
+        waitUntil: 'domcontentloaded',
+        timeout
+      }),
+      clickHelper(selector, timeout)
+    ]);
+
+    await page.waitForSelector('#txtVehicleNo', { timeout });
+    return waitForResult();
   }
 
   async function waitForTagSearchResult() {
@@ -692,7 +723,7 @@ module.exports = function(tabNo) {
       30000
     );
 
-    return result.jsonValue();
+    return result;
   }
 
   async function waitForTagSubmitResult(truckNo, previousTaggedCount) {
@@ -737,10 +768,17 @@ module.exports = function(tabNo) {
       previousTaggedCount
     );
 
-    return result.jsonValue();
+    return result;
   }
 
-  async function tagVehicle(href, truckNo, renderer, options, attempt = 0) {
+  async function tagVehicle(
+    href,
+    truckNo,
+    renderer,
+    options,
+    attempt = 0,
+    navigationAttempt = 0
+  ) {
     let reason = '';
     try {
       log('before waiting for txtVehicleNo');
@@ -771,9 +809,11 @@ module.exports = function(tabNo) {
         '#lblMsg',
         '#lblVehicleVldInfo'
       ]);
-      await clickHelper('#btnsearch', 120000);
-
-      const searchResult = await waitForTagSearchResult();
+      const searchResult = await clickAndWaitForTagResult(
+        '#btnsearch',
+        waitForTagSearchResult,
+        30000
+      );
 
       log('after btnsearch', searchResult);
 
@@ -783,13 +823,20 @@ module.exports = function(tabNo) {
         log('before waiting for SIM');
         await clickHelper('#Rdo_SIM_0');
 
-        await page.click('#chkClick');
+        await clickHelper('#chkClick');
         const gotCaptcha = await waitForCaptchaImage(6000);
         if (!gotCaptcha) {
           log('Loading captcha image error, reloading page');
           if (attempt < 2) {
             await gotoTagPage(href);
-            return tagVehicle(href, truckNo, renderer, options, attempt + 1);
+            return tagVehicle(
+              href,
+              truckNo,
+              renderer,
+              options,
+              attempt + 1,
+              navigationAttempt
+            );
           }
           return {
             reason: 'Loading captcha image timed out',
@@ -819,14 +866,10 @@ module.exports = function(tabNo) {
           })
           .catch(() => null);
         await markTagResultsStale(['#lblMsg']);
-        await page.evaluate(() => {
-          const btn = document.querySelector('#btnSubmit');
-          if (btn) btn.click();
-        });
-
-        const submitResult = await waitForTagSubmitResult(
-          truckNo,
-          previousTaggedCount
+        const submitResult = await clickAndWaitForTagResult(
+          '#btnSubmit',
+          () => waitForTagSubmitResult(truckNo, previousTaggedCount),
+          45000
         );
         log('after btnsubmit', submitResult);
 
@@ -840,7 +883,14 @@ module.exports = function(tabNo) {
         ) {
           if (attempt < 2) {
             await gotoTagPage(href);
-            return tagVehicle(href, truckNo, renderer, options, attempt + 1);
+            return tagVehicle(
+              href,
+              truckNo,
+              renderer,
+              options,
+              attempt + 1,
+              navigationAttempt
+            );
           }
         }
       } else {
@@ -860,7 +910,14 @@ module.exports = function(tabNo) {
         ) {
           if (attempt < 2) {
             await gotoTagPage(href);
-            return tagVehicle(href, truckNo, renderer, options, attempt + 1);
+            return tagVehicle(
+              href,
+              truckNo,
+              renderer,
+              options,
+              attempt + 1,
+              navigationAttempt
+            );
           }
         }
       }
@@ -869,9 +926,33 @@ module.exports = function(tabNo) {
     } catch (ex) {
       let url = page ? page.url() : '';
       error(ex.message, url);
+      if (isNavigationContextError(ex)) {
+        if (navigationAttempt < 5) {
+          await gotoTagPage(href);
+          return tagVehicle(
+            href,
+            truckNo,
+            renderer,
+            options,
+            attempt,
+            navigationAttempt + 1
+          );
+        }
+        return {
+          reason: 'i3ms page kept navigating before the vehicle result was available',
+          name: options.name || ''
+        };
+      }
       if (attempt < 2) {
         await gotoTagPage(href);
-        return tagVehicle(href, truckNo, renderer, options, attempt + 1);
+        return tagVehicle(
+          href,
+          truckNo,
+          renderer,
+          options,
+          attempt + 1,
+          navigationAttempt
+        );
       }
 
       let permitName = options.name || '';
