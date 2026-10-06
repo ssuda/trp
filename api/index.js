@@ -673,16 +673,26 @@ export function openTabs(numTabs, credentials, headless = true) {
       taggingCredentials = credentials;
       taggingHeadless = headless;
 
-      const opening = [...Array(parsedNumTabs).keys()].map(i =>
-        startOpeningTab(i, credentials, headless)
-      );
-
-      // Start every requested browser, but do not hold the workflow until the
-      // slowest login finishes. Remaining browsers continue warming and can
-      // join an active tagging job as soon as they authenticate.
+      // Give the first browser exclusive startup priority. Launching ten
+      // Chromium processes together delays the first usable login on Windows.
+      // Once one authenticated session is available, warm the rest without
+      // blocking the workflow; those browsers join the active shared queue.
       if (!tabs.some(tabReady)) {
-        await waitForFirstSuccessful(opening);
+        await waitForFirstSuccessful([
+          startOpeningTab(0, credentials, headless)
+        ]);
       }
+
+      [...Array(parsedNumTabs).keys()].forEach(i => {
+        startOpeningTab(i, credentials, headless).catch(ex => {
+          console.error(
+            'Tab',
+            i,
+            'background initialization failed:',
+            ex.message
+          );
+        });
+      });
 
       return tabs;
     });

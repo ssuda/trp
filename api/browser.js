@@ -613,8 +613,56 @@ module.exports = function(tabNo) {
     }, selectors);
   }
 
+  function isNavigationContextError(ex) {
+    return Boolean(
+      ex &&
+        /(execution context was destroyed|cannot find context with specified id|context.*destroyed)/i.test(
+          ex.message || ''
+        )
+    );
+  }
+
+  async function waitForFunctionAcrossNavigations(
+    pageFunction,
+    timeout,
+    ...args
+  ) {
+    const deadline = Date.now() + timeout;
+    let lastError;
+
+    while (Date.now() < deadline) {
+      try {
+        return await page.waitForFunction(
+          pageFunction,
+          {
+            polling: 100,
+            timeout: Math.max(1, deadline - Date.now())
+          },
+          ...args
+        );
+      } catch (ex) {
+        lastError = ex;
+        if (
+          !isNavigationContextError(ex) ||
+          !browser ||
+          !page ||
+          (typeof page.isClosed === 'function' && page.isClosed())
+        ) {
+          throw ex;
+        }
+
+        // Web Forms replaces the document after search and submit postbacks.
+        // Old Puppeteer rejects the waiter bound to that document; retrying it
+        // attaches the same bounded wait to the replacement document.
+        await delay(100);
+      }
+    }
+
+    throw lastError || new Error('Timed out waiting for i3ms page result');
+  }
+
   async function waitForTagSearchResult() {
-    const result = await page.waitForFunction(
+    const result = await waitForFunctionAcrossNavigations(
       () => {
         const vts = document.querySelector('#Rdo_VTS_0');
         if (vts && !vts.hasAttribute('data-spinbi-stale')) return 'vts';
@@ -641,14 +689,14 @@ module.exports = function(tabNo) {
         }
         return false;
       },
-      { polling: 100, timeout: 30000 }
+      30000
     );
 
     return result.jsonValue();
   }
 
   async function waitForTagSubmitResult(truckNo, previousTaggedCount) {
-    const result = await page.waitForFunction(
+    const result = await waitForFunctionAcrossNavigations(
       (expectedTruck, taggedCountBeforeSubmit) => {
         const message = document.querySelector('#lblMsg');
         if (
@@ -684,7 +732,7 @@ module.exports = function(tabNo) {
         }
         return false;
       },
-      { polling: 100, timeout: 45000 },
+      45000,
       truckNo,
       previousTaggedCount
     );
