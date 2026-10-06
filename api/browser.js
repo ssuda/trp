@@ -401,20 +401,28 @@ module.exports = function(tabNo) {
   }
 
   let loginPromise;
+  let stopLogin = false;
 
   async function performLogin() {
-    if (
-      !page ||
-      !credentials ||
-      !credentials.username ||
-      !credentials.password
-    ) {
+    if (!credentials || !credentials.username || !credentials.password) {
       throw new Error('i3ms login credentials are unavailable');
     }
 
-    let lastError;
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    let attempt = 0;
+    while (!stopLogin) {
+      attempt++;
       try {
+        const browserConnected =
+          browser &&
+          (typeof browser.isConnected !== 'function' || browser.isConnected());
+        const pageOpen =
+          page && (typeof page.isClosed !== 'function' || !page.isClosed());
+
+        if (!browserConnected || !pageOpen) {
+          log('Reopening browser before login retry');
+          await openBrowser(globalHeadless);
+        }
+
         const today = new Date();
         const date =
           today.getFullYear() +
@@ -435,7 +443,7 @@ module.exports = function(tabNo) {
         const loginUrl =
           'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString;
 
-        log('Logging into', loginUrl, `attempt ${attempt}/3`);
+        log('Logging into', loginUrl, `attempt ${attempt}`);
         await page.goto(loginUrl, {
           referer: 'https://i3ms.odishaminerals.gov.in/i3msnew1.aspx',
           waitUntil: 'domcontentloaded',
@@ -479,19 +487,18 @@ module.exports = function(tabNo) {
         }
         return true;
       } catch (ex) {
-        lastError = ex;
-        error(`Login attempt ${attempt}/3 failed:`, ex.message);
+        error(`Login attempt ${attempt} failed:`, ex.message);
         if (/password is incorrect/i.test(ex.message)) {
           throw ex;
         }
+        if (stopLogin) {
+          break;
+        }
+        await delay(3000);
       }
     }
 
-    throw new Error(
-      `Unable to log in to i3ms after 3 attempts: ${(lastError &&
-        lastError.message) ||
-        'unknown error'}`
-    );
+    throw new Error('i3ms login stopped');
   }
 
   function login() {
@@ -1060,6 +1067,7 @@ module.exports = function(tabNo) {
   }
 
   async function disconnect() {
+    stopLogin = true;
     if (browser) {
       await browser.close();
       browser = null;
@@ -1109,6 +1117,7 @@ module.exports = function(tabNo) {
     }
 
     await openBrowser(headless);
+    stopLogin = false;
 
     if (tologin) {
       await login();
