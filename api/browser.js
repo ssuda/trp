@@ -494,7 +494,9 @@ module.exports = function(tabNo) {
         if (stopLogin) {
           break;
         }
-        await delay(3000);
+        // Retry immediately, but yield once so a synchronous failure cannot
+        // block browser disconnect or application shutdown events.
+        await delay(0);
       }
     }
 
