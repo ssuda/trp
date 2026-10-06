@@ -546,6 +546,7 @@ async function tabTagging(taggingUrl, tab, takeNextTruck, options, sse, tabNo) {
 
 let tabs = [];
 let tabsReady = Promise.resolve();
+let openingTabs = [];
 let taggingCredentials;
 let taggingHeadless;
 
@@ -557,7 +558,8 @@ function tabReady(tab) {
       (typeof tabBrowser.isConnected !== 'function' ||
         tabBrowser.isConnected()) &&
       tabPage &&
-      (typeof tabPage.isClosed !== 'function' || !tabPage.isClosed())
+      (typeof tabPage.isClosed !== 'function' || !tabPage.isClosed()) &&
+      (typeof tab.isLoggedIn !== 'function' || tab.isLoggedIn())
   );
 }
 
@@ -573,6 +575,7 @@ function sameCredentials(first, second) {
 async function resetTabs() {
   const oldTabs = tabs;
   tabs = [];
+  openingTabs = [];
   await Promise.all(
     oldTabs.map(tab => (tab ? tab.disconnect().catch(() => {}) : null))
   );
@@ -588,9 +591,56 @@ async function openTab(tabNo, credentials, headless) {
   } catch (ex) {
     console.error('Tab', tabNo, 'failed to initialize:', ex.message);
     await tab.disconnect().catch(() => {});
-    tabs[tabNo] = null;
+    if (tabs[tabNo] === tab) {
+      tabs[tabNo] = null;
+    }
     return false;
   }
+}
+
+function startOpeningTab(tabNo, credentials, headless) {
+  if (tabReady(tabs[tabNo])) {
+    return Promise.resolve(true);
+  }
+  if (openingTabs[tabNo]) {
+    return openingTabs[tabNo];
+  }
+
+  const pending = openTab(tabNo, credentials, headless);
+  const tracked = pending.finally(() => {
+    if (openingTabs[tabNo] === tracked) {
+      openingTabs[tabNo] = null;
+    }
+  });
+  openingTabs[tabNo] = tracked;
+  return tracked;
+}
+
+function waitForFirstSuccessful(promises) {
+  return new Promise(resolve => {
+    let remaining = promises.length;
+    if (!remaining) {
+      resolve(false);
+      return;
+    }
+
+    promises.forEach(promise => {
+      Promise.resolve(promise).then(
+        opened => {
+          if (opened) {
+            resolve(true);
+          } else if (--remaining === 0) {
+            resolve(false);
+          }
+        },
+        () => {
+          if (--remaining === 0) {
+            resolve(false);
+          }
+        }
+      );
+    });
+  });
 }
 
 async function recoverTaggingTab(tabNo, options) {
@@ -623,14 +673,16 @@ export function openTabs(numTabs, credentials, headless = true) {
       taggingCredentials = credentials;
       taggingHeadless = headless;
 
-      await Promise.all(
-        [...Array(parsedNumTabs).keys()].map(i => {
-          if (tabReady(tabs[i])) {
-            return true;
-          }
-          return openTab(i, credentials, headless);
-        })
+      const opening = [...Array(parsedNumTabs).keys()].map(i =>
+        startOpeningTab(i, credentials, headless)
       );
+
+      // Start every requested browser, but do not hold the workflow until the
+      // slowest login finishes. Remaining browsers continue warming and can
+      // join an active tagging job as soon as they authenticate.
+      if (!tabs.some(tabReady)) {
+        await waitForFirstSuccessful(opening);
+      }
 
       return tabs;
     });
@@ -698,11 +750,8 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
       !options.showBrowser
     );
 
-    const readyTabEntries = tabs
-      .map((tab, tabNo) => ({ tab, tabNo }))
-      .filter(entry => tabReady(entry.tab))
-      .slice(0, trucks.length);
-    if (!readyTabEntries.length) {
+    const hasReadyTab = tabs.some(tabReady);
+    if (!hasReadyTab) {
       trucks.forEach(truck =>
         sendTagFailure(sse, options, truck, 'No tagging browser is available')
       );
@@ -719,19 +768,58 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
       return trucks[nextTruckIndex++];
     };
 
-    await Promise.all(
-      readyTabEntries.map(entry => {
-        return tabTagging(
+    let finishJob;
+    const jobFinished = new Promise(resolve => {
+      finishJob = resolve;
+    });
+    const usedTabEntries = [];
+    let activeWorkers = 0;
+
+    const runWorker = async tabNo => {
+      let tab = tabReady(tabs[tabNo]) ? tabs[tabNo] : null;
+      if (!tab) {
+        const opening = openingTabs[tabNo];
+        if (!opening) {
+          return;
+        }
+        const opened = await Promise.race([
+          opening.catch(() => false),
+          jobFinished.then(() => false)
+        ]);
+        if (!opened || !tabReady(tabs[tabNo])) {
+          return;
+        }
+        tab = tabs[tabNo];
+      }
+
+      if (nextTruckIndex >= trucks.length) {
+        return;
+      }
+
+      const entry = { tab, tabNo };
+      usedTabEntries.push(entry);
+      activeWorkers++;
+      try {
+        await tabTagging(
           taggingUrl,
-          entry.tab,
+          tab,
           takeNextTruck,
           options,
           sse,
-          entry.tabNo
-        ).catch(ex => {
-          console.error('Tab', entry.tabNo, 'tagging stopped:', ex.message);
-        });
-      })
+          tabNo
+        );
+      } catch (ex) {
+        console.error('Tab', tabNo, 'tagging stopped:', ex.message);
+      } finally {
+        activeWorkers--;
+        if (nextTruckIndex >= trucks.length && activeWorkers === 0) {
+          finishJob();
+        }
+      }
+    };
+
+    await Promise.all(
+      [...Array(requestedBrowsers).keys()].map(runWorker)
     );
 
     // A worker can stop before claiming another truck when its browser cannot
@@ -758,12 +846,16 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
     console.log('Fetching Successfully Tagged', options.name);
 
     let tagged = {};
-    const verificationEntry = readyTabEntries.find(entry =>
+    const verificationEntry = usedTabEntries.find(entry =>
       tabReady(tabs[entry.tabNo] || entry.tab)
     );
     const verificationTab = verificationEntry
       ? tabs[verificationEntry.tabNo] || verificationEntry.tab
-      : readyTabEntries[0].tab;
+      : tabs.find(tabReady);
+    if (!verificationTab) {
+      console.error('Final tag verification skipped: no browser is available');
+      return tagged;
+    }
     try {
       tagged = await promiseWithTimeout(
         successfullyTagged(options.name, null, verificationTab),

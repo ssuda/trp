@@ -8,6 +8,24 @@ const crypto = require('crypto');
 const vision = require('./captch-browser'); //require('./vision'); //require('../src/rekognition');
 const { delay, promiseAny, promiseWithTimeout } = require('./utils');
 
+// i3ms drops concurrent login submissions for the same transporter account.
+// Keep every Chromium instance and session separate, but let hidden browsers
+// submit login attempts one at a time. Once authenticated, they continue in
+// parallel for tagging as before.
+let hiddenLoginAttemptQueue = Promise.resolve();
+
+function queueHiddenLoginAttempt(attempt) {
+  const queuedAttempt = hiddenLoginAttemptQueue.catch(() => {}).then(attempt);
+
+  // Leave a small gap before the next account login reaches i3ms. The caller
+  // does not wait for this gap after its own attempt has completed.
+  hiddenLoginAttemptQueue = queuedAttempt
+    .catch(() => {})
+    .then(() => delay(250));
+
+  return queuedAttempt;
+}
+
 function browserArgs(headless) {
   const result = [
     '--disable-features=ScriptStreaming',
@@ -117,6 +135,7 @@ module.exports = function(tabNo) {
   let credentials;
   let globalHeadless;
   let captchaImage;
+  let loggedIn = false;
 
   async function browserInstance(headless) {
     // const browserFetcher = puppeteer.createBrowserFetcher();
@@ -169,6 +188,7 @@ module.exports = function(tabNo) {
   }
 
   function disconnectHandler(e) {
+    loggedIn = false;
     browser = null;
     page = null;
     if (globalDisconnectHandler) {
@@ -408,85 +428,102 @@ module.exports = function(tabNo) {
       throw new Error('i3ms login credentials are unavailable');
     }
 
+    loggedIn = false;
     let attempt = 0;
     while (!stopLogin) {
       attempt++;
       try {
-        const browserConnected =
-          browser &&
-          (typeof browser.isConnected !== 'function' || browser.isConnected());
-        const pageOpen =
-          page && (typeof page.isClosed !== 'function' || !page.isClosed());
+        const loginAttempt = async () => {
+          if (stopLogin) {
+            throw new Error('i3ms login stopped');
+          }
 
-        if (!browserConnected || !pageOpen) {
-          log('Reopening browser before login retry');
-          await openBrowser(globalHeadless);
-        }
+          const browserConnected =
+            browser &&
+            (typeof browser.isConnected !== 'function' ||
+              browser.isConnected());
+          const pageOpen =
+            page && (typeof page.isClosed !== 'function' || !page.isClosed());
 
-        const today = new Date();
-        const date =
-          today.getFullYear() +
-          '-' +
-          (today.getMonth() + 1) +
-          '-' +
-          today.getDate();
-        const time =
-          today.getHours() +
-          ':' +
-          today.getMinutes() +
-          ':' +
-          today.getSeconds();
-        const no = generateUID(256);
-        const encodedString = Buffer.from(
-          '09' + no + '/' + date + ' ' + time
-        ).toString('base64');
-        const loginUrl =
-          'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' + encodedString;
+          if (!browserConnected || !pageOpen) {
+            log('Reopening browser before login retry');
+            await openBrowser(globalHeadless);
+          }
 
-        log('Logging into', loginUrl, `attempt ${attempt}`);
-        await page.goto(loginUrl, {
-          referer: 'https://i3ms.odishaminerals.gov.in/i3msnew1.aspx',
-          waitUntil: 'domcontentloaded',
-          timeout: 30000
-        });
-        await page.waitForSelector('#btnSubmit', { timeout: 20000 });
-        await fill('#txtusr', credentials.username);
-        await fill('#txtpwd', credentials.password);
+          const today = new Date();
+          const date =
+            today.getFullYear() +
+            '-' +
+            (today.getMonth() + 1) +
+            '-' +
+            today.getDate();
+          const time =
+            today.getHours() +
+            ':' +
+            today.getMinutes() +
+            ':' +
+            today.getSeconds();
+          const no = generateUID(256);
+          const encodedString = Buffer.from(
+            '09' + no + '/' + date + ' ' + time
+          ).toString('base64');
+          const loginUrl =
+            'https://i3ms.odishaminerals.gov.in/Default.aspx?id=' +
+            encodedString;
 
-        const dashboardResponse = page
-          .waitForResponse(
-            response => response.url().includes('/Dashboard_TR.aspx'),
-            { timeout: 30000 }
-          )
-          .then(() => true)
-          .catch(() => false);
-
-        await page.click('#btnSubmit');
-        const reachedDashboard = await dashboardResponse;
-        const message = await page
-          .$eval('#lblMsg', el => el.innerText)
-          .catch(() => '');
-
-        if (/password is incorrect/i.test(message)) {
-          throw new Error('i3ms password is incorrect');
-        }
-        if (
-          !reachedDashboard &&
-          /\/(i3msnew1|Default)\.aspx/i.test(page.url())
-        ) {
-          throw new Error(message || 'i3ms login timed out');
-        }
-
-        log('loggedin');
-        if (mainUrl && mainUrl !== loginUrl) {
-          log('Going to url', mainUrl);
-          await page.goto(mainUrl, {
+          log('Logging into', loginUrl, `attempt ${attempt}`);
+          await page.goto(loginUrl, {
+            referer: 'https://i3ms.odishaminerals.gov.in/i3msnew1.aspx',
             waitUntil: 'domcontentloaded',
             timeout: 30000
           });
+          await page.waitForSelector('#btnSubmit', { timeout: 20000 });
+          await fill('#txtusr', credentials.username);
+          await fill('#txtpwd', credentials.password);
+
+          const dashboardResponse = page
+            .waitForResponse(
+              response => response.url().includes('/Dashboard_TR.aspx'),
+              { timeout: 30000 }
+            )
+            .then(() => true)
+            .catch(() => false);
+
+          await page.click('#btnSubmit');
+          const reachedDashboard = await dashboardResponse;
+          const message = await page
+            .$eval('#lblMsg', el => el.innerText)
+            .catch(() => '');
+
+          if (/password is incorrect/i.test(message)) {
+            throw new Error('i3ms password is incorrect');
+          }
+          if (
+            !reachedDashboard &&
+            /\/(i3msnew1|Default)\.aspx/i.test(page.url())
+          ) {
+            throw new Error(message || 'i3ms login timed out');
+          }
+
+          log('loggedin');
+          if (mainUrl && mainUrl !== loginUrl) {
+            log('Going to url', mainUrl);
+            await page.goto(mainUrl, {
+              waitUntil: 'domcontentloaded',
+              timeout: 30000
+            });
+          }
+        };
+
+        if (globalHeadless === true) {
+          await queueHiddenLoginAttempt(loginAttempt);
+        } else {
+          await loginAttempt();
         }
+        loggedIn = true;
         return true;
       } catch (ex) {
+        loggedIn = false;
         error(`Login attempt ${attempt} failed:`, ex.message);
         if (/password is incorrect/i.test(ex.message)) {
           throw ex;
@@ -1070,6 +1107,7 @@ module.exports = function(tabNo) {
 
   async function disconnect() {
     stopLogin = true;
+    loggedIn = false;
     if (browser) {
       await browser.close();
       browser = null;
@@ -1138,9 +1176,14 @@ module.exports = function(tabNo) {
     return page;
   }
 
+  function isLoggedIn() {
+    return loggedIn;
+  }
+
   return {
     getBrowser,
     getPage,
+    isLoggedIn,
     companyName,
     initializeBrowser,
     permitVehicles,
