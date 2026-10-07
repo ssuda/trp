@@ -142,9 +142,26 @@ function loadBrowserFactory(port) {
     if (name !== 'puppeteer') return normalRequire(name);
     return {
       launch: async options => {
-        const browser = await puppeteer.launch(options);
+        // Select one stable initial page before wrapping goto(). Otherwise a
+        // late about:blank target can become the factory's unwrapped page.
+        const browser = await puppeteer.launch({
+          ...options,
+          waitForInitialPage: true
+        });
         realBrowsers.push(browser);
         const page = (await browser.pages())[0] || (await browser.newPage());
+        await page.setRequestInterception(true);
+        page.on('request', request => {
+          const destination = new URL(request.url());
+          if (
+            destination.hostname === '127.0.0.1' &&
+            destination.port === String(port)
+          ) {
+            request.continue().catch(() => {});
+          } else {
+            request.abort().catch(() => {});
+          }
+        });
         const goto = page.goto.bind(page);
         page.goto = (url, settings) => {
           const destination = new URL(url);
@@ -198,6 +215,7 @@ async function run() {
     'every transient failure must retry'
   );
   assert(instances.every(instance => instance.isLoggedIn()));
+  assert(instances.every(instance => !instance.isLoggingIn()));
   assert(
     navigationOptions.every(options => options.waitUntil === 'domcontentloaded')
   );
@@ -239,6 +257,11 @@ async function run() {
   );
   heldReady.catch(() => {});
   await heldLogin;
+  assert.equal(
+    held.isLoggingIn(),
+    true,
+    'expose active login to the tagging watchdog'
+  );
   const queuedReady = queued.initializeBrowser(credentials, true, true);
   const queuedStopped = assert.rejects(queuedReady, /login stopped/);
   // Wait for form preparation, then stop while this browser is queued.
@@ -256,6 +279,7 @@ async function run() {
   await queued.disconnect();
   releaseHeldLogin();
   await heldReady;
+  assert.equal(held.isLoggingIn(), false);
   await queuedStopped;
   assert.equal(
     attempts.has(String(nextSession)),

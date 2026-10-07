@@ -1315,6 +1315,7 @@ module.exports = function(tabNo) {
     getBrowser,
     getPage,
     isLoggedIn,
+    isLoggingIn: () => Boolean(loginPromise),
     companyName,
     initializeBrowser,
     permitVehicles,

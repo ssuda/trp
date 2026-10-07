@@ -416,6 +416,61 @@ export async function getPermit(permit, sse, browser = i3ms) {
   return permit;
 }
 
+async function waitForTaggingResult(tab, operation) {
+  let remaining = 120000;
+  let previousCheck = Date.now();
+  let timer;
+  const stalled = new Promise((resolve, reject) => {
+    const check = () => {
+      const now = Date.now();
+      // Login keeps its own three-minute allowance and immediate retries.
+      // Do not count session renewal as an unresponsive tagging operation.
+      if (!(typeof tab.isLoggingIn === 'function' && tab.isLoggingIn())) {
+        remaining -= now - previousCheck;
+      }
+      previousCheck = now;
+      if (remaining <= 0) {
+        const error = new Error(
+          'Tagging result unconfirmed: browser did not respond within 120 seconds'
+        );
+        error.code = 'I3MS_TAG_STALLED';
+        reject(error);
+      } else {
+        timer = setTimeout(check, Math.min(1000, remaining));
+      }
+    };
+    timer = setTimeout(check, 1000);
+  });
+  try {
+    return await Promise.race([operation, stalled]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function retireTaggingTab(tab, tabNo) {
+  const ownedBrowser = tab.getBrowser();
+  const ownedProcess =
+    ownedBrowser && typeof ownedBrowser.process === 'function'
+      ? ownedBrowser.process()
+      : null;
+  // Detach before closing: the timed-out operation must never share a page
+  // with a new truck. A stuck close acknowledgement also needs a deadline.
+  if (tabs[tabNo] === tab) tabs[tabNo] = null;
+  try {
+    await promiseWithTimeout(tab.disconnect(), 5000);
+  } catch (ex) {
+    console.error('Tab', tabNo, 'close failed:', ex.message);
+    if (ownedProcess && typeof ownedProcess.kill === 'function') {
+      try {
+        ownedProcess.kill();
+      } catch (killError) {
+        console.error('Tab', tabNo, 'process stop failed:', killError.message);
+      }
+    }
+  }
+}
+
 export async function tagging(tab, vehicles, options, renderer, tabNo) {
   const { taggingUrl } = options;
 
@@ -446,11 +501,9 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
 
     console.log('Tab', tabNo, 'tagging vehicle', count);
     try {
-      let { reason, name } = await tab.tagVehicle(
-        taggingUrl,
-        truck,
-        renderer,
-        options
+      let { reason, name } = await waitForTaggingResult(
+        tab,
+        tab.tagVehicle(taggingUrl, truck, renderer, options)
       );
 
       console.log('Tab', tabNo, 'tagged vehicle', count, reason);
@@ -480,6 +533,11 @@ export async function tagging(tab, vehicles, options, renderer, tabNo) {
       }
     } catch (ex) {
       console.log('Tab', tabNo, 'tagged vehicle', count, ex.message);
+      if (ex.code === 'I3MS_TAG_STALLED') {
+        await retireTaggingTab(tab, tabNo);
+        sendTagFailure(renderer, options, truck, ex.message);
+        return;
+      }
       await tab.gotoTagPage(taggingUrl).catch(resetError => {
         console.error(
           'Tab',
@@ -511,20 +569,22 @@ function sendTagFailure(renderer, options, truck, reason) {
   });
 }
 
-async function tabTagging(taggingUrl, tab, takeNextTruck, options, sse, tabNo) {
+async function tabTagging(taggingUrl, tab, queue, options, sse, tabNo) {
   await tab.gotoTagPage(taggingUrl);
 
-  let truck;
-  while ((truck = takeNextTruck()) !== undefined) {
+  while (queue.hasRemaining()) {
     // tagging() can replace a disconnected browser in this slot. Always use
     // that current browser for the next truck instead of the stale instance.
-    const activeTab = tabs[tabNo] || tab;
-    await tagging(activeTab, [truck], options, sse, tabNo);
-
-    if (!tabReady(tabs[tabNo] || activeTab)) {
+    let activeTab = tabs[tabNo] || tab;
+    if (!tabReady(activeTab)) {
       try {
-        tab = await recoverTaggingTab(tabNo, options);
+        tab = await Promise.race([
+          recoverTaggingTab(tabNo, options),
+          queue.finished.then(() => null)
+        ]);
+        if (!tab || !queue.hasRemaining()) return;
         await tab.gotoTagPage(taggingUrl);
+        activeTab = tab;
       } catch (recoveryError) {
         console.error(
           'Tab',
@@ -534,6 +594,14 @@ async function tabTagging(taggingUrl, tab, takeNextTruck, options, sse, tabNo) {
         );
         break;
       }
+    }
+
+    const truck = queue.takeNext();
+    if (truck === undefined) return;
+    try {
+      await tagging(activeTab, [truck], options, sse, tabNo);
+    } finally {
+      queue.complete();
     }
   }
 }
@@ -638,7 +706,10 @@ function waitForFirstSuccessful(promises) {
 }
 
 async function recoverTaggingTab(tabNo, options) {
-  const opened = await openTab(
+  if (!openingTabs[tabNo] && tabs[tabNo]) {
+    await retireTaggingTab(tabs[tabNo], tabNo);
+  }
+  const opened = await startOpeningTab(
     tabNo,
     options.credentials,
     !options.showBrowser
@@ -765,10 +836,12 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
     // Workers take one truck only after completing the previous one. A faster
     // browser therefore keeps working instead of waiting behind a slow chunk.
     let nextTruckIndex = 0;
+    let inFlightTrucks = 0;
     const takeNextTruck = () => {
       if (nextTruckIndex >= trucks.length) {
         return undefined;
       }
+      inFlightTrucks++;
       return trucks[nextTruckIndex++];
     };
 
@@ -777,7 +850,17 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
       finishJob = resolve;
     });
     const usedTabEntries = [];
-    let activeWorkers = 0;
+    const queue = {
+      takeNext: takeNextTruck,
+      hasRemaining: () => nextTruckIndex < trucks.length,
+      finished: jobFinished,
+      complete: () => {
+        inFlightTrucks--;
+        if (nextTruckIndex >= trucks.length && inFlightTrucks === 0) {
+          finishJob();
+        }
+      }
+    };
 
     const runWorker = async tabNo => {
       let tab = tabReady(tabs[tabNo]) ? tabs[tabNo] : null;
@@ -802,29 +885,14 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
 
       const entry = { tab, tabNo };
       usedTabEntries.push(entry);
-      activeWorkers++;
       try {
-        await tabTagging(
-          taggingUrl,
-          tab,
-          takeNextTruck,
-          options,
-          sse,
-          tabNo
-        );
+        await tabTagging(taggingUrl, tab, queue, options, sse, tabNo);
       } catch (ex) {
         console.error('Tab', tabNo, 'tagging stopped:', ex.message);
-      } finally {
-        activeWorkers--;
-        if (nextTruckIndex >= trucks.length && activeWorkers === 0) {
-          finishJob();
-        }
       }
     };
 
-    await Promise.all(
-      [...Array(requestedBrowsers).keys()].map(runWorker)
-    );
+    await Promise.all([...Array(requestedBrowsers).keys()].map(runWorker));
 
     // A worker can stop before claiming another truck when its browser cannot
     // recover. Report only trucks that no worker ever claimed.
@@ -871,11 +939,8 @@ async function tagFromTabs(taggingUrl, trucks, options, sse) {
         verificationError.message
       );
       if (/timed out/i.test(verificationError.message)) {
-        await verificationTab.disconnect().catch(() => {});
         const tabIndex = tabs.indexOf(verificationTab);
-        if (tabIndex >= 0) {
-          tabs[tabIndex] = null;
-        }
+        await retireTaggingTab(verificationTab, tabIndex);
       }
     }
 
