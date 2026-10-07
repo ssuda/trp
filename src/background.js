@@ -342,7 +342,15 @@ ipcMain.on('reload-main-window', async () => {
 
 ipcMain.on('auto-tagging', (event, args) => {
   console.log('Received auto tagging from renderer');
-  newPermits(args.credentials, args.showBrowser, event.sender);
+  newPermits(args.credentials, args.showBrowser, event.sender).catch(ex => {
+    console.error('Unable to start auto tagging monitor:', ex);
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('i3ms-operation-failed', {
+        type: 'auto-tagging',
+        message: ex.message
+      });
+    }
+  });
 });
 
 ipcMain.on('show-browser', async () => {

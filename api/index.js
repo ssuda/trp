@@ -22,36 +22,34 @@ export async function newPermits(credentials, showBrowser, sse) {
   }
 
   newPermitBrowser = browser();
-
+  const monitor = newPermitBrowser;
   let toExit = false;
 
-  await newPermitBrowser.initializeBrowser(
-    credentials,
-    !showBrowser,
-    true,
-    () => {
+  try {
+    await monitor.initializeBrowser(credentials, !showBrowser, true, () => {
       toExit = true;
+    });
+
+    while (!toExit && !sse.isDestroyed()) {
+      try {
+        const out = await twoMonthPermits(
+          { onlyNewPermits: true },
+          null,
+          monitor
+        );
+
+        if (!toExit && !sse.isDestroyed()) {
+          sse.send('new-permits', out || []);
+        }
+      } catch (ex) {
+        console.error('Auto tagging permit monitor failed:', ex);
+      }
+
+      if (!toExit && !sse.isDestroyed()) await delay(5000);
     }
-  );
-
-  while (!toExit) {
-    let out = [];
-    try {
-      out = await twoMonthPermits(
-        {
-          onlyNewPermits: true
-        },
-        null,
-        newPermitBrowser
-      );
-
-      console.log('New permits', out);
-      sse.send('new-permits', out);
-    } catch (ex) {
-      console.error(ex);
-    }
-
-    await delay(5000);
+  } finally {
+    await monitor.disconnect().catch(() => {});
+    if (newPermitBrowser === monitor) newPermitBrowser = null;
   }
 }
 
@@ -110,8 +108,7 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
         'https://i3ms.odishaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx',
         '#grdTransporterActions',
         !args.onlyNewPermits,
-        args.onlyNewPermits,
-        sse
+        args.onlyNewPermits
       );
       break;
     } catch (ex) {}
@@ -160,24 +157,21 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
         noTagged: args.onlyNewPermits
       };
 
-      if (!pr.taggingUrl) {
-        const uri = new URL(pr.vehicleDetails);
-        pr.taggingUrl =
-          'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
-          uri.search;
-      }
-
-      if (args.onlyNewPermits && pr.taggingUrl) {
-        continue;
-      }
-
-      if (pr.taggingUrl) {
-        try {
-          const l = await getPermit(pr, sse, browser);
-          out.push(l);
-        } catch (ex) {
-          console.error(ex);
+      try {
+        if (!pr.taggingUrl) {
+          const uri = new URL(pr.vehicleDetails);
+          pr.taggingUrl =
+            'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
+            uri.search;
         }
+
+        if (pr.taggingUrl) {
+          const l = await getPermit(pr, sse, browser);
+          if (l) out.push(l);
+        }
+      } catch (ex) {
+        // One incomplete row must not discard other detected permits.
+        console.error('Unable to read permit:', pr.name, ex);
       }
     }
   }

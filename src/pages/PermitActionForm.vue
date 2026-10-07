@@ -275,7 +275,7 @@ export default {
       console.log("this.doc", this.doc.permit);
       if (this.doc.isCloudTagging) {
         console.log('clicking onclick')
-        this.onClick();
+        await this.onClick();
       }
     } catch (error) {
       console.log(error);
@@ -284,6 +284,10 @@ export default {
         return;
       }
       this.handleError(error);
+    } finally {
+      // Release auto dispatch if startup returns early (offline, missing
+      // trucks, or a manual job won the race). A started job keeps its slot.
+      await frappe.events.trigger('auto-tagging-attempted', this.name);
     }
   },
 

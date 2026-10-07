@@ -7,7 +7,7 @@ import outsideClickDirective from 'frappejs/ui/plugins/outsideClickDirective';
 import models from '../models';
 import { ipcMain, ipcRenderer } from 'electron';
 import { firestore } from '@/firebase';
-import moment from 'moment';
+import { setupAutoTagging } from './autoTagging';
 
 // vue imports
 import Vue from 'vue';
@@ -69,8 +69,12 @@ import tessaract from '../api/tessaract';
     await frappe.syncDoc({
       doctype: 'Permit',
       ..._.omit(permit, ['tagged', 'trips']),
-      delivered: trips.reduce((p, t) => p + +t.load_carrying, 0),
-      numTrips: trips.length,
+      ...(permit.trips
+        ? {
+            delivered: trips.reduce((p, t) => p + +t.load_carrying, 0),
+            numTrips: trips.length
+          }
+        : {}),
       tagged: JSON.stringify(tagged)
     });
 
@@ -318,176 +322,7 @@ import tessaract from '../api/tessaract';
     ipcRenderer.send('refresh-permits', args);
   });
 
-  async function tagPermit(doc) {
-    console.log('Auto Tagging new permit', doc.name);
-
-    const credentials = {
-      username: frappe.AccountingSettings.i3msUsername,
-      password: frappe.AccountingSettings.i3msPassword
-    };
-
-    const truckList = await frappe.getDoc('TruckList', doc.truckList);
-
-    console.log(truckList);
-    let trucks = truckList.trucks.split('\n').filter(Boolean);
-
-    let permit = doc.permit;
-
-    let obj = {
-      credentials,
-      trucks,
-      showBrowser: true,
-      numBrowsers: doc.numBrowsers
-    };
-
-    obj = {
-      ...obj,
-      ...permit
-    };
-
-    if (trucks.length) {
-      frappe.events.trigger('tag-vehicles', obj);
-    }
-  }
-
-  frappe.events.on('auto-tagging', async docs => {
-    console.log('Setting up auto tagging');
-    //Fetch autoTagging
-    docs = docs || [];
-
-    let oldDocs = await frappe.db.getAll({
-      doctype: 'AutoTagging'
-    });
-
-    docs = docs.concat(oldDocs);
-
-    console.log('Setting up auto tagging number of docs', docs.length);
-
-    if (docs.length) {
-      const credentials = {
-        username: frappe.AccountingSettings.i3msUsername,
-        password: frappe.AccountingSettings.i3msPassword
-      };
-
-      ipcRenderer.send('auto-tagging', {
-        credentials,
-        showBrowser: frappe.AccountingSettings.showBrowser
-      });
-
-      ipcRenderer.on('new-permits', async (e, permits) => {
-        //filter out permits today(startDate), replace DateTime with moment
-        const today = moment();
-
-        permits = permits.filter(p => {
-          const startDate = moment(p.startDate, 'YYYY-MM-DD');
-          console.log(
-            'startDAte',
-            today,
-            startDate,
-            startDate.isSame(today, 'day')
-          );
-          return startDate.isSame(today, 'day');
-        });
-
-        if (frappe.isTagging) {
-          console.log('Already Tagging');
-          return;
-        }
-
-        console.log('Received new permits', permits);
-        let newPermits = [];
-
-        for (let i = 0; i < permits.length; ++i) {
-          const isNew = await savePermit(permits[i]);
-          if (isNew) {
-            console.log('New permit saved', permits[i].name);
-            newPermits.push(permits[i]);
-          }
-        }
-
-        //find docs;
-        let autoTags = docs.filter(doc => {
-          let permit = newPermits.find(
-            p => p.source.toUpperCase() == doc.source.toUpperCase()
-          );
-
-          if (permit) {
-            doc.permit = permit;
-            return true;
-          }
-
-          return false;
-        });
-
-        console.log('Matched new Permit with Auto Tagging', autoTags.length);
-
-        //sort by priority and sort by permit number
-        if (autoTags.length) {
-          if (autoTags.length > 1) {
-            autoTags = autoTags.sort((a, b) => {
-              if (a.priority < b.priority) {
-                return -1;
-              }
-
-              if (a.priority > b.priority) {
-                return 1;
-              }
-
-              if (a.permit.name > b.permit.name) {
-                return 1;
-              }
-
-              return -1;
-            });
-          }
-
-          console.log('AutoTagging', autoTags);
-
-          if (frappe.isTagging) {
-            console.log(
-              'Actual tagging has started, skipping auto-tagging navigation'
-            );
-            return;
-          }
-
-          const permit = autoTags[0].permit;
-
-          try {
-            const doc = frappe.getNewDoc('PermitAction');
-            await doc.set({
-              label: _('Tagging'),
-              action: 'tagging',
-              buttonText: _('Tagging'),
-              permit: permit.name,
-              truckList: autoTags[0].truckList,
-              isCloudTagging: true
-            });
-
-            if (frappe.isTagging) {
-              console.log(
-                'Actual tagging has started, skipping auto-tagging navigation'
-              );
-              return;
-            }
-
-            router.push({
-              name: 'PermitAction',
-              params: {
-                name: doc.name
-              }
-            });
-          } catch (ex) {
-            console.error(ex);
-          }
-
-          // for (let i = 0; i < autoTags.length; ++i) {
-          //   await tagPermit(autoTags[i]);
-          // }
-          //}
-        }
-      });
-    }
-  });
+  setupAutoTagging({ frappe, ipcRenderer, router, savePermit });
 
   window.frappe = frappe;
 
