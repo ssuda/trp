@@ -24,6 +24,7 @@ const authenticatedSessions = new Set();
 const pendingDashboardSubmissions = new Set();
 const protectedPageVisits = new Map();
 const taggingPageVisits = new Map();
+const redirectedSessions = new Set();
 const sessionWarning =
   'Either you have already loged in or not properly signed out. Only one login is allowed for a particular user. Please contact ITPMU in case of any problem.';
 let fixtureStopped = false;
@@ -36,7 +37,7 @@ const heldLogin = new Promise(resolve => {
 const form = message => `<!doctype html><html><body>
   <form method="post" onsubmit='if (document.getElementById("txtusr").value === "session-warning-popup") { alert(${JSON.stringify(
     sessionWarning
-  )}); return false; }'><input id="txtusr" name="username">
+  )}); setTimeout(() => location.href = "/LoginLanding.aspx?warning=1", 100); return false; }'><input id="txtusr" name="username">
   <input id="txtpwd" name="password" type="password">
   <button id="btnSubmit" type="submit">Login</button>
   <span id="lblMsg">${message || ''}</span></form></body></html>`;
@@ -79,7 +80,15 @@ const server = http.createServer((request, response) => {
       activeSubmissions++;
       maxActiveSubmissions = Math.max(maxActiveSubmissions, activeSubmissions);
       const finish = () => {
-        if (username === 'direct-permit-page') {
+        if (
+          [
+            'direct-permit-page',
+            'other-page-warning',
+            'outside-http-error',
+            'delayed-redirect',
+            'click-ack-loss'
+          ].includes(username)
+        ) {
           activeSubmissions--;
           if (count > 1) {
             response.writeHead(200, { 'Content-Type': 'text/html' });
@@ -88,25 +97,46 @@ const server = http.createServer((request, response) => {
             );
           } else {
             authenticatedSessions.add(key);
-            response.writeHead(302, {
-              Location: '/i3ms/pms/ViewTransporterAction.aspx'
-            });
-            response.end();
+            if (username === 'other-page-warning') redirectedSessions.add(key);
+            if (username === 'delayed-redirect') {
+              response.writeHead(200, { 'Content-Type': 'text/html' });
+              response.end(
+                form() +
+                  '<script>setTimeout(() => location.href = "/LoginLanding.aspx", 250);</script>'
+              );
+            } else {
+              response.writeHead(302, {
+                Location:
+                  username === 'direct-permit-page'
+                    ? '/i3ms/pms/ViewTransporterAction.aspx'
+                    : username === 'outside-http-error'
+                    ? '/LoginLanding.aspx?error=503'
+                    : '/LoginLanding.aspx?warning=1'
+              });
+              response.end();
+            }
           }
           return;
         }
         if (username.startsWith('session-warning')) {
           activeSubmissions--;
-          const expected = username === 'session-warning' ? 1 : 2;
-          if (count >= expected) authenticatedSessions.add(key);
-          response.writeHead(200, { 'Content-Type': 'text/html' });
-          response.end(
-            form(
-              count > expected
-                ? 'Password is incorrect (fixture: valid session was ignored)'
-                : sessionWarning
-            )
-          );
+          const expected = username === 'session-warning-direct' ? 1 : 2;
+          if (count > expected) {
+            response.writeHead(200, { 'Content-Type': 'text/html' });
+            response.end(
+              form('Password is incorrect (fixture: login was restarted)')
+            );
+          } else if (count === expected) {
+            authenticatedSessions.add(key);
+            redirectedSessions.add(key);
+            response.writeHead(302, {
+              Location: '/LoginLanding.aspx?warning=1'
+            });
+            response.end();
+          } else {
+            response.writeHead(200, { 'Content-Type': 'text/html' });
+            response.end(form(sessionWarning));
+          }
           return;
         }
         if (username === 'incorrect-password' || count < 3) {
@@ -144,6 +174,24 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (/\/LoginLanding\.aspx/i.test(url.pathname)) {
+    const key = session && session[1];
+    if (!authenticatedSessions.has(key)) {
+      response.writeHead(302, { Location: '/Default.aspx' });
+      response.end();
+      return;
+    }
+    response.writeHead(url.searchParams.has('error') ? 503 : 200, {
+      'Content-Type': 'text/html'
+    });
+    response.end(
+      `<html><body><div class="welcome">Welcome fixture</div><input id="txtusr" type="hidden"><span id="lblMsg">${
+        url.searchParams.has('warning') ? sessionWarning : ''
+      }</span></body></html>`
+    );
+    return;
+  }
+
   if (/\/TransporterAssignVehicleNew\.aspx/i.test(url.pathname)) {
     const key = session && session[1];
     taggingPageVisits.set(key, (taggingPageVisits.get(key) || 0) + 1);
@@ -162,6 +210,11 @@ const server = http.createServer((request, response) => {
   if (/\/ViewTransporterAction\.aspx/i.test(url.pathname)) {
     const key = session && session[1];
     protectedPageVisits.set(key, (protectedPageVisits.get(key) || 0) + 1);
+    if (redirectedSessions.has(key)) {
+      response.writeHead(302, { Location: '/LoginLanding.aspx?warning=1' });
+      response.end();
+      return;
+    }
     if (!authenticatedSessions.has(key)) {
       response.writeHead(302, { Location: '/Default.aspx' });
       response.end();
@@ -259,6 +312,25 @@ function loadBrowserFactory(port) {
           navigationOptions.push(settings);
           return waitForNavigation(settings);
         };
+        const click = page.click.bind(page);
+        page.click = async selector => {
+          const username = await page
+            .$eval('#txtusr', el => el.value)
+            .catch(() => '');
+          if (username === 'click-ack-loss') {
+            await Promise.all([
+              waitForNavigation({
+                waitUntil: 'domcontentloaded',
+                timeout: 180000
+              }),
+              click(selector)
+            ]);
+            throw new Error(
+              'Execution context was destroyed, most likely because of a navigation.'
+            );
+          }
+          return click(selector);
+        };
         return browser;
       }
     };
@@ -353,8 +425,10 @@ async function run() {
   await direct.disconnect();
 
   for (const [username, expectedAttempts] of [
-    ['session-warning', 1],
-    ['session-warning-then-authenticated', 2]
+    ['other-page-warning', 1],
+    ['delayed-redirect', 1],
+    ['click-ack-loss', 1],
+    ['session-warning', 2]
   ]) {
     const warning = browserFactory(username);
     instances.push(warning);
@@ -366,25 +440,39 @@ async function run() {
     assert.equal(
       attempts.get(String(nextSession)),
       expectedAttempts,
-      'verify the session before deciding whether to resubmit login'
+      'resubmit only while the browser is still on Default.aspx'
     );
     assert.equal(warning.isLoggedIn(), true);
     assert.equal(warning.isLoggingIn(), false);
     assert.equal(await warning.companyName(), 'fixture');
-    assert.equal(
-      protectedPageVisits.get(String(nextSession)),
-      expectedAttempts
-    );
+    assert.equal(protectedPageVisits.has(String(nextSession)), false);
     assert(
       warning
         .getPage()
         .url()
-        .includes('/ViewTransporterAction.aspx')
+        .includes('/LoginLanding.aspx')
     );
     await warning.disconnect();
   }
   console.log(
-    'PASS: single-login warning accepts a verified session, otherwise retries'
+    'PASS: same-page-only retries, other-page warnings, delayed redirects and click acknowledgement loss'
+  );
+
+  const outsideError = browserFactory('outside-http-error');
+  instances.push(outsideError);
+  await assert.rejects(
+    outsideError.initializeBrowser(
+      { username: 'outside-http-error', password: 'fixture' },
+      true,
+      true
+    ),
+    /HTTP 503/
+  );
+  assert.equal(attempts.get(String(nextSession)), 1);
+  assert.equal(outsideError.isLoggedIn(), false);
+  await outsideError.disconnect();
+  console.log(
+    'PASS: errors after leaving the login page never resubmit credentials'
   );
 
   const popup = browserFactory('session-warning-popup');
@@ -403,22 +491,22 @@ async function run() {
   assert.equal(popup.isLoggedIn(), true);
   assert.equal(await popup.companyName(), 'fixture');
   assert.equal(attempts.has(cookie.value), false);
-  assert.equal(protectedPageVisits.get(cookie.value), 1);
+  assert.equal(protectedPageVisits.has(cookie.value), false);
   assert(
     popup
       .getPage()
       .url()
-      .includes('/ViewTransporterAction.aspx')
+      .includes('/LoginLanding.aspx')
   );
   console.log(
-    'PASS: warning popup without navigation verifies the existing session'
+    'PASS: warning popup completes its redirect without a login restart or probe'
   );
   await popup.disconnect();
 
   const resume = browserFactory('resume-tagging-page');
   instances.push(resume);
   await resume.initializeBrowser(
-    { username: 'session-warning', password: 'fixture' },
+    { username: 'session-warning-direct', password: 'fixture' },
     true,
     false
   );

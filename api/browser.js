@@ -427,16 +427,8 @@ module.exports = function(tabNo) {
   let loginPromise;
   let stopLogin = false;
 
-  function hasLoginForm() {
-    return page.evaluate(() => Boolean(document.querySelector('#txtusr')));
-  }
-
-  async function reachedLoginDestination() {
-    const path = new URL(page.url()).pathname;
-    if (!/^\/Dashboard_TR\.aspx$|^\/i3ms\/(pms|ePassReports)\//i.test(path)) {
-      return false;
-    }
-    return !(await hasLoginForm());
+  function onLoginPage() {
+    return page && /^\/Default\.aspx$/i.test(new URL(page.url()).pathname);
   }
 
   async function performLogin() {
@@ -526,8 +518,8 @@ module.exports = function(tabNo) {
           loginPage.on('dialog', onDialog);
           try {
             [loginResponse] = await Promise.all([
-              // A client-side warning dialog need not navigate. The existing
-              // dialog handler accepts it; the requested page verifies access.
+              // A warning can be a dialog rather than a postback. After the
+              // click settles, only the current login URL decides a retry.
               Promise.race([
                 loginPage.waitForNavigation({
                   waitUntil: 'domcontentloaded',
@@ -537,6 +529,18 @@ module.exports = function(tabNo) {
               ]),
               loginPage.click('#btnSubmit')
             ]);
+          } catch (ex) {
+            // The click acknowledgement can fail after a successful redirect.
+            // Never resubmit credentials once the browser left Default.aspx.
+            if (
+              stopLogin ||
+              !page ||
+              onLoginPage() ||
+              !/^https?:/i.test(page.url())
+            ) {
+              throw ex;
+            }
+            return true;
           } finally {
             loginPage.removeListener('dialog', onDialog);
           }
@@ -545,8 +549,8 @@ module.exports = function(tabNo) {
           if (loginResponse && loginResponse.status() >= 400) {
             throw new Error(`i3ms login returned HTTP ${loginResponse.status()}`);
           }
-          if (await reachedLoginDestination()) {
-            return;
+          if (!onLoginPage()) {
+            return true;
           }
 
           const message = await page
@@ -556,53 +560,38 @@ module.exports = function(tabNo) {
             throw new Error('i3ms password is incorrect');
           }
           if (
-            warned ||
-            /only one login is allowed for a particular user/i.test(message)
+            onLoginPage() &&
+            (warned ||
+              !message ||
+              /only one login is allowed for a particular user/i.test(message))
           ) {
-            // This warning can accompany an already usable session. Verify
-            // access outside the submit queue instead of rejecting/reposting.
-            return true;
+            // 1.1.15 allowed five seconds for a delayed redirect. Finish early
+            // when it happens instead of imposing that delay on every login.
+            await loginPage
+              .waitForFunction(
+                () => !/^\/Default\.aspx$/i.test(window.location.pathname),
+                { timeout: 5000, polling: 100 }
+              )
+              .catch(ex => {
+                if (ex.name !== 'TimeoutError') throw ex;
+              });
           }
-          // A client-side redirect may complete while reading the message.
-          if (await reachedLoginDestination()) {
-            return;
-          }
-          throw new Error(message || 'i3ms login did not reach a work page');
+          return !onLoginPage();
         };
 
-        const sessionWarning =
+        const leftLoginPage =
           globalHeadless === true
             ? await queueHiddenLoginAttempt(submitLogin)
             : await submitLogin();
 
-        let restoredMainUrl = false;
-        if (sessionWarning) {
-          // No dashboard is required. Resume the intended work page (or the
-          // read-only permit list during startup) using this browser's session.
-          const sessionUrl =
-            mainUrl ||
-            'https://i3ms.odishaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx';
-          log('Login session warning; continuing to requested page');
-          const response = await page.goto(sessionUrl, {
-            referer: page.url(),
-            waitUntil: 'domcontentloaded',
-            timeout: 180000
-          });
-          if (
-            !response ||
-            response.status() >= 400 ||
-            new URL(page.url()).pathname.toLowerCase() !==
-              new URL(sessionUrl).pathname.toLowerCase() ||
-            (await hasLoginForm())
-          ) {
-            throw new Error('i3ms session is not authenticated yet');
-          }
-          restoredMainUrl = Boolean(mainUrl);
-          log('Existing login session verified');
+        if (!leftLoginPage) {
+          log('Still on Default.aspx; retrying login immediately');
+          await delay(0);
+          continue;
         }
 
         // Loading the requested page need not hold up another browser's login.
-        if (mainUrl && mainUrl !== loginUrl && !restoredMainUrl) {
+        if (mainUrl && mainUrl !== loginUrl) {
           log('Going to url', mainUrl);
           await page.goto(mainUrl, {
             waitUntil: 'domcontentloaded',
@@ -620,6 +609,10 @@ module.exports = function(tabNo) {
         }
         if (stopLogin) {
           break;
+        }
+        if (page && !onLoginPage()) {
+          // An error on another page is not a reason to start login again.
+          throw ex;
         }
         // Retry immediately, but yield once so a synchronous failure cannot
         // block browser disconnect or application shutdown events.
