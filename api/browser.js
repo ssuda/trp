@@ -427,6 +427,18 @@ module.exports = function(tabNo) {
   let loginPromise;
   let stopLogin = false;
 
+  function hasLoginForm() {
+    return page.evaluate(() => Boolean(document.querySelector('#txtusr')));
+  }
+
+  async function reachedLoginDestination() {
+    const path = new URL(page.url()).pathname;
+    if (!/^\/Dashboard_TR\.aspx$|^\/i3ms\/(pms|ePassReports)\//i.test(path)) {
+      return false;
+    }
+    return !(await hasLoginForm());
+  }
+
   async function performLogin() {
     if (!credentials || !credentials.username || !credentials.password) {
       throw new Error('i3ms login credentials are unavailable');
@@ -494,16 +506,46 @@ module.exports = function(tabNo) {
           // A failed Web Forms login posts back to the login form, so waiting
           // only for Dashboard_TR's response wastes 30 seconds on rejection.
           // Arm navigation before clicking and inspect the committed document.
-          await Promise.all([
-            page.waitForNavigation({
-              waitUntil: 'domcontentloaded',
-              timeout: 180000
-            }),
-            page.click('#btnSubmit')
-          ]);
-          log('Login postback completed in', Date.now() - submittedAt, 'ms');
+          const loginPage = page;
+          let warned = false;
+          let loginResponse;
+          let receiveWarning;
+          const warning = new Promise(resolve => {
+            receiveWarning = resolve;
+          });
+          const onDialog = dialog => {
+            if (
+              /only one login is allowed for a particular user/i.test(
+                dialog.message()
+              )
+            ) {
+              warned = true;
+              receiveWarning();
+            }
+          };
+          loginPage.on('dialog', onDialog);
+          try {
+            [loginResponse] = await Promise.all([
+              // A client-side warning dialog need not navigate. The existing
+              // dialog handler accepts it; the requested page verifies access.
+              Promise.race([
+                loginPage.waitForNavigation({
+                  waitUntil: 'domcontentloaded',
+                  timeout: 180000
+                }),
+                warning
+              ]),
+              loginPage.click('#btnSubmit')
+            ]);
+          } finally {
+            loginPage.removeListener('dialog', onDialog);
+          }
+          log('Login submission completed in', Date.now() - submittedAt, 'ms');
 
-          if (/\/Dashboard_TR\.aspx(?:[?#]|$)/i.test(page.url())) {
+          if (loginResponse && loginResponse.status() >= 400) {
+            throw new Error(`i3ms login returned HTTP ${loginResponse.status()}`);
+          }
+          if (await reachedLoginDestination()) {
             return;
           }
 
@@ -513,17 +555,54 @@ module.exports = function(tabNo) {
           if (/password is incorrect/i.test(message)) {
             throw new Error('i3ms password is incorrect');
           }
-          throw new Error(message || 'i3ms login did not reach the dashboard');
+          if (
+            warned ||
+            /only one login is allowed for a particular user/i.test(message)
+          ) {
+            // This warning can accompany an already usable session. Verify
+            // access outside the submit queue instead of rejecting/reposting.
+            return true;
+          }
+          // A client-side redirect may complete while reading the message.
+          if (await reachedLoginDestination()) {
+            return;
+          }
+          throw new Error(message || 'i3ms login did not reach a work page');
         };
 
-        if (globalHeadless === true) {
-          await queueHiddenLoginAttempt(submitLogin);
-        } else {
-          await submitLogin();
+        const sessionWarning =
+          globalHeadless === true
+            ? await queueHiddenLoginAttempt(submitLogin)
+            : await submitLogin();
+
+        let restoredMainUrl = false;
+        if (sessionWarning) {
+          // No dashboard is required. Resume the intended work page (or the
+          // read-only permit list during startup) using this browser's session.
+          const sessionUrl =
+            mainUrl ||
+            'https://i3ms.odishaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx';
+          log('Login session warning; continuing to requested page');
+          const response = await page.goto(sessionUrl, {
+            referer: page.url(),
+            waitUntil: 'domcontentloaded',
+            timeout: 180000
+          });
+          if (
+            !response ||
+            response.status() >= 400 ||
+            new URL(page.url()).pathname.toLowerCase() !==
+              new URL(sessionUrl).pathname.toLowerCase() ||
+            (await hasLoginForm())
+          ) {
+            throw new Error('i3ms session is not authenticated yet');
+          }
+          restoredMainUrl = Boolean(mainUrl);
+          log('Existing login session verified');
         }
 
         // Loading the requested page need not hold up another browser's login.
-        if (mainUrl && mainUrl !== loginUrl) {
+        if (mainUrl && mainUrl !== loginUrl && !restoredMainUrl) {
           log('Going to url', mainUrl);
           await page.goto(mainUrl, {
             waitUntil: 'domcontentloaded',

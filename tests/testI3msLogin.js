@@ -20,6 +20,13 @@ let nextSession = 0;
 let activeSubmissions = 0;
 let maxActiveSubmissions = 0;
 const attempts = new Map();
+const authenticatedSessions = new Set();
+const pendingDashboardSubmissions = new Set();
+const protectedPageVisits = new Map();
+const taggingPageVisits = new Map();
+const sessionWarning =
+  'Either you have already loged in or not properly signed out. Only one login is allowed for a particular user. Please contact ITPMU in case of any problem.';
+let fixtureStopped = false;
 let releaseHeldLogin;
 let heldLoginStarted;
 const heldLogin = new Promise(resolve => {
@@ -27,7 +34,9 @@ const heldLogin = new Promise(resolve => {
 });
 
 const form = message => `<!doctype html><html><body>
-  <form method="post"><input id="txtusr" name="username">
+  <form method="post" onsubmit='if (document.getElementById("txtusr").value === "session-warning-popup") { alert(${JSON.stringify(
+    sessionWarning
+  )}); return false; }'><input id="txtusr" name="username">
   <input id="txtpwd" name="password" type="password">
   <button id="btnSubmit" type="submit">Login</button>
   <span id="lblMsg">${message || ''}</span></form></body></html>`;
@@ -70,6 +79,36 @@ const server = http.createServer((request, response) => {
       activeSubmissions++;
       maxActiveSubmissions = Math.max(maxActiveSubmissions, activeSubmissions);
       const finish = () => {
+        if (username === 'direct-permit-page') {
+          activeSubmissions--;
+          if (count > 1) {
+            response.writeHead(200, { 'Content-Type': 'text/html' });
+            response.end(
+              form('Password is incorrect (fixture: permit page was ignored)')
+            );
+          } else {
+            authenticatedSessions.add(key);
+            response.writeHead(302, {
+              Location: '/i3ms/pms/ViewTransporterAction.aspx'
+            });
+            response.end();
+          }
+          return;
+        }
+        if (username.startsWith('session-warning')) {
+          activeSubmissions--;
+          const expected = username === 'session-warning' ? 1 : 2;
+          if (count >= expected) authenticatedSessions.add(key);
+          response.writeHead(200, { 'Content-Type': 'text/html' });
+          response.end(
+            form(
+              count > expected
+                ? 'Password is incorrect (fixture: valid session was ignored)'
+                : sessionWarning
+            )
+          );
+          return;
+        }
         if (username === 'incorrect-password' || count < 3) {
           activeSubmissions--;
           response.writeHead(200, { 'Content-Type': 'text/html' });
@@ -82,6 +121,8 @@ const server = http.createServer((request, response) => {
           );
         } else {
           // Mixed casing must still be recognized as a successful dashboard.
+          authenticatedSessions.add(key);
+          pendingDashboardSubmissions.add(key);
           response.writeHead(302, { Location: '/DASHBOARD_TR.aspx' });
           response.end();
         }
@@ -90,6 +131,8 @@ const server = http.createServer((request, response) => {
         // This case succeeds on the first submit once the test releases it.
         attempts.set(key, 3);
         releaseHeldLogin = () => {
+          authenticatedSessions.add(key);
+          pendingDashboardSubmissions.add(key);
           response.writeHead(302, { Location: '/DASHBOARD_TR.aspx' });
           response.end();
         };
@@ -101,11 +144,47 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (/\/TransporterAssignVehicleNew\.aspx/i.test(url.pathname)) {
+    const key = session && session[1];
+    taggingPageVisits.set(key, (taggingPageVisits.get(key) || 0) + 1);
+    if (!authenticatedSessions.has(key)) {
+      response.writeHead(302, { Location: '/Default.aspx' });
+      response.end();
+      return;
+    }
+    response.writeHead(200, { 'Content-Type': 'text/html' });
+    response.end(
+      '<html><body><table id="grTrAction"></table><input id="txtVehicleNo"></body></html>'
+    );
+    return;
+  }
+
+  if (/\/ViewTransporterAction\.aspx/i.test(url.pathname)) {
+    const key = session && session[1];
+    protectedPageVisits.set(key, (protectedPageVisits.get(key) || 0) + 1);
+    if (!authenticatedSessions.has(key)) {
+      response.writeHead(302, { Location: '/Default.aspx' });
+      response.end();
+      return;
+    }
+    response.writeHead(200, { 'Content-Type': 'text/html' });
+    response.end(
+      '<html><body><div class="welcome">Welcome fixture</div><table id="grdTransporterActions"></table></body></html>'
+    );
+    return;
+  }
+
   if (/\/Dashboard_TR\.aspx/i.test(url.pathname)) {
+    const key = session && session[1];
+    if (!authenticatedSessions.has(key)) {
+      response.writeHead(302, { Location: '/Default.aspx' });
+      response.end();
+      return;
+    }
     // Include a real response-body delay: login must await DOM readiness.
     response.writeHead(200, { 'Content-Type': 'text/html' });
     setTimeout(() => {
-      activeSubmissions--;
+      if (pendingDashboardSubmissions.delete(key)) activeSubmissions--;
       response.end(
         '<html><body><div class="welcome">Welcome fixture</div></body></html>'
       );
@@ -148,6 +227,10 @@ function loadBrowserFactory(port) {
           ...options,
           waitForInitialPage: true
         });
+        if (fixtureStopped) {
+          await browser.close();
+          throw new Error('Login fixture stopped');
+        }
         realBrowsers.push(browser);
         const page = (await browser.pages())[0] || (await browser.newPage());
         await page.setRequestInterception(true);
@@ -228,6 +311,7 @@ async function run() {
     Date.now() - started,
     'ms'
   );
+  await Promise.all(instances.map(instance => instance.disconnect()));
 
   const incorrect = browserFactory('incorrect');
   instances.push(incorrect);
@@ -246,6 +330,121 @@ async function run() {
   );
   assert.equal(incorrect.isLoggedIn(), false);
   console.log('PASS: explicit incorrect password stops immediately');
+  await incorrect.disconnect();
+
+  const direct = browserFactory('direct-permit-page');
+  instances.push(direct);
+  await direct.initializeBrowser(
+    { username: 'direct-permit-page', password: 'fixture' },
+    true,
+    true
+  );
+  assert.equal(direct.isLoggedIn(), true);
+  assert.equal(attempts.get(String(nextSession)), 1);
+  assert(
+    direct
+      .getPage()
+      .url()
+      .includes('/ViewTransporterAction.aspx')
+  );
+  console.log(
+    'PASS: login can land directly on a permit page without a dashboard'
+  );
+  await direct.disconnect();
+
+  for (const [username, expectedAttempts] of [
+    ['session-warning', 1],
+    ['session-warning-then-authenticated', 2]
+  ]) {
+    const warning = browserFactory(username);
+    instances.push(warning);
+    await warning.initializeBrowser(
+      { username, password: 'fixture' },
+      true,
+      true
+    );
+    assert.equal(
+      attempts.get(String(nextSession)),
+      expectedAttempts,
+      'verify the session before deciding whether to resubmit login'
+    );
+    assert.equal(warning.isLoggedIn(), true);
+    assert.equal(warning.isLoggingIn(), false);
+    assert.equal(await warning.companyName(), 'fixture');
+    assert.equal(
+      protectedPageVisits.get(String(nextSession)),
+      expectedAttempts
+    );
+    assert(
+      warning
+        .getPage()
+        .url()
+        .includes('/ViewTransporterAction.aspx')
+    );
+    await warning.disconnect();
+  }
+  console.log(
+    'PASS: single-login warning accepts a verified session, otherwise retries'
+  );
+
+  const popup = browserFactory('session-warning-popup');
+  instances.push(popup);
+  const popupCredentials = {
+    username: 'session-warning-popup',
+    password: 'fixture'
+  };
+  await popup.initializeBrowser(popupCredentials, true, false);
+  await popup.getPage().goto('https://i3ms.odishaminerals.gov.in/Default.aspx');
+  const cookie = (await popup.getPage().cookies()).find(
+    value => value.name === 'fixtureSession'
+  );
+  authenticatedSessions.add(cookie.value);
+  await popup.initializeBrowser(popupCredentials, true, true);
+  assert.equal(popup.isLoggedIn(), true);
+  assert.equal(await popup.companyName(), 'fixture');
+  assert.equal(attempts.has(cookie.value), false);
+  assert.equal(protectedPageVisits.get(cookie.value), 1);
+  assert(
+    popup
+      .getPage()
+      .url()
+      .includes('/ViewTransporterAction.aspx')
+  );
+  console.log(
+    'PASS: warning popup without navigation verifies the existing session'
+  );
+  await popup.disconnect();
+
+  const resume = browserFactory('resume-tagging-page');
+  instances.push(resume);
+  await resume.initializeBrowser(
+    { username: 'session-warning', password: 'fixture' },
+    true,
+    false
+  );
+  await resume
+    .getPage()
+    .goto('https://i3ms.odishaminerals.gov.in/Default.aspx');
+  const resumeCookie = (await resume.getPage().cookies()).find(
+    value => value.name === 'fixtureSession'
+  );
+  const requestedUrl =
+    'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?fixture=resume';
+  assert.deepEqual(await resume.gotoTagPage(requestedUrl), {});
+  assert.equal(resume.isLoggedIn(), true);
+  assert.equal(attempts.get(resumeCookie.value), 1);
+  assert.equal(taggingPageVisits.get(resumeCookie.value), 2);
+  assert.equal(protectedPageVisits.has(resumeCookie.value), false);
+  assert(
+    resume
+      .getPage()
+      .url()
+      .endsWith('/TransporterAssignVehicleNew.aspx?fixture=resume')
+  );
+  console.log(
+    'PASS: login warning resumes the requested tagging URL without dashboard or duplicate reload'
+  );
+  await resume.disconnect();
 
   const held = browserFactory('held');
   const queued = browserFactory('queued');
@@ -295,7 +494,7 @@ Promise.race([
   new Promise((_, reject) => {
     timeout = setTimeout(
       () => reject(new Error('Login regression test timed out')),
-      12000
+      60000
     );
   })
 ])
@@ -304,6 +503,7 @@ Promise.race([
     process.exitCode = 1;
   })
   .finally(async () => {
+    fixtureStopped = true;
     clearTimeout(timeout);
     await Promise.all(
       instances.map(instance => instance.disconnect().catch(() => {}))
