@@ -5,12 +5,28 @@ const assert = require('assert');
 const fs = require('fs');
 const Module = require('module');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { transformSync } = require('@babel/core');
 const { parse } = require('@babel/parser');
 const moment = require('moment');
 const Observable = require('frappejs/utils/observable');
 
 const root = path.resolve(__dirname, '..');
+const apiSource = process.argv.includes('--baseline')
+  ? execFileSync('git', ['show', 'HEAD:api/index.js'], {
+      cwd: root,
+      encoding: 'utf8'
+    })
+  : undefined;
+const coordinatorSource = process.argv.includes('--baseline')
+  ? execFileSync('git', ['show', 'HEAD:src/autoTagging.js'], {
+      cwd: root,
+      encoding: 'utf8'
+    })
+  : fs.readFileSync(path.join(root, 'src/autoTagging.js'), 'utf8');
+const flush = async () => {
+  for (let i = 0; i < 100; i++) await Promise.resolve();
+};
 function load(relativePath, overrides = {}, source) {
   const filename = path.join(root, relativePath);
   const loaded = new Module(filename, module);
@@ -58,7 +74,24 @@ function fixture(stored = [rule()]) {
   const actions = [];
   const routes = [];
   const sent = [];
-  const state = { stored, saving: null, navigate: null };
+  const state = {
+    stored,
+    saving: null,
+    navigate: null,
+    send: null,
+    dbError: null
+  };
+  const intervals = [];
+  const timers = {
+    setInterval: (callback, ms) => {
+      const timer = { callback, ms, active: true };
+      intervals.push(timer);
+      return timer;
+    },
+    clearInterval: timer => {
+      timer.active = false;
+    }
+  };
   const frappe = {
     events,
     isTagging: false,
@@ -69,7 +102,12 @@ function fixture(stored = [rule()]) {
       showBrowser: 0,
       numBrowsers: 10
     },
-    db: { getAll: async () => state.stored },
+    db: {
+      getAll: async () => {
+        if (state.dbError) throw state.dbError;
+        return state.stored;
+      }
+    },
     getDoc: async (doctype, name) => {
       const doc =
         doctype === 'PermitAction'
@@ -93,7 +131,10 @@ function fixture(stored = [rule()]) {
       handlers.push(handler);
       ipcHandlers.set(event, handlers);
     },
-    send: (event, args) => sent.push({ event, args })
+    send: (event, args) => {
+      sent.push({ event, args });
+      if (state.send) state.send(event, args);
+    }
   };
   const router = {
     push: async route => {
@@ -112,7 +153,11 @@ function fixture(stored = [rule()]) {
     // Return false: existing local permits must still be eligible.
     return false;
   };
-  load('src/autoTagging.js').setupAutoTagging({
+  const stop = load(
+    'src/autoTagging.js',
+    { 'fixture-timers': timers },
+    `const { setInterval, clearInterval } = require('fixture-timers');\n${coordinatorSource}`
+  ).setupAutoTagging({
     frappe,
     ipcRenderer,
     router,
@@ -149,6 +194,17 @@ function fixture(stored = [rule()]) {
     sent,
     state,
     ipcHandlers,
+    intervals,
+    stop,
+    tickMonitor: async () => {
+      for (const timer of intervals) if (timer.active) await timer.callback();
+      await flush();
+    },
+    failMonitor: async failure => {
+      for (const handler of ipcHandlers.get('i3ms-operation-failed') || []) {
+        await handler({}, failure);
+      }
+    },
     poll,
     finish
   };
@@ -325,14 +381,6 @@ async function apiTests() {
   let failInitialization = false;
   let monitorDisconnected = 0;
   let reads = 0;
-  const row = {
-    'Permit No.': 'FIXTURE-PERMIT',
-    'Request On': moment().format('DD MMM YYYY'),
-    'Lessee/Licensee Name': 'Mine',
-    'Tag New Vehicle': permit('P').taggingUrl,
-    'Vehicle Details':
-      'https://i3ms.odishaminerals.gov.in/i3ms/pms/VehicleDetails.aspx?fixture'
-  };
   const monitor = {
     initializeBrowser: async () => {
       if (failInitialization) throw new Error('Fixture initialization failed');
@@ -341,24 +389,18 @@ async function apiTests() {
       monitorDisconnected++;
     },
     getBrowser: () => ({}),
-    lastTwoMonthPermits: async (...args) => {
-      assert.equal(
-        args.length,
-        4,
-        'permit lookup must not enter the nested SSE polling loop'
-      );
+    watchNewPermits: async sender => {
       reads++;
-      return [
-        { 'Permit No.': 'BROKEN-ROW', 'Request On': row['Request On'] },
-        row,
-        { ...row, 'Permit No.': 'FROM-DETAILS', 'Tag New Vehicle': '' }
-      ];
+      sender.send('new-permits', [permit('FIXTURE-PERMIT'), permit('SECOND')]);
+      sender.send('new-permits', [permit('LATE')]);
     },
-    permitDetails: async () => ({
-      'Permit Qty.': '100',
-      'Requested By': 'Mine',
-      'Transported From': 'Pit A'
-    })
+    lastTwoMonthPermits: async () => {
+      destroyed = true;
+      throw new Error('The watcher must not call the full permit report');
+    },
+    permitDetails: async () => {
+      throw new Error('The watcher must not visit permit details');
+    }
   };
   const api = load('api/index.js', {
     './browser': () => {
@@ -388,15 +430,12 @@ async function apiTests() {
   );
   assert.equal(out[0].data[0].transportedFrom, 'Pit A');
   assert.equal(
-    out[0].data.length,
+    out.flatMap(message => message.data).length,
     2,
     'a malformed row must not drop valid permits'
   );
-  assert.equal(
-    out[0].data[1].name,
-    'FROM-DETAILS',
-    'derive the tagging link when the direct link is absent'
-  );
+  assert.equal(out[0].data[1].name, 'SECOND', 'forward every detected permit');
+  assert.equal(out.length, 1, 'no delivery after the renderer has closed');
   assert.equal(reads, 1);
   assert.equal(monitorDisconnected, 1);
   destroyed = false;
@@ -417,8 +456,148 @@ async function apiTests() {
   );
   assert.equal(factoryCount, 5);
   console.log(
-    'PASS: active permit detection, finite lookup, renderer shutdown and monitor restart'
+    'PASS: list-only monitor routing, renderer shutdown and monitor restart'
   );
+}
+
+async function monitorProgressTests() {
+  const lateRules = fixture([]);
+  assert.equal(
+    lateRules.intervals.length,
+    1,
+    'install a monitor health check at startup'
+  );
+  assert.equal(lateRules.intervals[0].ms, 10000);
+  await lateRules.tickMonitor();
+  assert.equal(lateRules.sent.length, 0);
+  lateRules.state.stored = [rule()];
+  lateRules.state.dbError = new Error('Fixture database still initializing');
+  await lateRules.tickMonitor();
+  lateRules.state.dbError = null;
+  await lateRules.tickMonitor();
+  assert.equal(lateRules.sent[0].event, 'auto-tagging');
+  assert.equal(lateRules.sent[0].args.credentials.username, 'fixture');
+  lateRules.stop();
+  await lateRules.tickMonitor();
+  assert.equal(lateRules.sent.length, 1);
+  console.log(
+    'PASS: monitor starts without the App startup event and recovers late database/rules'
+  );
+
+  const invalid = fixture();
+  await invalid.tickMonitor();
+  await invalid.failMonitor({
+    type: 'auto-tagging',
+    monitorId: invalid.sent[0].args.monitorId,
+    message: 'i3ms password is incorrect'
+  });
+  await invalid.tickMonitor();
+  assert.equal(
+    invalid.sent.length,
+    1,
+    'do not relaunch invalid credentials every ten seconds'
+  );
+  invalid.frappe.AccountingSettings.i3msPassword = 'corrected-fixture';
+  await invalid.tickMonitor();
+  assert.equal(invalid.sent.length, 2);
+  invalid.stop();
+  console.log(
+    'PASS: incorrect-password stop is retained until credentials change'
+  );
+
+  const f = fixture();
+  let initializeCount = 0;
+  let failInitialization = true;
+  let disconnected;
+  let releaseWatch;
+  let destroyed = false;
+  const requests = [];
+  const monitor = {
+    initializeBrowser: async (credentials, headless, login, onDisconnect) => {
+      initializeCount++;
+      disconnected = onDisconnect;
+      if (failInitialization) throw new Error('Fixture monitor startup failed');
+    },
+    watchNewPermits: async sender => {
+      sender.send('new-permits', [permit('HEARTBEAT')]);
+      await new Promise(resolve => {
+        releaseWatch = resolve;
+      });
+    },
+    disconnect: async () => {}
+  };
+  const api = load(
+    'api/index.js',
+    {
+      './browser': () => monitor,
+      './utils': {
+        delay: async () => {},
+        promiseWithTimeout: promise => promise
+      },
+      'console-stamp': () => {}
+    },
+    apiSource
+  );
+  const sender = {
+    isDestroyed: () => destroyed,
+    send: (event, data) => {
+      f.poll(data).catch(error => {
+        throw error;
+      });
+    }
+  };
+  f.state.send = (event, args) => {
+    if (event !== 'auto-tagging') return;
+    requests.push(
+      api.newPermits(args.credentials, args.showBrowser, sender).catch(error =>
+        f.failMonitor({
+          type: 'auto-tagging',
+          monitorId: args.monitorId,
+          message: error.message
+        })
+      )
+    );
+  };
+  try {
+    await f.tickMonitor();
+    await requests[0];
+    assert.equal(initializeCount, 1);
+    failInitialization = false;
+    await f.tickMonitor();
+    assert.equal(
+      initializeCount,
+      2,
+      'restart a monitor that failed to initialize'
+    );
+    assert.equal(
+      f.routes.length,
+      1,
+      'the recovered watcher reaches auto dispatch'
+    );
+    await f.tickMonitor();
+    assert.equal(
+      initializeCount,
+      2,
+      'healthy monitor requests reuse the login session'
+    );
+    disconnected();
+    releaseWatch();
+    await requests[1];
+    await f.tickMonitor();
+    assert.equal(
+      initializeCount,
+      3,
+      'restart after a disconnected watcher stops'
+    );
+    console.log(
+      'PASS: ten-second recovery restarts stopped monitors without relogging healthy browsers'
+    );
+  } finally {
+    f.stop();
+    destroyed = true;
+    if (releaseWatch) releaseWatch();
+    await Promise.all(requests);
+  }
 }
 
 async function formTests() {
@@ -554,6 +733,7 @@ async function saveTests() {
 }
 
 (async () => {
+  await monitorProgressTests();
   await coordinatorTests();
   await formTests();
   await saveTests();

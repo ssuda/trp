@@ -9,6 +9,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { transformFileSync } = require('@babel/core');
 const puppeteer = require('puppeteer');
+const moment = require('moment');
 
 const root = path.resolve(__dirname, '..');
 const browserFile = path.join(root, 'api/browser.js');
@@ -28,6 +29,14 @@ const redirectedSessions = new Set();
 const sessionWarning =
   'Either you have already loged in or not properly signed out. Only one login is allowed for a particular user. Please contact ITPMU in case of any problem.';
 let fixtureStopped = false;
+let watchedSession;
+let watchActive = false;
+let watchStopped = false;
+let watchReads = 0;
+let watchReloads = 0;
+let watchDetailRequests = 0;
+const watchWaits = [];
+const watchNavigations = [];
 let releaseHeldLogin;
 let heldLoginStarted;
 const heldLogin = new Promise(resolve => {
@@ -45,6 +54,15 @@ const form = message => `<!doctype html><html><body>
 const server = http.createServer((request, response) => {
   const url = new URL(request.url, 'http://localhost');
   const session = (request.headers.cookie || '').match(/fixtureSession=(\d+)/);
+  if (
+    watchActive &&
+    session &&
+    session[1] === watchedSession &&
+    /VehicleDetails|TransporterAssignVehicleNew|PermitWiseTransportDetails|ReleaseVehicle/i.test(
+      url.pathname
+    )
+  )
+    watchDetailRequests++;
   if (/\/Default\.aspx/i.test(url.pathname) && request.method === 'GET') {
     const sendForm = () => {
       response.writeHead(200, {
@@ -220,6 +238,22 @@ const server = http.createServer((request, response) => {
       response.end();
       return;
     }
+    if (watchActive && key === watchedSession) {
+      watchReads++;
+      const today = moment().format('DD MMM YYYY');
+      const yesterday = moment()
+        .subtract(1, 'day')
+        .format('DD MMM YYYY');
+      response.writeHead(200, { 'Content-Type': 'text/html' });
+      response.end(`<html><body><table id="grdTransporterActions">
+        <tr><th>Permit No.</th><th>Request On</th><th>Lessee/Licensee Name</th><th>Transported From</th><th>Tag New Vehicle</th><th>Vehicle Details</th></tr>
+        <tr><td>OLD</td><td>${yesterday}</td><td>Mine-123</td><td>Pit A</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?old">Tag</a></td><td></td></tr>
+        <tr><td>BROKEN</td><td>${today}</td><td>Mine-123</td><td>Pit A</td><td></td><td></td></tr>
+        <tr><td>WATCH-${watchReads}</td><td>${today}</td><td>Mine-123</td><td>Pit A</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?fixture">Tag</a></td><td></td></tr>
+        <tr><td>DERIVED</td><td>${today}</td><td>Mine-123</td><td>Pit A</td><td></td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/VehicleDetails.aspx?derived">Details</a></td></tr>
+        </table></body></html>`);
+      return;
+    }
     response.writeHead(200, { 'Content-Type': 'text/html' });
     response.end(
       '<html><body><div class="welcome">Welcome fixture</div><table id="grdTransporterActions"></table></body></html>'
@@ -260,6 +294,14 @@ function loadBrowserFactory(port) {
     }).code,
     utilities.filename
   );
+  const realDelay = utilities.exports.delay;
+  utilities.exports.delay = ms => {
+    if (watchActive && ms === 10000) {
+      watchWaits.push(ms);
+      return Promise.resolve();
+    }
+    return realDelay(ms);
+  };
 
   const factory = new Module(browserFile, module);
   factory.paths = Module._nodeModulePaths(path.dirname(browserFile));
@@ -302,10 +344,19 @@ function loadBrowserFactory(port) {
         page.goto = (url, settings) => {
           const destination = new URL(url);
           assert.equal(destination.hostname, 'i3ms.odishaminerals.gov.in');
+          if (watchActive) watchNavigations.push(destination.pathname);
           return goto(
             `http://127.0.0.1:${port}${destination.pathname}${destination.search}`,
             settings
           );
+        };
+        const reload = page.reload.bind(page);
+        page.reload = settings => {
+          if (watchActive) {
+            watchReloads++;
+            assert.equal(settings.waitUntil, 'domcontentloaded');
+          }
+          return reload(settings);
         };
         const waitForNavigation = page.waitForNavigation.bind(page);
         page.waitForNavigation = settings => {
@@ -533,6 +584,92 @@ async function run() {
     'PASS: login warning resumes the requested tagging URL without dashboard or duplicate reload'
   );
   await resume.disconnect();
+
+  const watcher = browserFactory('permit-watcher');
+  instances.push(watcher);
+  const watcherCredentials = { ...credentials };
+  await watcher.initializeBrowser(watcherCredentials, true, true);
+  watchedSession = (await watcher.getPage().cookies()).find(
+    cookie => cookie.name === 'fixtureSession'
+  ).value;
+  watchActive = true;
+  const polls = [];
+  try {
+    await watcher.watchNewPermits({
+      isDestroyed: () => watchStopped,
+      send: (event, data) => {
+        assert.equal(event, 'new-permits');
+        polls.push(data);
+        if (polls.length === 2) watchStopped = true;
+      }
+    });
+    assert.deepEqual(watchWaits, [10000], 'refresh the list every ten seconds');
+    assert.deepEqual(watchNavigations, [
+      '/i3ms/pms/ViewTransporterAction.aspx'
+    ]);
+    assert.equal(
+      watchReloads,
+      1,
+      'reload the existing list instead of navigating away'
+    );
+    assert.equal(watchReads, 2);
+    assert.equal(
+      watchDetailRequests,
+      0,
+      'never fetch a detail, trip or release page'
+    );
+    assert.equal(
+      attempts.get(watchedSession),
+      3,
+      'reuse the authenticated browser'
+    );
+    assert.deepEqual(
+      polls.map(rows => rows.map(row => row.name)),
+      [
+        ['WATCH-1', 'DERIVED'],
+        ['WATCH-2', 'DERIVED']
+      ]
+    );
+    assert.equal(polls[0][0].source, 'Mine');
+    assert.equal(polls[0][0].transportedFrom, 'Pit A');
+    assert(polls[0][1].taggingUrl.endsWith('?derived'));
+    console.log(
+      'PASS: actual Puppeteer list reloads every ten seconds with no detail/report reads or repeated login'
+    );
+
+    watchStopped = false;
+    let recoveredPolls = 0;
+    await watcher.watchNewPermits({
+      isDestroyed: () => watchStopped,
+      send: () => {
+        recoveredPolls++;
+        if (recoveredPolls === 1) authenticatedSessions.delete(watchedSession);
+        if (recoveredPolls === 2) watchStopped = true;
+      }
+    });
+    assert.equal(attempts.get(watchedSession), 4);
+    assert.deepEqual(watchWaits, [10000, 10000]);
+    assert.equal(watchDetailRequests, 0);
+    console.log('PASS: expired watcher session logs in and resumes the list');
+
+    watchStopped = false;
+    watcherCredentials.username = 'incorrect-password';
+    await assert.rejects(
+      watcher.watchNewPermits({
+        isDestroyed: () => watchStopped,
+        send: () => authenticatedSessions.delete(watchedSession)
+      }),
+      /password is incorrect/
+    );
+    assert.equal(attempts.get(watchedSession), 5);
+    console.log(
+      'PASS: expired watcher stops on an explicit incorrect password'
+    );
+  } finally {
+    watchStopped = true;
+    watchActive = false;
+    await watcher.disconnect();
+  }
 
   const held = browserFactory('held');
   const queued = browserFactory('queued');

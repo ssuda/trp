@@ -347,6 +347,7 @@ ipcMain.on('auto-tagging', (event, args) => {
     if (!event.sender.isDestroyed()) {
       event.sender.send('i3ms-operation-failed', {
         type: 'auto-tagging',
+        monitorId: args.monitorId,
         message: ex.message
       });
     }

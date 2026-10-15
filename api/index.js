@@ -30,23 +30,14 @@ export async function newPermits(credentials, showBrowser, sse) {
       toExit = true;
     });
 
-    while (!toExit && !sse.isDestroyed()) {
-      try {
-        const out = await twoMonthPermits(
-          { onlyNewPermits: true },
-          null,
-          monitor
-        );
-
-        if (!toExit && !sse.isDestroyed()) {
-          sse.send('new-permits', out || []);
-        }
-      } catch (ex) {
-        console.error('Auto tagging permit monitor failed:', ex);
+    // This browser stays on the list. Never run the report/detail fetcher
+    // from the watch loop; it delays detection and navigates away each poll.
+    await monitor.watchNewPermits({
+      isDestroyed: () => toExit || sse.isDestroyed(),
+      send: (event, permits) => {
+        if (!toExit && !sse.isDestroyed()) sse.send(event, permits);
       }
-
-      if (!toExit && !sse.isDestroyed()) await delay(5000);
-    }
+    });
   } finally {
     await monitor.disconnect().catch(() => {});
     if (newPermitBrowser === monitor) newPermitBrowser = null;

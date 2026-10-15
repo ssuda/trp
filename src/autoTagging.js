@@ -17,6 +17,10 @@ export function setupAutoTagging({ frappe, ipcRenderer, router, savePermit }) {
   let configuring = Promise.resolve();
   let dispatching = false;
   let active = null;
+  let stopped = false;
+  let checkingMonitor = false;
+  let monitorConfig = null;
+  let blockedMonitorId = null;
   const pending = new Map();
   const completed = new Set();
 
@@ -27,7 +31,8 @@ export function setupAutoTagging({ frappe, ipcRenderer, router, savePermit }) {
       normalize(rule.transportedFrom) === normalize(permit.transportedFrom));
 
   async function dispatch() {
-    if (dispatching || active || frappe.isTagging || !rules.length) return;
+    if (stopped || dispatching || active || frappe.isTagging || !rules.length)
+      return;
     dispatching = true;
     try {
       const candidates = [];
@@ -128,7 +133,49 @@ export function setupAutoTagging({ frappe, ipcRenderer, router, savePermit }) {
     }
   });
 
-  frappe.events.on('auto-tagging', docs => {
+  function requestMonitor() {
+    const settings = frappe.AccountingSettings || {};
+    const { i3msUsername: username, i3msPassword: password } = settings;
+    if (!rules.length || !username || !password || stopped) return;
+    const showBrowser = !!settings.showBrowser;
+    if (
+      !monitorConfig ||
+      monitorConfig.username !== username ||
+      monitorConfig.password !== password ||
+      monitorConfig.showBrowser !== showBrowser
+    ) {
+      monitorConfig = {
+        username,
+        password,
+        showBrowser,
+        id: (monitorConfig ? monitorConfig.id : 0) + 1
+      };
+    }
+    if (blockedMonitorId === monitorConfig.id) return;
+    // The main process reuses an active watcher. This only restarts one that
+    // failed to start or stopped after its browser disconnected.
+    ipcRenderer.send('auto-tagging', {
+      credentials: { username, password },
+      showBrowser,
+      monitorId: monitorConfig.id
+    });
+  }
+
+  ipcRenderer.on('i3ms-operation-failed', (event, failure) => {
+    if (!failure || failure.type !== 'auto-tagging' || stopped) return;
+    console.error('Auto tagging monitor failed:', failure.message);
+    if (
+      monitorConfig &&
+      failure.monitorId === monitorConfig.id &&
+      /password is incorrect/i.test(failure.message)
+    ) {
+      // Invalid credentials require a change, not a new browser every tick.
+      blockedMonitorId = monitorConfig.id;
+    }
+  });
+
+  function configure(docs) {
+    if (stopped) return Promise.resolve();
     configuring = configuring
       .catch(() => {})
       .then(async () => {
@@ -139,20 +186,32 @@ export function setupAutoTagging({ frappe, ipcRenderer, router, savePermit }) {
         const byName = new Map(stored.map(rule => [rule.name, rule]));
         for (const rule of docs || []) byName.set(rule.name, rule);
         rules = [...byName.values()];
-        if (rules.length) {
-          ipcRenderer.send('auto-tagging', {
-            credentials: {
-              username: frappe.AccountingSettings.i3msUsername,
-              password: frappe.AccountingSettings.i3msPassword
-            },
-            showBrowser: !!frappe.AccountingSettings.showBrowser
-          });
-          await dispatch();
-        }
+        requestMonitor();
+        await dispatch();
       })
       .catch(ex => {
         console.error('Auto tagging configuration failed:', ex);
       });
     return configuring;
-  });
+  }
+  frappe.events.on('auto-tagging', configure);
+
+  // Do not depend on the one-shot App startup event or a generic internet
+  // probe. Re-read saved rules and ensure the watcher exists every 10 seconds.
+  const timer = setInterval(() => {
+    if (checkingMonitor || stopped) return;
+    checkingMonitor = true;
+    return configure().finally(() => {
+      checkingMonitor = false;
+    });
+  }, 10000);
+  if (timer && typeof timer.unref === 'function') timer.unref();
+  const stop = () => {
+    stopped = true;
+    clearInterval(timer);
+  };
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', stop, { once: true });
+  }
+  return stop;
 }

@@ -1135,6 +1135,8 @@ module.exports = function(tabNo) {
         'DD MMM YYYY'
       );
 
+      if (!createdAt.isValid() || !createdAt.isSame(moment(), 'day')) continue;
+
       const startDate = createdAt.local().format('YYYY-MM-DD');
       createdAt.add(1, 'month');
       const endDate = createdAt.local().format('YYYY-MM-DD');
@@ -1145,21 +1147,73 @@ module.exports = function(tabNo) {
         endDate: endDate,
         circle: permit['Circle'],
         taggingUrl: permit['Tag New Vehicle'],
-        source: permit['Lessee/Licensee Name'].replace(/-\d+/, ''),
-        vehicleDetails: permit['Vehicle Details']
+        source: String(
+          permit['Requested By Text'] ||
+            permit['Requested By'] ||
+            permit['Lessee/Licensee Name Text'] ||
+            permit['Lessee/Licensee Name'] ||
+            ''
+        )
+          .replace(/-\d+/, '')
+          .trim(),
+        vehicleDetails: permit['Vehicle Details'],
+        ...(permit['Transported From']
+          ? { transportedFrom: permit['Transported From'] }
+          : {})
       };
 
       if (!pr.taggingUrl) {
-        const uri = new URL(pr.vehicleDetails);
-        pr.taggingUrl =
-          'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
-          uri.search;
+        try {
+          const uri = new URL(pr.vehicleDetails);
+          pr.taggingUrl =
+            'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
+            uri.search;
+        } catch (ex) {
+          continue;
+        }
       }
 
       out.push(pr);
     }
 
     sse.send('new-permits', out);
+  }
+
+  async function watchNewPermits(sse) {
+    const href =
+      'https://i3ms.odishaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx';
+    const selector = '#grdTransporterActions';
+    const listPath = new URL(href).pathname.toLowerCase();
+    const stopped = () => sse.isDestroyed() || !browser || !page;
+    await gotoPage(href);
+
+    while (!stopped()) {
+      try {
+        if (/\/(Default|i3msnew1)\.aspx/i.test(page.url())) await login();
+        await page.waitForSelector(selector, { timeout: 30000 });
+        await permitsInfo(await tableData(selector), sse);
+      } catch (ex) {
+        if (stopped()) break;
+        if (/password is incorrect/i.test(ex.message)) throw ex;
+        error('Permit list read failed:', ex.message);
+      }
+
+      if (stopped()) break;
+      await delay(10000);
+      if (stopped()) break;
+
+      try {
+        if (new URL(page.url()).pathname.toLowerCase() === listPath) {
+          await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+        } else {
+          await gotoPage(href, 1);
+        }
+      } catch (ex) {
+        if (stopped()) break;
+        if (/password is incorrect/i.test(ex.message)) throw ex;
+        error('Permit list refresh failed:', ex.message);
+      }
+    }
   }
 
   async function lastTwoMonthPermits(
@@ -1393,6 +1447,7 @@ module.exports = function(tabNo) {
     permitVehicles,
     gotoPermitTripsPage,
     lastTwoMonthPermits,
+    watchNewPermits,
     permitDetails,
     releasePage,
     tagVehicle,
