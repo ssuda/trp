@@ -74,6 +74,7 @@ function fixture(stored = [rule()]) {
   const actions = [];
   const routes = [];
   const sent = [];
+  const logs = [];
   const state = {
     stored,
     saving: null,
@@ -155,8 +156,14 @@ function fixture(stored = [rule()]) {
   };
   const stop = load(
     'src/autoTagging.js',
-    { 'fixture-timers': timers },
-    `const { setInterval, clearInterval } = require('fixture-timers');\n${coordinatorSource}`
+    {
+      'fixture-timers': timers,
+      'fixture-console': {
+        log: (...args) => logs.push(args),
+        error: (...args) => console.error(...args)
+      }
+    },
+    `const { setInterval, clearInterval } = require('fixture-timers');\nconst console = require('fixture-console');\n${coordinatorSource}`
   ).setupAutoTagging({
     frappe,
     ipcRenderer,
@@ -192,6 +199,7 @@ function fixture(stored = [rule()]) {
     actions,
     routes,
     sent,
+    logs,
     state,
     ipcHandlers,
     intervals,
@@ -231,6 +239,20 @@ async function coordinatorTests() {
   );
   assert.equal(f.actions[0].permit, 'P1');
   assert.equal(f.actions[0].numBrowsers, 10);
+  assert(
+    f.logs.some(
+      args =>
+        args[0] === 'Received new permits' &&
+        args[1].some(row => row.name === 'P1')
+    ),
+    'show received permits in the renderer console'
+  );
+  assert(
+    f.logs.some(
+      args => args[0] === 'Matched new Permit with Auto Tagging' && args[1] > 0
+    ),
+    'show whether received permits match rules'
+  );
   await f.poll([permit('P2')]);
   assert.equal(
     f.routes.length,
@@ -289,6 +311,7 @@ async function coordinatorTests() {
   await priority.events.trigger('auto-tagging');
   await priority.poll([
     permit('WRONG-LOCATION', 'Mine', { transportedFrom: 'Pit B' }),
+    permit('MISSING-LOCATION', 'Mine', { transportedFrom: undefined }),
     permit('OLD', 'Mine', {
       startDate: moment()
         .subtract(1, 'day')
@@ -600,10 +623,12 @@ async function monitorProgressTests() {
   }
 }
 
-async function formTests() {
+async function formTests(detectedPermit = permit('FORM')) {
   const f = fixture();
+  const jobs = [];
+  f.events.on('tag-vehicles', job => jobs.push(job));
   await f.events.trigger('auto-tagging');
-  await f.poll([permit('FORM')]);
+  await f.poll([detectedPermit]);
   const source = fs.readFileSync(
     path.join(root, 'src/pages/PermitActionForm.vue'),
     'utf8'
@@ -648,6 +673,10 @@ async function formTests() {
       true,
       'automatic form reaches the normal tag-vehicles dispatch'
     );
+    assert.equal(jobs.length, 1);
+    assert.equal(jobs[0].name, detectedPermit.name);
+    assert.equal(jobs[0].taggingUrl, detectedPermit.taggingUrl);
+    assert.deepEqual(jobs[0].trucks, ['OD14TEST1', 'OD14TEST2']);
     await f.poll([]);
     assert.equal(
       f.routes.length,
@@ -682,6 +711,7 @@ async function formTests() {
     // The real form owns an interval; release it even if an assertion fails.
     await f.events.trigger('tag-results', {});
     f.frappe.isTagging = false;
+    f.stop();
   }
 }
 
@@ -732,13 +762,17 @@ async function saveTests() {
   );
 }
 
-(async () => {
-  await monitorProgressTests();
-  await coordinatorTests();
-  await formTests();
-  await saveTests();
-  await apiTests();
-})().catch(error => {
-  console.error(error);
-  process.exitCode = 1;
-});
+module.exports = { formTests };
+
+if (require.main === module) {
+  (async () => {
+    await monitorProgressTests();
+    await coordinatorTests();
+    await formTests();
+    await saveTests();
+    await apiTests();
+  })().catch(error => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

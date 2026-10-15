@@ -37,6 +37,7 @@ let watchReloads = 0;
 let watchDetailRequests = 0;
 const watchWaits = [];
 const watchNavigations = [];
+const watchLogs = [];
 let releaseHeldLogin;
 let heldLoginStarted;
 const heldLogin = new Promise(resolve => {
@@ -240,16 +241,22 @@ const server = http.createServer((request, response) => {
     }
     if (watchActive && key === watchedSession) {
       watchReads++;
-      const today = moment().format('DD MMM YYYY');
+      const today = moment().format(
+        watchReads === 1 ? 'DD MMM YYYY' : 'DD/MM/YYYY'
+      );
       const yesterday = moment()
         .subtract(1, 'day')
         .format('DD MMM YYYY');
+      const header = watchReads === 1 ? 'th' : 'td';
       response.writeHead(200, { 'Content-Type': 'text/html' });
       response.end(`<html><body><table id="grdTransporterActions">
-        <tr><th>Permit No.</th><th>Request On</th><th>Lessee/Licensee Name</th><th>Transported From</th><th>Tag New Vehicle</th><th>Vehicle Details</th></tr>
+        <tr><${header}>Permit&nbsp;<br>No${
+        watchReads === 1 ? '.' : ''
+      }</${header}><${header}>Request On</${header}><${header}>Lessee/Licensee Name</${header}><${header}>Transported From</${header}><${header}>Tag New Vehicle</${header}><${header}>Vehicle Details</${header}></tr>
         <tr><td>OLD</td><td>${yesterday}</td><td>Mine-123</td><td>Pit A</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?old">Tag</a></td><td></td></tr>
         <tr><td>BROKEN</td><td>${today}</td><td>Mine-123</td><td>Pit A</td><td></td><td></td></tr>
-        <tr><td>WATCH-${watchReads}</td><td>${today}</td><td>Mine-123</td><td>Pit A</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?fixture">Tag</a></td><td></td></tr>
+        <tr><td>INVALID-DATE</td><td>not a date</td><td>Mine-123</td><td>Pit A</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?invalid">Tag</a></td><td></td></tr>
+        <tr><td><a href="javascript:__doPostBack('permit','')">WATCH-${watchReads}</a></td><td>${today}</td><td><a href="javascript:__doPostBack('source','')">Mine-123</a></td><td>Pit A</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?fixture">Tag</a></td><td></td></tr>
         <tr><td>DERIVED</td><td>${today}</td><td>Mine-123</td><td>Pit A</td><td></td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/VehicleDetails.aspx?derived">Details</a></td></tr>
         </table></body></html>`);
       return;
@@ -307,6 +314,15 @@ function loadBrowserFactory(port) {
   factory.paths = Module._nodeModulePaths(path.dirname(browserFile));
   const normalRequire = factory.require.bind(factory);
   factory.require = name => {
+    if (name === 'fixture-console') {
+      return {
+        log: (...args) => {
+          if (watchActive) watchLogs.push(args);
+          console.log(...args);
+        },
+        error: (...args) => console.error(...args)
+      };
+    }
     if (name === './utils') return utilities.exports;
     if (name === './captch-browser') {
       return () => {
@@ -392,7 +408,10 @@ function loadBrowserFactory(port) {
         encoding: 'utf8'
       })
     : fs.readFileSync(browserFile, 'utf8');
-  factory._compile(source, browserFile);
+  factory._compile(
+    `const console = require('fixture-console');\n${source}`,
+    browserFile
+  );
   return factory.exports;
 }
 
@@ -631,10 +650,33 @@ async function run() {
       ]
     );
     assert.equal(polls[0][0].source, 'Mine');
+    assert.equal(polls[1][0].source, 'Mine');
     assert.equal(polls[0][0].transportedFrom, 'Pit A');
     assert(polls[0][1].taggingUrl.endsWith('?derived'));
+    const reads = watchLogs.filter(args => args.includes('Permit list read:'));
+    assert.equal(reads.length, 2, 'log every list read, not just refreshes');
+    for (const entry of reads) {
+      const summary = entry[entry.length - 1];
+      assert.equal(summary.rows, 5);
+      assert.equal(summary.eligible, 2);
+      assert.deepEqual(summary.skipped, {
+        missingNumber: 0,
+        invalidDate: 1,
+        notToday: 1,
+        missingLink: 1
+      });
+    }
     console.log(
       'PASS: actual Puppeteer list reloads every ten seconds with no detail/report reads or repeated login'
+    );
+    console.log(
+      'PASS: linked permit numbers, wrapped/td headers, numeric dates, legacy source names and read diagnostics'
+    );
+    // Feed an actual parsed row through the real coordinator and automatic
+    // form, stopping at the tagging event boundary (no portal mutation).
+    await require('./testAutoTagging').formTests(polls[0][0]);
+    console.log(
+      'PASS: browser-read permit reaches rule matching, save, automatic form and tag-vehicles with the correct trucks'
     );
 
     watchStopped = false;

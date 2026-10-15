@@ -51,6 +51,14 @@ export function setupAutoTagging({ frappe, ipcRenderer, router, savePermit }) {
           (+a.rule.priority || 10) - (+b.rule.priority || 10) ||
           a.permit.name.localeCompare(b.permit.name)
       );
+      console.log(
+        'Matched new Permit with Auto Tagging',
+        candidates.length,
+        candidates.map(({ rule, permit }) => ({
+          permit: permit.name,
+          rule: rule.name
+        }))
+      );
 
       for (const { rule, permit } of candidates) {
         try {
@@ -109,11 +117,28 @@ export function setupAutoTagging({ frappe, ipcRenderer, router, savePermit }) {
   // Installed once, before starting the monitor. Re-saving a rule updates the
   // configuration instead of accumulating IPC listeners with stale rules.
   ipcRenderer.on('new-permits', async (event, permits) => {
-    for (const permit of Array.isArray(permits) ? permits : []) {
+    const received = Array.isArray(permits) ? permits : [];
+    console.log(
+      'Received new permits',
+      received.map(({ name, source, startDate, transportedFrom }) => ({
+        name,
+        source,
+        startDate,
+        transportedFrom
+      }))
+    );
+    for (const permit of received) {
       if (isToday(permit) && !completed.has(permit.name)) {
         pending.set(permit.name, permit);
       }
     }
+    console.log('Auto tagging permit queue', {
+      received: received.length,
+      pending: pending.size,
+      rules: rules.length,
+      tagging: !!frappe.isTagging,
+      starting: active ? active.permit : null
+    });
     await dispatch();
   });
 

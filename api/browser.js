@@ -325,9 +325,13 @@ module.exports = function(tabNo) {
         trs.forEach(tr => {
           if (first_row) {
             first_row = false;
-            const ths = tr.querySelectorAll('th');
+            let ths = tr.querySelectorAll('th');
+            // Permit-list layouts can use td headers. Keep report parsing
+            // unchanged unless a text-field read was explicitly requested.
+            if (txtField && !ths.length) ths = tr.querySelectorAll('td');
             ths.forEach(td => {
-              headers.push(td.innerText.replace(/\*/, '').trim());
+              const header = td.innerText.replace(/\*/, '').trim();
+              headers.push(txtField ? header.replace(/\s+/g, ' ') : header);
             });
           } else {
             const tds = tr.querySelectorAll('td');
@@ -1124,41 +1128,90 @@ module.exports = function(tabNo) {
 
   async function permitsInfo(permits, sse) {
     const out = [];
+    const skipped = {
+      missingNumber: 0,
+      invalidDate: 0,
+      notToday: 0,
+      missingLink: 0
+    };
+    const columnKey = value => value.toLowerCase().replace(/[^a-z0-9]/g, '');
 
     for (let permit of permits) {
-      if (/javascript/i.test(permit['Permit No.']) || !permit['Permit No.']) {
+      const fields = {};
+      for (const [key, value] of Object.entries(permit)) {
+        fields[columnKey(key)] = value;
+      }
+      const field = (...names) =>
+        names.map(name => fields[columnKey(name)]).find(value => value);
+      // tableData preserves link text separately from href. A permit number
+      // may itself be a postback link; its text is the identifier, not its URL.
+      const name = field(
+        'Permit No Text',
+        'Permit Number Text',
+        'Permit No',
+        'Permit Number'
+      );
+      if (!name || /^(javascript:|https?:)/i.test(name)) {
+        skipped.missingNumber++;
         continue;
       }
 
+      const requestedOn = String(field('Request On', 'Requested On') || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      // Read the displayed calendar date, allowing a time after it. Do not
+      // let Moment guess numeric dates as month/day or silently drop them.
+      const date = requestedOn.match(
+        /^(\d{4}-\d{2}-\d{2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{4}|\d{1,2}[ -][a-z]{3,9}[ -]\d{4})(?=$|[ T])/i
+      );
       const createdAt = moment(
-        permit['Request On'] || permit['Requested On'],
-        'DD MMM YYYY'
+        date ? date[1] : '',
+        [
+          'D MMM YYYY',
+          'D-MMM-YYYY',
+          'D MMMM YYYY',
+          'D-MMMM-YYYY',
+          'D/M/YYYY',
+          'D-M-YYYY',
+          'D.M.YYYY',
+          'YYYY-MM-DD'
+        ],
+        true
       );
 
-      if (!createdAt.isValid() || !createdAt.isSame(moment(), 'day')) continue;
+      if (!createdAt.isValid()) {
+        skipped.invalidDate++;
+        continue;
+      }
+      if (!createdAt.isSame(moment(), 'day')) {
+        skipped.notToday++;
+        continue;
+      }
 
       const startDate = createdAt.local().format('YYYY-MM-DD');
       createdAt.add(1, 'month');
       const endDate = createdAt.local().format('YYYY-MM-DD');
 
       let pr = {
-        name: permit['Permit No.'],
+        name,
         startDate: startDate,
         endDate: endDate,
-        circle: permit['Circle'],
-        taggingUrl: permit['Tag New Vehicle'],
+        circle: field('Circle'),
+        taggingUrl: field('Tag New Vehicle'),
         source: String(
-          permit['Requested By Text'] ||
-            permit['Requested By'] ||
-            permit['Lessee/Licensee Name Text'] ||
-            permit['Lessee/Licensee Name'] ||
+          field(
+            'Requested By Text',
+            'Requested By',
+            'Lessee/Licensee Name Text',
+            'Lessee/Licensee Name'
+          ) ||
             ''
         )
           .replace(/-\d+/, '')
           .trim(),
-        vehicleDetails: permit['Vehicle Details'],
-        ...(permit['Transported From']
-          ? { transportedFrom: permit['Transported From'] }
+        vehicleDetails: field('Vehicle Details'),
+        ...(field('Transported From')
+          ? { transportedFrom: field('Transported From') }
           : {})
       };
 
@@ -1169,6 +1222,7 @@ module.exports = function(tabNo) {
             'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
             uri.search;
         } catch (ex) {
+          skipped.missingLink++;
           continue;
         }
       }
@@ -1176,6 +1230,21 @@ module.exports = function(tabNo) {
       out.push(pr);
     }
 
+    log('Permit list read:', {
+      rows: permits.length,
+      eligible: out.length,
+      skipped,
+      columns: Object.keys(permits[0] || {})
+    });
+    log(
+      'New permits',
+      out.map(({ name, source, startDate, transportedFrom }) => ({
+        name,
+        source,
+        startDate,
+        transportedFrom
+      }))
+    );
     sse.send('new-permits', out);
   }
 
@@ -1191,7 +1260,7 @@ module.exports = function(tabNo) {
       try {
         if (/\/(Default|i3msnew1)\.aspx/i.test(page.url())) await login();
         await page.waitForSelector(selector, { timeout: 30000 });
-        await permitsInfo(await tableData(selector), sse);
+        await permitsInfo(await tableData(selector, 'Permit No.'), sse);
       } catch (ex) {
         if (stopped()) break;
         if (/password is incorrect/i.test(ex.message)) throw ex;
