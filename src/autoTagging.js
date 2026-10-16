@@ -1,242 +1,105 @@
 import moment from 'moment';
 
-const normalize = value =>
-  String(value || '')
-    .trim()
-    .toUpperCase();
-const isToday = permit =>
-  permit &&
-  permit.name &&
-  moment(permit.startDate, 'YYYY-MM-DD', true).isSame(moment(), 'day');
-
-// Detection and navigation are separate from the existing tagging procedure.
-// Keep permits pending until their job actually starts and completes, rather
-// than using "new in the local database" as a one-shot dispatch flag.
+// Restore the 1.1.15 eligibility flow: receive complete permit details, save
+// today's permits, then match only newly inserted permits and open the normal
+// automatic tagging form. Do not keep the newer pending/completed queue.
 export function setupAutoTagging({ frappe, ipcRenderer, router, savePermit }) {
   let rules = [];
-  let configuring = Promise.resolve();
-  let dispatching = false;
-  let active = null;
+  let processing = false;
   let stopped = false;
-  let checkingMonitor = false;
-  let monitorConfig = null;
-  let blockedMonitorId = null;
-  const pending = new Map();
-  const completed = new Set();
+  const upper = value => String(value || '').toUpperCase();
 
-  const matches = (rule, permit) =>
-    normalize(rule.source) &&
-    normalize(rule.source) === normalize(permit.source) &&
-    (!normalize(rule.transportedFrom) ||
-      normalize(rule.transportedFrom) === normalize(permit.transportedFrom));
-
-  async function dispatch() {
-    if (stopped || dispatching || active || frappe.isTagging || !rules.length)
-      return;
-    dispatching = true;
-    try {
-      const candidates = [];
-      for (const permit of pending.values()) {
-        if (!isToday(permit)) {
-          pending.delete(permit.name);
-          continue;
-        }
-        const rule = rules
-          .filter(rule => matches(rule, permit))
-          .sort((a, b) => (+a.priority || 10) - (+b.priority || 10))[0];
-        if (rule) candidates.push({ rule, permit });
-      }
-      candidates.sort(
-        (a, b) =>
-          (+a.rule.priority || 10) - (+b.rule.priority || 10) ||
-          a.permit.name.localeCompare(b.permit.name)
-      );
-      console.log(
-        'Matched new Permit with Auto Tagging',
-        candidates.length,
-        candidates.map(({ rule, permit }) => ({
-          permit: permit.name,
-          rule: rule.name
-        }))
-      );
-
-      for (const { rule, permit } of candidates) {
-        try {
-          await savePermit(permit);
-          const saved = await frappe.getDoc('Permit', permit.name);
-          const truckList = await frappe.getDoc('TruckList', rule.truckList);
-          const trucks = String(truckList.trucks || '')
-            .split('\n')
-            .filter(Boolean);
-          const tagged = saved.tagged ? JSON.parse(saved.tagged) : {};
-          if (!trucks.length) continue;
-          if (trucks.every(truck => truck in tagged)) {
-            pending.delete(permit.name);
-            completed.add(permit.name);
-            continue;
-          }
-
-          // Manual tagging may have started during the database reads.
-          if (frappe.isTagging) return;
-          const action = frappe.getNewDoc('PermitAction');
-          await action.set({
-            label: frappe._('Tagging'),
-            action: 'tagging',
-            buttonText: frappe._('Tagging'),
-            permit: permit.name,
-            truckList: rule.truckList,
-            numBrowsers: frappe.AccountingSettings.numBrowsers,
-            isCloudTagging: true
-          });
-          if (frappe.isTagging) return;
-
-          // Reserve through automatic form startup, before isTagging is set.
-          active = {
-            permit: permit.name,
-            action: action.name,
-            started: false
-          };
-          await router.push({
-            name: 'PermitAction',
-            params: { name: action.name }
-          });
-          return;
-        } catch (ex) {
-          if (active && active.permit === permit.name && !active.started) {
-            active = null;
-          }
-          console.error('Auto tagging could not start:', permit.name, ex);
-          // Keep this permit pending for the next monitor result.
-        }
-      }
-    } finally {
-      dispatching = false;
-    }
-  }
-
-  // Installed once, before starting the monitor. Re-saving a rule updates the
-  // configuration instead of accumulating IPC listeners with stale rules.
+  // Keep one listener across rule edits; the IPC envelope and teardown are
+  // compatible with the current app, while dispatch follows 1.1.15.
   ipcRenderer.on('new-permits', async (event, permits) => {
-    const received = Array.isArray(permits) ? permits : [];
-    console.log(
-      'Received new permits',
-      received.map(({ name, source, startDate, transportedFrom }) => ({
-        name,
-        source,
-        startDate,
-        transportedFrom
-      }))
+    if (stopped || !rules.length) return;
+    const today = moment();
+    permits = (Array.isArray(permits) ? permits : []).filter(permit =>
+      moment(permit.startDate, 'YYYY-MM-DD').isSame(today, 'day')
     );
-    for (const permit of received) {
-      if (isToday(permit) && !completed.has(permit.name)) {
-        pending.set(permit.name, permit);
+
+    if (frappe.isTagging || processing) {
+      console.log('Already Tagging');
+      return;
+    }
+
+    processing = true;
+    try {
+      console.log('Received new permits', permits);
+      const newPermits = [];
+      for (const permit of permits) {
+        if (await savePermit(permit)) {
+          console.log('New permit saved', permit.name);
+          newPermits.push(permit);
+        }
       }
-    }
-    console.log('Auto tagging permit queue', {
-      received: received.length,
-      pending: pending.size,
-      rules: rules.length,
-      tagging: !!frappe.isTagging,
-      starting: active ? active.permit : null
-    });
-    await dispatch();
-  });
 
-  frappe.events.on('tag-vehicles', args => {
-    if (active && args && args.name === active.permit) active.started = true;
-  });
-  frappe.events.on('tag-results', () => {
-    if (active && active.started) {
-      // The main process can return an empty result on startup failure. Keep
-      // the permit until the next dispatch checks the saved truck results.
-      active = null;
-    }
-  });
-  frappe.events.on('auto-tagging-attempted', actionName => {
-    if (active && active.action === actionName && !active.started) {
-      active = null;
-    }
-  });
+      const autoTags = rules
+        .map(rule => ({
+          rule,
+          permit: newPermits.find(
+            permit =>
+              upper(permit.source) === upper(rule.source) &&
+              (!rule.transportedFrom ||
+                upper(rule.transportedFrom) === upper(permit.transportedFrom))
+          )
+        }))
+        .filter(match => match.permit)
+        .sort(
+          (a, b) =>
+            (+a.rule.priority || 10) - (+b.rule.priority || 10) ||
+            a.permit.name.localeCompare(b.permit.name)
+        );
+      console.log('Matched new Permit with Auto Tagging', autoTags.length);
 
-  function requestMonitor() {
-    const settings = frappe.AccountingSettings || {};
-    const { i3msUsername: username, i3msPassword: password } = settings;
-    if (!rules.length || !username || !password || stopped) return;
-    const showBrowser = !!settings.showBrowser;
-    if (
-      !monitorConfig ||
-      monitorConfig.username !== username ||
-      monitorConfig.password !== password ||
-      monitorConfig.showBrowser !== showBrowser
-    ) {
-      monitorConfig = {
-        username,
-        password,
-        showBrowser,
-        id: (monitorConfig ? monitorConfig.id : 0) + 1
-      };
-    }
-    if (blockedMonitorId === monitorConfig.id) return;
-    // The main process reuses an active watcher. This only restarts one that
-    // failed to start or stopped after its browser disconnected.
-    ipcRenderer.send('auto-tagging', {
-      credentials: { username, password },
-      showBrowser,
-      monitorId: monitorConfig.id
-    });
-  }
-
-  ipcRenderer.on('i3ms-operation-failed', (event, failure) => {
-    if (!failure || failure.type !== 'auto-tagging' || stopped) return;
-    console.error('Auto tagging monitor failed:', failure.message);
-    if (
-      monitorConfig &&
-      failure.monitorId === monitorConfig.id &&
-      /password is incorrect/i.test(failure.message)
-    ) {
-      // Invalid credentials require a change, not a new browser every tick.
-      blockedMonitorId = monitorConfig.id;
-    }
-  });
-
-  function configure(docs) {
-    if (stopped) return Promise.resolve();
-    configuring = configuring
-      .catch(() => {})
-      .then(async () => {
-        const stored = await frappe.db.getAll({
-          doctype: 'AutoTagging',
-          fields: ['*']
-        });
-        const byName = new Map(stored.map(rule => [rule.name, rule]));
-        for (const rule of docs || []) byName.set(rule.name, rule);
-        rules = [...byName.values()];
-        requestMonitor();
-        await dispatch();
-      })
-      .catch(ex => {
-        console.error('Auto tagging configuration failed:', ex);
+      if (!autoTags.length || frappe.isTagging || stopped) return;
+      console.log('AutoTagging', autoTags);
+      const { rule, permit } = autoTags[0];
+      const action = frappe.getNewDoc('PermitAction');
+      await action.set({
+        label: frappe._('Tagging'),
+        action: 'tagging',
+        buttonText: frappe._('Tagging'),
+        permit: permit.name,
+        truckList: rule.truckList,
+        numBrowsers: frappe.AccountingSettings.numBrowsers,
+        isCloudTagging: true
       });
-    return configuring;
-  }
-  frappe.events.on('auto-tagging', configure);
+      if (frappe.isTagging || stopped) return;
+      await router.push({
+        name: 'PermitAction',
+        params: { name: action.name }
+      });
+    } catch (ex) {
+      console.error('Auto tagging could not start:', ex);
+    } finally {
+      processing = false;
+    }
+  });
 
-  // Do not depend on the one-shot App startup event or a generic internet
-  // probe. Re-read saved rules and ensure the watcher exists every 10 seconds.
-  const timer = setInterval(() => {
-    if (checkingMonitor || stopped) return;
-    checkingMonitor = true;
-    return configure().finally(() => {
-      checkingMonitor = false;
-    });
-  }, 10000);
-  if (timer && typeof timer.unref === 'function') timer.unref();
-  const stop = () => {
+  frappe.events.on('auto-tagging', async docs => {
+    if (stopped) return;
+    console.log('Setting up auto tagging');
+    try {
+      const stored = await frappe.db.getAll({ doctype: 'AutoTagging' });
+      const byName = new Map(stored.map(rule => [rule.name, rule]));
+      for (const rule of docs || []) byName.set(rule.name, rule);
+      rules = [...byName.values()];
+      console.log('Setting up auto tagging number of docs', rules.length);
+      if (!rules.length || stopped) return;
+      ipcRenderer.send('auto-tagging', {
+        credentials: {
+          username: frappe.AccountingSettings.i3msUsername,
+          password: frappe.AccountingSettings.i3msPassword
+        },
+        showBrowser: !!frappe.AccountingSettings.showBrowser
+      });
+    } catch (ex) {
+      console.error('Auto tagging configuration failed:', ex);
+    }
+  });
+
+  return () => {
     stopped = true;
-    clearInterval(timer);
   };
-  if (typeof window !== 'undefined') {
-    window.addEventListener('beforeunload', stop, { once: true });
-  }
-  return stop;
 }

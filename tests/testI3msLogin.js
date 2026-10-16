@@ -226,6 +226,28 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (/\/VehicleDetails\.aspx/i.test(url.pathname)) {
+    const key = session && session[1];
+    if (!authenticatedSessions.has(key)) {
+      response.writeHead(302, { Location: '/Default.aspx' });
+      response.end();
+      return;
+    }
+    response.writeHead(200, { 'Content-Type': 'text/html' });
+    response.end(`<html><body><table id="grTrAction">
+      <tr><td>Permit No.</td><td>:</td><td>${url.searchParams.get(
+        'name'
+      )}</td></tr>
+      <tr><td>Requested By</td><td>:</td><td>Mine</td></tr>
+      <tr><td>Transported From</td><td>:</td><td>Pit A</td></tr>
+      <tr><td>Permit Qty.</td><td>:</td><td>100</td></tr>
+      <tr><td>Permit Validity</td><td>:</td><td>${moment()
+        .add(1, 'month')
+        .format('DD MMM YYYY')}</td></tr>
+      </table></body></html>`);
+    return;
+  }
+
   if (/\/ViewTransporterAction\.aspx/i.test(url.pathname)) {
     const key = session && session[1];
     protectedPageVisits.set(key, (protectedPageVisits.get(key) || 0) + 1);
@@ -241,23 +263,12 @@ const server = http.createServer((request, response) => {
     }
     if (watchActive && key === watchedSession) {
       watchReads++;
-      const today = moment().format(
-        watchReads === 1 ? 'DD MMM YYYY' : 'DD/MM/YYYY'
-      );
-      const yesterday = moment()
-        .subtract(1, 'day')
-        .format('DD MMM YYYY');
-      const header = watchReads === 1 ? 'th' : 'td';
+      const today = moment().format('DD MMM YYYY');
       response.writeHead(200, { 'Content-Type': 'text/html' });
-      response.end(`<html><body><table id="grdTransporterActions">
-        <tr><${header}>Permit&nbsp;<br>No${
-        watchReads === 1 ? '.' : ''
-      }</${header}><${header}>Request On</${header}><${header}>Lessee/Licensee Name</${header}><${header}>Transported From</${header}><${header}>Tag New Vehicle</${header}><${header}>Vehicle Details</${header}></tr>
-        <tr><td>OLD</td><td>${yesterday}</td><td>Mine-123</td><td>Pit A</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?old">Tag</a></td><td></td></tr>
-        <tr><td>BROKEN</td><td>${today}</td><td>Mine-123</td><td>Pit A</td><td></td><td></td></tr>
-        <tr><td>INVALID-DATE</td><td>not a date</td><td>Mine-123</td><td>Pit A</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?invalid">Tag</a></td><td></td></tr>
-        <tr><td><a href="javascript:__doPostBack('permit','')">WATCH-${watchReads}</a></td><td>${today}</td><td><a href="javascript:__doPostBack('source','')">Mine-123</a></td><td>Pit A</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?fixture">Tag</a></td><td></td></tr>
-        <tr><td>DERIVED</td><td>${today}</td><td>Mine-123</td><td>Pit A</td><td></td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/VehicleDetails.aspx?derived">Details</a></td></tr>
+      response.end(`<html><body><button id="btnsubmit">Search</button><button id="btnSubmit">Search</button><table id="grdTransporterActions">
+        <tr><th>Permit No.</th><th>Request On</th><th>Lessee/Licensee Name</th><th>Tag New Vehicle</th><th>Vehicle Details</th></tr>
+        <tr><td>WATCH-${watchReads}</td><td>${today}</td><td>List identity-123</td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?name=WATCH-${watchReads}">Tag</a></td><td></td></tr>
+        <tr><td>DERIVED</td><td>${today}</td><td>List identity-123</td><td></td><td><a href="https://i3ms.odishaminerals.gov.in/i3ms/pms/VehicleDetails.aspx?name=DERIVED">Details</a></td></tr>
         </table></body></html>`);
       return;
     }
@@ -303,7 +314,7 @@ function loadBrowserFactory(port) {
   );
   const realDelay = utilities.exports.delay;
   utilities.exports.delay = ms => {
-    if (watchActive && ms === 10000) {
+    if (watchActive && ms === 5000) {
       watchWaits.push(ms);
       return Promise.resolve();
     }
@@ -413,6 +424,37 @@ function loadBrowserFactory(port) {
     browserFile
   );
   return factory.exports;
+}
+
+function loadMonitorApi(monitor) {
+  const filename = path.join(root, 'api/index.js');
+  const loaded = new Module(filename, module);
+  loaded.filename = filename;
+  loaded.paths = Module._nodeModulePaths(path.dirname(filename));
+  const normalRequire = loaded.require.bind(loaded);
+  loaded.require = name => {
+    if (name === './browser') return () => monitor;
+    if (name === 'console-stamp') return () => {};
+    if (name === './utils') {
+      return {
+        delay: async ms => {
+          assert.equal(ms, 5000);
+          watchWaits.push(ms);
+        },
+        promiseWithTimeout: promise => promise
+      };
+    }
+    return normalRequire(name);
+  };
+  loaded._compile(
+    transformFileSync(filename, {
+      configFile: false,
+      babelrc: false,
+      plugins: ['@babel/plugin-transform-modules-commonjs']
+    }).code,
+    filename
+  );
+  return loaded.exports;
 }
 
 async function run() {
@@ -606,41 +648,43 @@ async function run() {
 
   const watcher = browserFactory('permit-watcher');
   instances.push(watcher);
-  const watcherCredentials = { ...credentials };
-  await watcher.initializeBrowser(watcherCredentials, true, true);
-  watchedSession = (await watcher.getPage().cookies()).find(
-    cookie => cookie.name === 'fixtureSession'
-  ).value;
-  watchActive = true;
+  const initializeWatcher = watcher.initializeBrowser;
+  watcher.initializeBrowser = async (...args) => {
+    await initializeWatcher(...args);
+    watchedSession = (await watcher.getPage().cookies()).find(
+      cookie => cookie.name === 'fixtureSession'
+    ).value;
+    watchActive = true;
+  };
   const polls = [];
   try {
-    await watcher.watchNewPermits({
+    const monitorApi = loadMonitorApi(watcher);
+    await monitorApi.newPermits(credentials, false, {
       isDestroyed: () => watchStopped,
       send: (event, data) => {
         assert.equal(event, 'new-permits');
         polls.push(data);
+        // Exercise renewal without changing the existing login policy.
+        if (polls.length === 1) authenticatedSessions.delete(watchedSession);
         if (polls.length === 2) watchStopped = true;
       }
     });
-    assert.deepEqual(watchWaits, [10000], 'refresh the list every ten seconds');
-    assert.deepEqual(watchNavigations, [
-      '/i3ms/pms/ViewTransporterAction.aspx'
-    ]);
-    assert.equal(
-      watchReloads,
-      1,
-      'reload the existing list instead of navigating away'
+    assert.deepEqual(
+      watchWaits,
+      [5000],
+      'wait five seconds between permit polls'
     );
     assert.equal(watchReads, 2);
+    assert.equal(watchReloads, 0, 'legacy polling navigates back from details');
     assert.equal(
       watchDetailRequests,
-      0,
-      'never fetch a detail, trip or release page'
+      4,
+      'fetch both permit detail pages on each poll'
     );
     assert.equal(
       attempts.get(watchedSession),
-      3,
-      'reuse the authenticated browser'
+      4,
+      'renew only the expired session'
     );
     assert.deepEqual(
       polls.map(rows => rows.map(row => row.name)),
@@ -649,63 +693,53 @@ async function run() {
         ['WATCH-2', 'DERIVED']
       ]
     );
-    assert.equal(polls[0][0].source, 'Mine');
-    assert.equal(polls[1][0].source, 'Mine');
-    assert.equal(polls[0][0].transportedFrom, 'Pit A');
-    assert(polls[0][1].taggingUrl.endsWith('?derived'));
-    const reads = watchLogs.filter(args => args.includes('Permit list read:'));
-    assert.equal(reads.length, 2, 'log every list read, not just refreshes');
-    for (const entry of reads) {
-      const summary = entry[entry.length - 1];
-      assert.equal(summary.rows, 5);
-      assert.equal(summary.eligible, 2);
-      assert.deepEqual(summary.skipped, {
-        missingNumber: 0,
-        invalidDate: 1,
-        notToday: 1,
-        missingLink: 1
-      });
-    }
-    console.log(
-      'PASS: actual Puppeteer list reloads every ten seconds with no detail/report reads or repeated login'
-    );
-    console.log(
-      'PASS: linked permit numbers, wrapped/td headers, numeric dates, legacy source names and read diagnostics'
-    );
-    // Feed an actual parsed row through the real coordinator and automatic
-    // form, stopping at the tagging event boundary (no portal mutation).
-    await require('./testAutoTagging').formTests(polls[0][0]);
-    console.log(
-      'PASS: browser-read permit reaches rule matching, save, automatic form and tag-vehicles with the correct trucks'
-    );
-
-    watchStopped = false;
-    let recoveredPolls = 0;
-    await watcher.watchNewPermits({
-      isDestroyed: () => watchStopped,
-      send: () => {
-        recoveredPolls++;
-        if (recoveredPolls === 1) authenticatedSessions.delete(watchedSession);
-        if (recoveredPolls === 2) watchStopped = true;
+    for (const batch of polls) {
+      for (const permit of batch) {
+        assert.equal(
+          permit.source,
+          'MINE',
+          'read Requested By from the detail grid'
+        );
+        assert.equal(
+          permit.transportedFrom,
+          'PIT A',
+          'location is absent from the list but present in details'
+        );
+        assert.equal(permit.quantity, 100);
       }
-    });
-    assert.equal(attempts.get(watchedSession), 4);
-    assert.deepEqual(watchWaits, [10000, 10000]);
-    assert.equal(watchDetailRequests, 0);
-    console.log('PASS: expired watcher session logs in and resumes the list');
-
-    watchStopped = false;
-    watcherCredentials.username = 'incorrect-password';
-    await assert.rejects(
-      watcher.watchNewPermits({
-        isDestroyed: () => watchStopped,
-        send: () => authenticatedSessions.delete(watchedSession)
-      }),
-      /password is incorrect/
+    }
+    assert(polls[0][1].taggingUrl.endsWith('?name=DERIVED'));
+    assert.equal(
+      watcher.watchNewPermits,
+      undefined,
+      'the list-only watcher is removed'
     );
-    assert.equal(attempts.get(watchedSession), 5);
+    assert(
+      watchNavigations.every(path =>
+        /ViewTransporterAction|VehicleDetails|Default/.test(path)
+      ),
+      'no release or trip reports during auto discovery'
+    );
+    assert.equal(
+      watchLogs.filter(args => args.includes('last two month permits called'))
+        .length,
+      2
+    );
     console.log(
-      'PASS: expired watcher stops on an explicit incorrect password'
+      'PASS: legacy discovery extracts Requested By and Transported From from actual detail pages, including session renewal'
+    );
+
+    await require('./testAutoTagging').formTests(polls[0][0], [
+      {
+        name: 'location-rule',
+        source: 'Mine',
+        transportedFrom: 'Pit A',
+        truckList: 'trucks',
+        priority: '1'
+      }
+    ]);
+    console.log(
+      'PASS: real permit details satisfy the location rule and dispatch the correct tagging job'
     );
   } finally {
     watchStopped = true;

@@ -30,14 +30,25 @@ export async function newPermits(credentials, showBrowser, sse) {
       toExit = true;
     });
 
-    // This browser stays on the list. Never run the report/detail fetcher
-    // from the watch loop; it delays detection and navigates away each poll.
-    await monitor.watchNewPermits({
-      isDestroyed: () => toExit || sse.isDestroyed(),
-      send: (event, permits) => {
-        if (!toExit && !sse.isDestroyed()) sse.send(event, permits);
+    // 1.1.15 reads each permit's details before publishing the batch. The list
+    // may omit Transported From, which location-specific rules need.
+    while (!toExit && !sse.isDestroyed()) {
+      try {
+        const permits = await twoMonthPermits(
+          { onlyNewPermits: true },
+          null,
+          monitor
+        );
+        console.log('New permits', permits);
+        if (!toExit && !sse.isDestroyed()) {
+          sse.send('new-permits', permits || []);
+        }
+      } catch (ex) {
+        console.error('Auto tagging permit monitor failed:', ex);
       }
-    });
+
+      if (!toExit && !sse.isDestroyed()) await delay(5000);
+    }
   } finally {
     await monitor.disconnect().catch(() => {});
     if (newPermitBrowser === monitor) newPermitBrowser = null;
@@ -143,7 +154,9 @@ export async function twoMonthPermits(args, sse, browser = i3ms) {
         circle: permit['Circle'],
         taggingUrl: permit['Tag New Vehicle'],
         vehicleDetails: permit['Vehicle Details'],
-        source: permit['Lessee/Licensee Name'],
+        // As in 1.1.15, auto-tagging uses Requested By from the detail page,
+        // rather than the list's lessee label (which can include an ID).
+        source: args.onlyNewPermits ? undefined : permit['Lessee/Licensee Name'],
         noTrips: args.onlyNewPermits,
         noTagged: args.onlyNewPermits
       };

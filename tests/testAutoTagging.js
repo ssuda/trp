@@ -66,7 +66,7 @@ const rule = (name = 'rule', extra = {}) => ({
   ...extra
 });
 
-function fixture(stored = [rule()]) {
+function fixture(stored = [rule()], source = coordinatorSource) {
   const ipcHandlers = new Map();
   const events = new Observable();
   const saved = new Map();
@@ -145,14 +145,14 @@ function fixture(stored = [rule()]) {
   };
   const savePermit = async data => {
     if (state.saving) await state.saving(data);
+    const isNew = !saved.has(data.name);
     const old = saved.get(data.name) || {};
     const tagged = {
       ...(old.tagged ? JSON.parse(old.tagged) : {}),
       ...data.tagged
     };
     saved.set(data.name, { ...old, ...data, tagged: JSON.stringify(tagged) });
-    // Return false: existing local permits must still be eligible.
-    return false;
+    return isNew;
   };
   const stop = load(
     'src/autoTagging.js',
@@ -163,7 +163,7 @@ function fixture(stored = [rule()]) {
         error: (...args) => console.error(...args)
       }
     },
-    `const { setInterval, clearInterval } = require('fixture-timers');\nconst console = require('fixture-console');\n${coordinatorSource}`
+    `const { setInterval, clearInterval } = require('fixture-timers');\nconst console = require('fixture-console');\n${source}`
   ).setupAutoTagging({
     frappe,
     ipcRenderer,
@@ -218,343 +218,260 @@ function fixture(stored = [rule()]) {
   };
 }
 
-async function coordinatorTests() {
-  const f = fixture();
-  await f.events.trigger('auto-tagging');
-  await f.events.trigger('auto-tagging', [rule('rule', { priority: '2' })]);
-  assert.equal(
-    f.ipcHandlers.get('new-permits').length,
-    1,
-    'setup installs only one listener'
+async function legacyParityTests() {
+  const legacy = execFileSync('git', ['show', '4812d32:src/main.js'], {
+    cwd: root,
+    encoding: 'utf8'
+  });
+  let registration;
+  function find(node) {
+    if (!node || typeof node !== 'object') return;
+    if (
+      node.type === 'CallExpression' &&
+      node.callee.type === 'MemberExpression' &&
+      node.callee.property.name === 'on' &&
+      node.arguments[0] &&
+      node.arguments[0].value === 'auto-tagging'
+    )
+      registration = legacy.slice(node.start, node.end);
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) value.forEach(find);
+      else if (value && typeof value === 'object') find(value);
+    }
+  }
+  find(parse(legacy, { sourceType: 'module' }));
+  assert(registration, 'locate the actual 1.1.15 registration');
+  const legacyModule = `import moment from 'moment';
+  export function setupAutoTagging({ frappe, ipcRenderer, router, savePermit }) {
+    const _ = frappe._;
+    ${registration};
+    return () => {};
+  }`;
+  const stored = [
+    rule('first', { transportedFrom: 'Pit A', priority: '1' }),
+    rule('second', { source: 'Mine B', priority: '2' })
+  ];
+  const legacyFixture = fixture(
+    JSON.parse(JSON.stringify(stored)),
+    legacyModule
   );
-  assert.equal(f.sent[0].args.showBrowser, false);
-  await Promise.all([
-    f.poll([permit('P2'), permit('P1')]),
-    f.poll([permit('P1')])
-  ]);
-  assert.equal(
-    f.routes.length,
-    1,
-    'overlapping polls and form startup reserve one job'
-  );
-  assert.equal(f.actions[0].permit, 'P1');
-  assert.equal(f.actions[0].numBrowsers, 10);
-  assert(
-    f.logs.some(
-      args =>
-        args[0] === 'Received new permits' &&
-        args[1].some(row => row.name === 'P1')
-    ),
-    'show received permits in the renderer console'
-  );
-  assert(
-    f.logs.some(
-      args => args[0] === 'Matched new Permit with Auto Tagging' && args[1] > 0
-    ),
-    'show whether received permits match rules'
-  );
-  await f.poll([permit('P2')]);
-  assert.equal(
-    f.routes.length,
-    1,
-    'do not navigate while the auto form is starting'
-  );
-  await f.finish();
-  await f.poll([]);
-  assert.equal(
-    f.actions[1].permit,
-    'P2',
-    'second detected permit is retained after first completes'
-  );
-  await f.finish();
-  await f.poll([permit('P1'), permit('P2')]);
-  assert.equal(f.routes.length, 2, 'completed jobs do not launch again');
-  console.log(
-    'PASS: single listener, duplicate polls, startup reservation and retained global permit queue'
-  );
+  const restored = fixture(stored);
+  try {
+    for (const f of [legacyFixture, restored]) {
+      await f.events.trigger('auto-tagging');
+      await f.poll([
+        permit('WRONG-LOCATION', 'Mine', { transportedFrom: 'Pit B' }),
+        permit('FIRST'),
+        permit('SECOND', 'Mine B')
+      ]);
+      await f.poll([permit('FIRST'), permit('SECOND', 'Mine B')]);
+    }
+    const actions = f =>
+      f.actions.map(({ permit, truckList, isCloudTagging }) => ({
+        permit,
+        truckList,
+        isCloudTagging
+      }));
+    assert.deepEqual(actions(restored), actions(legacyFixture));
+    assert.deepEqual(
+      [...restored.saved.keys()],
+      [...legacyFixture.saved.keys()]
+    );
+    assert.equal(restored.actions.length, 1);
+    console.log(
+      'PASS: selected action and save/new-permit eligibility match the actual 1.1.15 callback'
+    );
+  } finally {
+    legacyFixture.stop();
+    restored.stop();
+  }
+}
 
-  const busy = fixture();
-  await busy.events.trigger('auto-tagging');
-  busy.frappe.isTagging = true;
-  await busy.poll([permit('BUSY')]);
-  assert.equal(busy.routes.length, 0);
-  busy.frappe.isTagging = false;
-  await busy.poll([]);
-  assert.equal(
-    busy.routes.length,
-    1,
-    'permits detected during manual tagging remain queued'
-  );
-  const racing = fixture();
-  await racing.events.trigger('auto-tagging');
-  racing.state.saving = async () => {
-    racing.frappe.isTagging = true;
-  };
-  await racing.poll([permit('RACE')]);
-  assert.equal(
-    racing.routes.length,
-    0,
-    'recheck the busy flag after async preparation'
-  );
-  racing.state.saving = null;
-  racing.frappe.isTagging = false;
-  await racing.poll([]);
-  assert.equal(racing.routes.length, 1);
-  console.log(
-    'PASS: manual tagging and preparation races keep automatic work pending'
-  );
+async function coordinatorTests() {
+  const f = fixture([rule('location', { transportedFrom: 'Pit A' })]);
+  try {
+    assert.equal(
+      f.sent.length,
+      0,
+      'restore event-driven startup without a heartbeat'
+    );
+    await f.events.trigger('auto-tagging');
+    assert.equal(
+      f.intervals.length,
+      0,
+      'the newer monitor/dispatch heartbeat is removed'
+    );
+    assert.deepEqual(f.sent[0].args, {
+      credentials: { username: 'fixture', password: 'fixture' },
+      showBrowser: false
+    });
+    await f.poll([
+      permit('OLD', 'Mine', {
+        startDate: moment()
+          .subtract(1, 'day')
+          .format('YYYY-MM-DD')
+      }),
+      permit('OTHER-SOURCE', 'Other mine'),
+      permit('OTHER-LOCATION', 'Mine', { transportedFrom: 'Pit B' }),
+      permit('MISSING-LOCATION', 'Mine', { transportedFrom: undefined }),
+      permit('NEW')
+    ]);
+    assert.equal(f.actions[0].permit, 'NEW');
+    assert.equal(f.actions[0].truckList, 'trucks');
+    assert.equal(f.actions[0].isCloudTagging, true);
+    assert.equal(f.saved.has('OLD'), false);
+    assert.equal(
+      f.saved.has('OTHER-SOURCE'),
+      true,
+      'save all current-day permits before matching, as in 1.1.15'
+    );
+    assert.equal(f.saved.has('OTHER-LOCATION'), true);
+    assert.equal(f.saved.has('MISSING-LOCATION'), true);
+    assert(f.logs.some(args => args[0] === 'Received new permits'));
+    assert(
+      f.logs.some(
+        args =>
+          args[0] === 'Matched new Permit with Auto Tagging' && args[1] === 1
+      )
+    );
+    await f.poll([permit('NEW')]);
+    assert.equal(
+      f.routes.length,
+      1,
+      'existing local permits are not dispatched again'
+    );
+    f.frappe.isTagging = true;
+    await f.poll([permit('WHILE-BUSY')]);
+    assert.equal(
+      f.saved.has('WHILE-BUSY'),
+      false,
+      'do not process a batch while tagging'
+    );
+    f.frappe.isTagging = false;
+    await f.poll([permit('WHILE-BUSY')]);
+    assert.equal(f.actions[1].permit, 'WHILE-BUSY');
+    console.log(
+      'PASS: 1.1.15 today-only, save-first, new-only, source/location matching and normal automatic action'
+    );
+  } finally {
+    f.stop();
+  }
 
   const priority = fixture([
-    rule('slow', { source: 'Mine B', priority: '10' }),
-    rule('fast', { priority: '2', transportedFrom: ' Pit A ' })
+    rule('second', { source: 'Mine B', priority: '2' }),
+    rule('first', { priority: '1' })
   ]);
-  await priority.events.trigger('auto-tagging');
-  await priority.poll([
-    permit('WRONG-LOCATION', 'Mine', { transportedFrom: 'Pit B' }),
-    permit('MISSING-LOCATION', 'Mine', { transportedFrom: undefined }),
-    permit('OLD', 'Mine', {
-      startDate: moment()
-        .subtract(1, 'day')
-        .format('YYYY-MM-DD')
-    }),
-    permit('P10', 'Mine B'),
-    permit('P2', ' mine ')
-  ]);
-  assert.equal(
-    priority.actions[0].permit,
-    'P2',
-    'numeric priority and trimmed matching'
-  );
-  await priority.finish();
-  await priority.poll([]);
-  assert.equal(priority.actions[1].permit, 'P10');
-  await priority.finish();
-  await priority.poll([]);
-  assert.equal(
-    priority.routes.length,
-    2,
-    'date and optional location filters are enforced'
-  );
-  console.log(
-    'PASS: numeric priority, date filter and optional transported-from matching'
-  );
+  try {
+    await priority.events.trigger('auto-tagging');
+    await priority.poll([permit('B', 'Mine B'), permit('A')]);
+    assert.equal(priority.actions[0].permit, 'A');
+    await priority.poll([permit('B', 'Mine B'), permit('A')]);
+    assert.equal(
+      priority.routes.length,
+      1,
+      'restore new-in-database eligibility, not a pending work queue'
+    );
+    await priority.events.trigger('auto-tagging', [
+      rule('first', { source: 'Updated mine' })
+    ]);
+    assert.equal(
+      priority.ipcHandlers.get('new-permits').length,
+      1,
+      'rule edits keep one IPC listener'
+    );
+    await priority.poll([permit('UPDATED', 'Updated mine')]);
+    assert.equal(priority.actions[1].permit, 'UPDATED');
+    console.log(
+      'PASS: legacy priority/eligibility and rule updates without duplicate listeners'
+    );
+  } finally {
+    priority.stop();
+  }
 
-  const failed = fixture();
-  await failed.events.trigger('auto-tagging');
-  failed.state.navigate = async () => {
-    throw new Error('Fixture navigation failed');
-  };
-  await failed.poll([permit('RETRY')]);
-  failed.state.navigate = null;
-  await failed.poll([]);
-  assert.equal(
-    failed.routes.length,
-    1,
-    'failed navigation retries an already-saved permit'
-  );
-  await failed.events.trigger('auto-tagging-attempted', failed.actions[1].name);
-  await failed.poll([]);
-  assert.equal(
-    failed.routes.length,
-    2,
-    'early form return releases the startup reservation'
-  );
-  await failed.finish(false);
-  await failed.poll([]);
-  assert.equal(
-    failed.routes.length,
-    3,
-    'empty failure results are not treated as completed work'
-  );
-  console.log(
-    'PASS: startup failure, early form return and empty result recovery'
-  );
-
-  const empty = fixture();
-  empty.truckLists.set('trucks', { trucks: '' });
-  await empty.events.trigger('auto-tagging');
-  await empty.poll([permit('EMPTY')]);
-  assert.equal(empty.routes.length, 0);
-  empty.truckLists.set('trucks', { trucks: 'OD14TEST1' });
-  await empty.poll([]);
-  assert.equal(
-    empty.routes.length,
-    1,
-    'an empty truck list is not permanently completed'
-  );
-  console.log('PASS: missing trucks can be supplied and retried');
-
-  const updated = fixture();
-  await updated.events.trigger('auto-tagging');
-  await updated.events.trigger('auto-tagging', [
-    rule('rule', { source: 'Updated Mine' })
-  ]);
-  await updated.poll([permit('UPDATED', 'Updated Mine')]);
-  assert.equal(
-    updated.routes.length,
-    1,
-    'a re-saved rule replaces its stored configuration'
-  );
-  assert.equal(updated.ipcHandlers.get('new-permits').length, 1);
-  console.log('PASS: latest rule configuration replaces stale listeners');
+  const race = fixture();
+  try {
+    await race.events.trigger('auto-tagging');
+    race.state.saving = async () => {
+      race.frappe.isTagging = true;
+    };
+    await race.poll([permit('MANUAL-RACE')]);
+    assert.equal(
+      race.routes.length,
+      0,
+      'do not open an automatic action over a manual tagging job'
+    );
+    console.log('PASS: manual-job guard remains intact');
+  } finally {
+    race.stop();
+  }
 }
 
 async function apiTests() {
-  let factoryCount = 0;
-  let failInitialization = false;
-  let monitorDisconnected = 0;
+  let destroyed = false;
+  let initializes = 0;
+  let closes = 0;
+  let details = 0;
   let reads = 0;
+  let connected = true;
+  let failStartup = false;
+  const waits = [];
+  const batches = [];
   const monitor = {
     initializeBrowser: async () => {
-      if (failInitialization) throw new Error('Fixture initialization failed');
+      initializes++;
+      if (failStartup) throw new Error('Fixture startup failed');
+      connected = true;
+    },
+    getBrowser: () => connected,
+    lastTwoMonthPermits: async (
+      href,
+      selector,
+      previousMonth,
+      onlyNewPermits
+    ) => {
+      reads++;
+      assert.equal(selector, '#grdTransporterActions');
+      assert.equal(previousMonth, false);
+      assert.equal(onlyNewPermits, true);
+      return [
+        {
+          'Permit No.': 'DETAIL-PERMIT',
+          'Request On': moment().format('DD MMM YYYY'),
+          'Lessee/Licensee Name': 'Different list identity-123',
+          'Tag New Vehicle':
+            'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx?fixture'
+        }
+      ];
+    },
+    permitDetails: async href => {
+      details++;
+      assert(href.includes('/VehicleDetails.aspx?fixture'));
+      return {
+        'Requested By': 'Mine',
+        'Transported From': 'PIT A',
+        'Permit Qty.': '100',
+        'Permit Validity': moment()
+          .add(1, 'month')
+          .format('DD MMM YYYY')
+      };
+    },
+    permitVehicles: () => {
+      throw new Error('No trip reports during auto discovery');
+    },
+    releasePage: () => {
+      throw new Error('No release-page scan during auto discovery');
     },
     disconnect: async () => {
-      monitorDisconnected++;
-    },
-    getBrowser: () => ({}),
-    watchNewPermits: async sender => {
-      reads++;
-      sender.send('new-permits', [permit('FIXTURE-PERMIT'), permit('SECOND')]);
-      sender.send('new-permits', [permit('LATE')]);
-    },
-    lastTwoMonthPermits: async () => {
-      destroyed = true;
-      throw new Error('The watcher must not call the full permit report');
-    },
-    permitDetails: async () => {
-      throw new Error('The watcher must not visit permit details');
+      connected = false;
+      closes++;
     }
-  };
-  const api = load('api/index.js', {
-    './browser': () => {
-      factoryCount++;
-      return monitor;
-    },
-    './utils': {
-      delay: async () => {},
-      promiseWithTimeout: async promise => promise
-    },
-    'console-stamp': () => {}
-  });
-  let destroyed = false;
-  const out = [];
-  const sender = {
-    isDestroyed: () => destroyed,
-    send: (event, data) => {
-      out.push({ event, data });
-      destroyed = true;
-    }
-  };
-  await api.newPermits({}, false, sender);
-  assert.equal(
-    out[0].data[0].name,
-    'FIXTURE-PERMIT',
-    'active taggable rows must not be discarded'
-  );
-  assert.equal(out[0].data[0].transportedFrom, 'Pit A');
-  assert.equal(
-    out.flatMap(message => message.data).length,
-    2,
-    'a malformed row must not drop valid permits'
-  );
-  assert.equal(out[0].data[1].name, 'SECOND', 'forward every detected permit');
-  assert.equal(out.length, 1, 'no delivery after the renderer has closed');
-  assert.equal(reads, 1);
-  assert.equal(monitorDisconnected, 1);
-  destroyed = false;
-  await api.newPermits({}, false, sender);
-  assert.equal(out.length, 2, 'stopped monitor must be restartable');
-  failInitialization = true;
-  destroyed = false;
-  await assert.rejects(
-    api.newPermits({}, false, sender),
-    /initialization failed/
-  );
-  failInitialization = false;
-  await api.newPermits({}, false, sender);
-  assert.equal(
-    out.length,
-    3,
-    'initialization failure must release the monitor singleton'
-  );
-  assert.equal(factoryCount, 5);
-  console.log(
-    'PASS: list-only monitor routing, renderer shutdown and monitor restart'
-  );
-}
-
-async function monitorProgressTests() {
-  const lateRules = fixture([]);
-  assert.equal(
-    lateRules.intervals.length,
-    1,
-    'install a monitor health check at startup'
-  );
-  assert.equal(lateRules.intervals[0].ms, 10000);
-  await lateRules.tickMonitor();
-  assert.equal(lateRules.sent.length, 0);
-  lateRules.state.stored = [rule()];
-  lateRules.state.dbError = new Error('Fixture database still initializing');
-  await lateRules.tickMonitor();
-  lateRules.state.dbError = null;
-  await lateRules.tickMonitor();
-  assert.equal(lateRules.sent[0].event, 'auto-tagging');
-  assert.equal(lateRules.sent[0].args.credentials.username, 'fixture');
-  lateRules.stop();
-  await lateRules.tickMonitor();
-  assert.equal(lateRules.sent.length, 1);
-  console.log(
-    'PASS: monitor starts without the App startup event and recovers late database/rules'
-  );
-
-  const invalid = fixture();
-  await invalid.tickMonitor();
-  await invalid.failMonitor({
-    type: 'auto-tagging',
-    monitorId: invalid.sent[0].args.monitorId,
-    message: 'i3ms password is incorrect'
-  });
-  await invalid.tickMonitor();
-  assert.equal(
-    invalid.sent.length,
-    1,
-    'do not relaunch invalid credentials every ten seconds'
-  );
-  invalid.frappe.AccountingSettings.i3msPassword = 'corrected-fixture';
-  await invalid.tickMonitor();
-  assert.equal(invalid.sent.length, 2);
-  invalid.stop();
-  console.log(
-    'PASS: incorrect-password stop is retained until credentials change'
-  );
-
-  const f = fixture();
-  let initializeCount = 0;
-  let failInitialization = true;
-  let disconnected;
-  let releaseWatch;
-  let destroyed = false;
-  const requests = [];
-  const monitor = {
-    initializeBrowser: async (credentials, headless, login, onDisconnect) => {
-      initializeCount++;
-      disconnected = onDisconnect;
-      if (failInitialization) throw new Error('Fixture monitor startup failed');
-    },
-    watchNewPermits: async sender => {
-      sender.send('new-permits', [permit('HEARTBEAT')]);
-      await new Promise(resolve => {
-        releaseWatch = resolve;
-      });
-    },
-    disconnect: async () => {}
   };
   const api = load(
     'api/index.js',
     {
       './browser': () => monitor,
       './utils': {
-        delay: async () => {},
+        delay: async ms => waits.push(ms),
         promiseWithTimeout: promise => promise
       },
       'console-stamp': () => {}
@@ -563,68 +480,74 @@ async function monitorProgressTests() {
   );
   const sender = {
     isDestroyed: () => destroyed,
-    send: (event, data) => {
-      f.poll(data).catch(error => {
-        throw error;
-      });
+    send: (event, batch) => {
+      assert.equal(event, 'new-permits');
+      batches.push(batch);
+      if (batches.length === 2) destroyed = true;
     }
   };
-  f.state.send = (event, args) => {
-    if (event !== 'auto-tagging') return;
-    requests.push(
-      api.newPermits(args.credentials, args.showBrowser, sender).catch(error =>
-        f.failMonitor({
-          type: 'auto-tagging',
-          monitorId: args.monitorId,
-          message: error.message
-        })
-      )
+  await api.newPermits(
+    { username: 'fixture', password: 'fixture' },
+    false,
+    sender
+  );
+  assert.equal(reads, 2);
+  assert.equal(details, 2);
+  assert.deepEqual(waits, [5000]);
+  assert.equal(initializes, 1);
+  assert.equal(closes, 1);
+  for (const batch of batches) {
+    assert.equal(
+      batch[0].source,
+      'Mine',
+      'use Requested By from details as in 1.1.15'
     );
-  };
+    assert.equal(
+      batch[0].transportedFrom,
+      'PIT A',
+      'extract the field missing from the list'
+    );
+    assert.equal(batch[0].quantity, 100);
+    assert.deepEqual(batch[0].tagged, {});
+    assert.deepEqual(batch[0].trips, []);
+  }
+
+  const coordinator = fixture([rule('location', { transportedFrom: 'Pit A' })]);
   try {
-    await f.tickMonitor();
-    await requests[0];
-    assert.equal(initializeCount, 1);
-    failInitialization = false;
-    await f.tickMonitor();
+    await coordinator.events.trigger('auto-tagging');
+    await coordinator.poll(batches[0]);
+    assert.equal(coordinator.actions[0].permit, 'DETAIL-PERMIT');
     assert.equal(
-      initializeCount,
-      2,
-      'restart a monitor that failed to initialize'
-    );
-    assert.equal(
-      f.routes.length,
-      1,
-      'the recovered watcher reaches auto dispatch'
-    );
-    await f.tickMonitor();
-    assert.equal(
-      initializeCount,
-      2,
-      'healthy monitor requests reuse the login session'
-    );
-    disconnected();
-    releaseWatch();
-    await requests[1];
-    await f.tickMonitor();
-    assert.equal(
-      initializeCount,
-      3,
-      'restart after a disconnected watcher stops'
-    );
-    console.log(
-      'PASS: ten-second recovery restarts stopped monitors without relogging healthy browsers'
+      coordinator.saved.get('DETAIL-PERMIT').transportedFrom,
+      'PIT A'
     );
   } finally {
-    f.stop();
-    destroyed = true;
-    if (releaseWatch) releaseWatch();
-    await Promise.all(requests);
+    coordinator.stop();
   }
+  console.log(
+    'PASS: legacy monitor reads actual details, extracts source/location and waits five seconds between polls without trip/release scans'
+  );
+
+  failStartup = true;
+  await assert.rejects(
+    api.newPermits({}, false, sender),
+    /Fixture startup failed/
+  );
+  failStartup = false;
+  await api.newPermits({}, false, sender);
+  assert.equal(
+    initializes,
+    3,
+    'failed or stopped monitors release their singleton'
+  );
+  assert.equal(closes, 3);
+  console.log(
+    'PASS: monitor cleanup remains intact on shutdown and failed initialization'
+  );
 }
 
-async function formTests(detectedPermit = permit('FORM')) {
-  const f = fixture();
+async function formTests(detectedPermit = permit('FORM'), storedRules) {
+  const f = fixture(storedRules);
   const jobs = [];
   f.events.on('tag-vehicles', job => jobs.push(job));
   await f.events.trigger('auto-tagging');
@@ -692,20 +615,8 @@ async function formTests(detectedPermit = permit('FORM')) {
     await f.poll([]);
     assert.equal(f.routes.length, 1);
 
-    await f.poll([permit('OFFLINE')]);
-    online = false;
-    await component.created.call(makeForm());
-    online = true;
-    await f.poll([]);
-    assert.equal(
-      f.routes.length,
-      3,
-      'offline auto startup releases its reservation for retry'
-    );
-    await component.created.call(makeForm());
-    await f.finish();
     console.log(
-      'PASS: real automatic form starts normal tagging, finishes cleanly and retries offline startup'
+      'PASS: complete permit details open the normal automatic form and dispatch the correct trucks'
     );
   } finally {
     // The real form owns an interval; release it even if an assertion fails.
@@ -766,7 +677,7 @@ module.exports = { formTests };
 
 if (require.main === module) {
   (async () => {
-    await monitorProgressTests();
+    await legacyParityTests();
     await coordinatorTests();
     await formTests();
     await saveTests();

@@ -318,20 +318,16 @@ module.exports = function(tabNo) {
     await page.waitForSelector(selector);
     return await page.$$eval(
       `${selector} tr`,
-      (trs, txtField) => {
+      trs => {
         let first_row = true;
         const headers = [];
         const rows = [];
         trs.forEach(tr => {
           if (first_row) {
             first_row = false;
-            let ths = tr.querySelectorAll('th');
-            // Permit-list layouts can use td headers. Keep report parsing
-            // unchanged unless a text-field read was explicitly requested.
-            if (txtField && !ths.length) ths = tr.querySelectorAll('td');
+            const ths = tr.querySelectorAll('th');
             ths.forEach(td => {
-              const header = td.innerText.replace(/\*/, '').trim();
-              headers.push(txtField ? header.replace(/\s+/g, ' ') : header);
+              headers.push(td.innerText.replace(/\*/, '').trim());
             });
           } else {
             const tds = tr.querySelectorAll('td');
@@ -1126,235 +1122,64 @@ module.exports = function(tabNo) {
     }
   }
 
-  async function permitsInfo(permits, sse) {
-    const out = [];
-    const skipped = {
-      missingNumber: 0,
-      invalidDate: 0,
-      notToday: 0,
-      missingLink: 0
-    };
-    const columnKey = value => value.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-    for (let permit of permits) {
-      const fields = {};
-      for (const [key, value] of Object.entries(permit)) {
-        fields[columnKey(key)] = value;
-      }
-      const field = (...names) =>
-        names.map(name => fields[columnKey(name)]).find(value => value);
-      // tableData preserves link text separately from href. A permit number
-      // may itself be a postback link; its text is the identifier, not its URL.
-      const name = field(
-        'Permit No Text',
-        'Permit Number Text',
-        'Permit No',
-        'Permit Number'
-      );
-      if (!name || /^(javascript:|https?:)/i.test(name)) {
-        skipped.missingNumber++;
-        continue;
-      }
-
-      const requestedOn = String(field('Request On', 'Requested On') || '')
-        .replace(/\s+/g, ' ')
-        .trim();
-      // Read the displayed calendar date, allowing a time after it. Do not
-      // let Moment guess numeric dates as month/day or silently drop them.
-      const date = requestedOn.match(
-        /^(\d{4}-\d{2}-\d{2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{4}|\d{1,2}[ -][a-z]{3,9}[ -]\d{4})(?=$|[ T])/i
-      );
-      const createdAt = moment(
-        date ? date[1] : '',
-        [
-          'D MMM YYYY',
-          'D-MMM-YYYY',
-          'D MMMM YYYY',
-          'D-MMMM-YYYY',
-          'D/M/YYYY',
-          'D-M-YYYY',
-          'D.M.YYYY',
-          'YYYY-MM-DD'
-        ],
-        true
-      );
-
-      if (!createdAt.isValid()) {
-        skipped.invalidDate++;
-        continue;
-      }
-      if (!createdAt.isSame(moment(), 'day')) {
-        skipped.notToday++;
-        continue;
-      }
-
-      const startDate = createdAt.local().format('YYYY-MM-DD');
-      createdAt.add(1, 'month');
-      const endDate = createdAt.local().format('YYYY-MM-DD');
-
-      let pr = {
-        name,
-        startDate: startDate,
-        endDate: endDate,
-        circle: field('Circle'),
-        taggingUrl: field('Tag New Vehicle'),
-        source: String(
-          field(
-            'Requested By Text',
-            'Requested By',
-            'Lessee/Licensee Name Text',
-            'Lessee/Licensee Name'
-          ) ||
-            ''
-        )
-          .replace(/-\d+/, '')
-          .trim(),
-        vehicleDetails: field('Vehicle Details'),
-        ...(field('Transported From')
-          ? { transportedFrom: field('Transported From') }
-          : {})
-      };
-
-      if (!pr.taggingUrl) {
-        try {
-          const uri = new URL(pr.vehicleDetails);
-          pr.taggingUrl =
-            'https://i3ms.odishaminerals.gov.in/i3ms/pms/TransporterAssignVehicleNew.aspx' +
-            uri.search;
-        } catch (ex) {
-          skipped.missingLink++;
-          continue;
-        }
-      }
-
-      out.push(pr);
-    }
-
-    log('Permit list read:', {
-      rows: permits.length,
-      eligible: out.length,
-      skipped,
-      columns: Object.keys(permits[0] || {})
-    });
-    log(
-      'New permits',
-      out.map(({ name, source, startDate, transportedFrom }) => ({
-        name,
-        source,
-        startDate,
-        transportedFrom
-      }))
-    );
-    sse.send('new-permits', out);
-  }
-
-  async function watchNewPermits(sse) {
-    const href =
-      'https://i3ms.odishaminerals.gov.in/i3ms/pms/ViewTransporterAction.aspx';
-    const selector = '#grdTransporterActions';
-    const listPath = new URL(href).pathname.toLowerCase();
-    const stopped = () => sse.isDestroyed() || !browser || !page;
-    await gotoPage(href);
-
-    while (!stopped()) {
-      try {
-        if (/\/(Default|i3msnew1)\.aspx/i.test(page.url())) await login();
-        await page.waitForSelector(selector, { timeout: 30000 });
-        await permitsInfo(await tableData(selector, 'Permit No.'), sse);
-      } catch (ex) {
-        if (stopped()) break;
-        if (/password is incorrect/i.test(ex.message)) throw ex;
-        error('Permit list read failed:', ex.message);
-      }
-
-      if (stopped()) break;
-      await delay(10000);
-      if (stopped()) break;
-
-      try {
-        if (new URL(page.url()).pathname.toLowerCase() === listPath) {
-          await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
-        } else {
-          await gotoPage(href, 1);
-        }
-      } catch (ex) {
-        if (stopped()) break;
-        if (/password is incorrect/i.test(ex.message)) throw ex;
-        error('Permit list refresh failed:', ex.message);
-      }
-    }
-  }
-
   async function lastTwoMonthPermits(
     href,
     selector,
     previousMonth,
-    onlyNewPermits,
-    sse
+    onlyNewPermits
   ) {
     console.log('last two month permits called');
     await gotoPage(href);
 
-    do {
-      selector || (selector = '#grdTransporterActions');
+    selector || (selector = '#grdTransporterActions');
 
-      let submitButton = await promiseAny(
-        page.waitForSelector('#btnsubmit'),
-        page.waitForSelector('#btnSubmit')
-      );
+    let submitButton = await promiseAny(
+      page.waitForSelector('#btnsubmit'),
+      page.waitForSelector('#btnSubmit')
+    );
 
-      await page.waitForSelector(selector);
+    await page.waitForSelector(selector);
 
-      const el = await page.$(selector);
-      let rows = [];
-      if (el) {
-        if (!onlyNewPermits) {
-          const r = await promiseAny(
-            page.waitForXPath(
-              '//*[@id="grdTransporterActions"]/tbody/tr/td[contains(text(), "No Record(s) Found")]'
-            ),
-            openAll('#btnAll')
-          );
+    const el = await page.$(selector);
+    let rows = [];
+    if (el) {
+      if (!onlyNewPermits) {
+        const r = await promiseAny(
+          page.waitForXPath(
+            '//*[@id="grdTransporterActions"]/tbody/tr/td[contains(text(), "No Record(s) Found")]'
+          ),
+          openAll('#btnAll')
+        );
 
-          console.log('last two month permits after waiting', r);
+        console.log('last two month permits after waiting', r);
 
-          if (r === 2) {
-            await delay(5000);
-            rows = await tableData(selector);
-            console.log('last two month permits', rows);
-          }
-        } else {
+        if (r === 2) {
+          await delay(5000);
           rows = await tableData(selector);
+          console.log('last two month permits', rows);
         }
-      }
-
-      if (previousMonth) {
-        await page.waitForSelector('#ddlMonth');
-        const dt = moment().subtract(1, 'month');
-        const month = dt.month() + 1;
-        const year = dt.year();
-
-        await page.select('#ddlMonth', '' + month);
-        await page.select('#ddlYear', '' + year);
-        await page.click(submitButton == 1 ? '#btnsubmit' : '#btnSubmit');
-
-        await openAll('#btnAll');
-        await delay(5000);
-
-        let data = await tableData(selector);
-        rows = rows.concat(data || []);
-      }
-
-      if (sse) {
-        //sse.send('new-permits', rows);
-        await permitsInfo(rows, sse);
-        await page.reload();
       } else {
-        return rows;
+        rows = await tableData(selector);
       }
+    }
 
+    if (previousMonth) {
+      await page.waitForSelector('#ddlMonth');
+      const dt = moment().subtract(1, 'month');
+      const month = dt.month() + 1;
+      const year = dt.year();
+
+      await page.select('#ddlMonth', '' + month);
+      await page.select('#ddlYear', '' + year);
+      await page.click(submitButton == 1 ? '#btnsubmit' : '#btnSubmit');
+
+      await openAll('#btnAll');
       await delay(5000);
-    } while (sse);
+
+      let data = await tableData(selector);
+      rows = rows.concat(data || []);
+    }
+    return rows;
   }
 
   async function gotoPermitTripsPage(href) {
@@ -1516,7 +1341,6 @@ module.exports = function(tabNo) {
     permitVehicles,
     gotoPermitTripsPage,
     lastTwoMonthPermits,
-    watchNewPermits,
     permitDetails,
     releasePage,
     tagVehicle,
